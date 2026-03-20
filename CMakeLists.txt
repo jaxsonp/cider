@@ -13,5 +13,5 @@ include_directories("src")
 # find all source files
 file(GLOB_RECURSE SRCS "src/*.cpp")
 
-# Define target executable name [cite: 1]
+# Define target executable name
 add_executable(sasc-compiler ${SRCS})
