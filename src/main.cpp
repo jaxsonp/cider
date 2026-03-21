@@ -23,12 +23,15 @@ int main(int argc, char **argv)
 	{
 		// TODO improve this
 		if (!strcmp(argv[i], "-v"))
-			global_log_verbosity += 1;
+			settings::log_verbosity += 1;
+		else if (!strcmp(argv[i], "--print-ast"))
+			settings::print_ast = true;
 	}
-	log_v("verbosity: {:d}", global_log_verbosity);
+	log_vv("verbosity: {}", settings::log_verbosity);
+	log_vv("print ast: {}", bool_str(settings::print_ast));
 
 	std::string filename = argv[1];
-	log_v("file: {:s}", filename.c_str());
+	log_v("input file: {:s}", filename.c_str());
 
 	try
 	{
@@ -62,6 +65,12 @@ void compile(const std::string &filename)
 
 	log_vv("Parsing AST");
 	AST ast(lexer);
+
+	if (settings::print_ast)
+	{
+		log_vv("Printing AST");
+		ast.debug_print();
+	}
 
 	log_v("compilation complete");
 }

@@ -18,6 +18,8 @@ namespace ast
 		SourceLoc src_start;
 		SourceLoc src_end;
 
+		virtual void debug_print(unsigned int depth) = 0;
+
 		virtual ~Node() = default;
 	};
 
@@ -27,18 +29,23 @@ namespace ast
 
 		struct IntegerLiteral : Node
 		{
-			// TODO parse this
 			std::string value;
+			std::string type_annotation;
+
+			void debug_print(unsigned int depth = 0) override;
 
 			static std::optional<IntegerLiteral> try_parse(Lexer &lexer);
 
 		private:
-			IntegerLiteral(std::string value_) : value(value_) {}
+			IntegerLiteral(const std::string &value_, const std::string &type_)
+				: value(value_), type_annotation(type_) {}
 		};
 
 		struct Expression : Node
 		{
 			std::variant<IntegerLiteral> variant;
+
+			void debug_print(unsigned int depth = 0) override;
 
 			static std::optional<Expression> try_parse(Lexer &lexer);
 
@@ -49,6 +56,8 @@ namespace ast
 		struct ReturnStatement : Node
 		{
 			std::optional<Expression> expr;
+
+			void debug_print(unsigned int depth = 0) override;
 
 			static std::optional<ReturnStatement> try_parse(Lexer &lexer);
 
@@ -61,6 +70,8 @@ namespace ast
 		{
 			std::variant<ReturnStatement> variant;
 
+			void debug_print(unsigned int depth = 0) override;
+
 			static std::optional<Statement> try_parse(Lexer &lexer);
 
 		private:
@@ -72,6 +83,8 @@ namespace ast
 			std::vector<Statement> statements;
 			std::optional<Expression> expression;
 
+			void debug_print(unsigned int depth = 0) override;
+
 			static std::optional<Block> try_parse(Lexer &lexer);
 		};
 
@@ -79,6 +92,8 @@ namespace ast
 		{
 			std::string type;
 			std::string name;
+
+			void debug_print(unsigned int depth = 0) override;
 
 			static std::optional<ArgDefinition> try_parse(Lexer &lexer);
 		};
@@ -90,10 +105,12 @@ namespace ast
 			std::string return_type;
 			Block block;
 
+			void debug_print(unsigned int depth = 0) override;
+
 			static std::optional<FunctionDefinition> try_parse(Lexer &lexer);
 
 		private:
-			FunctionDefinition(std::string name_, std::vector<ArgDefinition> args_, std::string return_type_, Block block_)
+			FunctionDefinition(const std::string &name_, std::vector<ArgDefinition> args_, const std::string &return_type_, Block block_)
 				: name(name_),
 				  args(args_), return_type(return_type_), block(block_) {}
 		};
@@ -101,6 +118,8 @@ namespace ast
 		struct TopLevelDeclaration : Node
 		{
 			std::variant<FunctionDefinition> variant;
+
+			void debug_print(unsigned int depth = 0) override;
 
 			static std::optional<TopLevelDeclaration> try_parse(Lexer &lexer);
 
@@ -117,6 +136,8 @@ namespace ast
 		{
 			std::vector<TopLevelDeclaration> tlds;
 
+			void debug_print(unsigned int depth = 0) override;
+
 			static Program try_parse(Lexer &lexer);
 		};
 	}
@@ -129,4 +150,6 @@ class AST
 public:
 	// attempt to create an AST from tokens
 	AST(Lexer &lexer);
+
+	void debug_print();
 };

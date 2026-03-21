@@ -7,6 +7,7 @@ Soon:
 - float literals
 - if statements
 - loops
+- comments
 
 Before self-hosting:
 

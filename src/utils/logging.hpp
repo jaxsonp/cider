@@ -4,12 +4,12 @@
 #include <chrono>
 #include <iostream>
 
-extern unsigned short global_log_verbosity;
+#include "settings.hpp"
 
 template <typename... Args>
 void log(unsigned short verbosity, std::format_string<Args...> msg_fmt, Args &&...msg_args)
 {
-	if (verbosity > global_log_verbosity)
+	if (verbosity > settings::log_verbosity)
 		return;
 
 	auto now = std::chrono::system_clock::now();

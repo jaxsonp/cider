@@ -17,14 +17,8 @@ public:
 	CompileError(const std::string &_msg, SourceLoc start);
 	CompileError(const std::string &_msg, SourceLoc start, SourceLoc end);
 
-	const char *what()
-	{
-		return msg.c_str();
-	};
+	const char *what();
 
 	// prepends a prefix to this error
-	void add_prefix(const std::string &prefix)
-	{
-		msg = prefix + msg;
-	}
+	void add_prefix(const std::string &prefix);
 };

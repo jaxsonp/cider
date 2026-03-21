@@ -61,8 +61,4 @@ private:
 
 	char take_char();
 	char peek_char();
-	static bool is_whitespace(char c);
-	static bool is_numeric(char c);
-	static bool is_alpha(char c);
-	static bool is_delimiter(char c);
 };

@@ -16,3 +16,13 @@ CompileError::CompileError(const std::string &_msg, SourceLoc start, SourceLoc e
 {
 	this->msg = std::format("{} (at {}:{})", _msg, start.line, start.col);
 }
+
+const char *CompileError::what()
+{
+	return msg.c_str();
+}
+
+void CompileError::add_prefix(const std::string &prefix)
+{
+	msg = prefix + msg;
+}

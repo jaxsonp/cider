@@ -1,6 +1,7 @@
 #include "AST.hpp"
 
 #include <format>
+#include <iostream>
 
 #include "utils/error.hpp"
 
@@ -17,16 +18,45 @@ AST::AST(Lexer &lexer)
 	}
 }
 
+void AST::debug_print()
+{
+	program.debug_print();
+}
+
 namespace ast
 {
 	namespace node_types
 	{
+		void IntegerLiteral::debug_print(unsigned int depth)
+		{
+			std::cout << std::string(depth * 2, ' ');
+			std::cout << "Integer literal (value: \"" << this->value << "\", type annotation: \"" << this->type_annotation << "\")" << std::endl;
+		}
+
 		std::optional<IntegerLiteral> IntegerLiteral::try_parse(Lexer &lexer)
 		{
 			if (lexer.peek().type != TokenType::INT_LITERAL)
 				return std::nullopt;
-			Token tok = lexer.take();
-			return IntegerLiteral(tok.token_str);
+			std::string s = lexer.take().token_str;
+
+			// finding where numbers stop
+			auto type_annotation_pos = s.begin();
+			while (type_annotation_pos != s.end() && is_numeric(*type_annotation_pos))
+				++type_annotation_pos;
+
+			return IntegerLiteral(
+				std::string(s.begin(), type_annotation_pos),
+				std::string(type_annotation_pos, s.end()));
+		}
+
+		void Expression::debug_print(unsigned int depth)
+		{
+			std::cout << std::string(depth * 2, ' ');
+			std::cout << "Expression" << std::endl;
+			if (std::holds_alternative<IntegerLiteral>(this->variant))
+				std::get<IntegerLiteral>(this->variant).debug_print(depth + 1);
+			else
+				throw std::logic_error("Unhandled expression variant");
 		}
 
 		std::optional<Expression> Expression::try_parse(Lexer &lexer)
@@ -36,6 +66,14 @@ namespace ast
 				return Expression(int_lit.value());
 			}
 			return std::nullopt;
+		}
+
+		void ReturnStatement::debug_print(unsigned int depth)
+		{
+			std::cout << std::string(depth * 2, ' ');
+			std::cout << "Return statement (expression present: " << bool_str(this->expr.has_value()) << ")" << std::endl;
+			if (this->expr.has_value())
+				this->expr.value().debug_print(depth + 1);
 		}
 
 		std::optional<ReturnStatement> ReturnStatement::try_parse(Lexer &lexer)
@@ -55,12 +93,36 @@ namespace ast
 			return ReturnStatement(expr.value());
 		}
 
+		void Statement::debug_print(unsigned int depth)
+		{
+			std::cout << std::string(depth * 2, ' ');
+			std::cout << "Statement" << std::endl;
+			if (std::holds_alternative<ReturnStatement>(this->variant))
+				std::get<ReturnStatement>(this->variant).debug_print(depth + 1);
+			else
+				throw std::logic_error("Unhandled statement variant");
+		}
+
 		std::optional<Statement> Statement::try_parse(Lexer &lexer)
 		{
 			if (auto return_stmt = ReturnStatement::try_parse(lexer))
 				return Statement(return_stmt.value());
 			else
 				return std::nullopt;
+		}
+
+		void Block::debug_print(unsigned int depth)
+		{
+			std::cout << std::string(depth * 2, ' ');
+			std::cout << "Block (statements: " << this->statements.size() << ", expression present: " << bool_str(this->expression.has_value()) << ")" << std::endl;
+			for (auto &stmt : this->statements)
+			{
+				stmt.debug_print(depth + 1);
+			}
+			if (this->expression.has_value())
+			{
+				this->expression.value().debug_print(depth + 1);
+			}
 		}
 
 		std::optional<Block> Block::try_parse(Lexer &lexer)
@@ -87,6 +149,12 @@ namespace ast
 			return block;
 		}
 
+		void ArgDefinition::debug_print(unsigned int depth)
+		{
+			std::cout << std::string(depth * 2, ' ');
+			std::cout << "Argument definition (type: \"" << this->type << "\", name: \"" << this->name << "\")" << std::endl;
+		}
+
 		std::optional<ArgDefinition> ArgDefinition::try_parse(Lexer &lexer)
 		{
 			if (lexer.peek().type != TokenType::IDENT)
@@ -96,6 +164,17 @@ namespace ast
 
 			lexer.expect(TokenType::COLON);
 			// TODO
+		}
+
+		void FunctionDefinition::debug_print(unsigned int depth)
+		{
+			std::cout << std::string(depth * 2, ' ');
+			std::cout << "Function definition (name: \"" << this->name << "\", args: " << this->args.size() << ", return type: \"" << this->return_type << "\")" << std::endl;
+			for (ArgDefinition &arg : this->args)
+			{
+				arg.debug_print(depth + 1);
+			}
+			this->block.debug_print(depth + 1);
 		}
 
 		std::optional<FunctionDefinition> FunctionDefinition::try_parse(Lexer &lexer)
@@ -152,6 +231,16 @@ namespace ast
 			return FunctionDefinition(name_tok.token_str, args, return_type, block.value());
 		}
 
+		void TopLevelDeclaration::debug_print(unsigned int depth)
+		{
+			std::cout << std::string(depth * 2, ' ');
+			std::cout << "Top level declaration" << std::endl;
+			if (std::holds_alternative<FunctionDefinition>(this->variant))
+				std::get<FunctionDefinition>(this->variant).debug_print(depth + 1);
+			else
+				throw std::logic_error("Unhandled tld variant");
+		}
+
 		std::optional<TopLevelDeclaration> TopLevelDeclaration::try_parse(Lexer &lexer)
 		{
 			if (auto func = FunctionDefinition::try_parse(lexer))
@@ -163,6 +252,16 @@ namespace ast
 				return std::nullopt;
 			}
 		}
+		void Program::debug_print(unsigned int depth)
+		{
+			std::cout << std::string(depth * 2, ' ');
+			std::cout << "Program root" << std::endl;
+			for (TopLevelDeclaration &tld : this->tlds)
+			{
+				tld.debug_print(depth + 1);
+			}
+		}
+
 		Program Program::try_parse(Lexer &lexer)
 		{
 			Program program;

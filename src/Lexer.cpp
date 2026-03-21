@@ -52,26 +52,6 @@ char Lexer::peek_char()
 	return peeked_char.value();
 }
 
-bool Lexer::is_whitespace(char c)
-{
-	return (c >= 9 && c <= 13) || c == 32;
-}
-
-bool Lexer::is_numeric(char c)
-{
-	return c >= '0' && c <= '9';
-}
-
-bool Lexer::is_alpha(char c)
-{
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-
-bool Lexer::is_delimiter(char c)
-{
-	return !is_numeric(c) && !is_alpha(c) && c != '_';
-}
-
 Lexer::Lexer(std::istream &in_stream) : in(in_stream), peeked_char(std::nullopt), done(false)
 {
 	pos.line = 0;
