@@ -7,8 +7,10 @@
 
 namespace logging::detail
 {
+	extern double init_time;
+	double timestamp();
 
-	double generate_timestamp();
+	std::string generate_msg_prefix(unsigned short verbosity);
 }
 
 template <typename... Args>
@@ -17,9 +19,7 @@ void log(unsigned short verbosity, std::format_string<Args...> msg_fmt, Args &&.
 	if (verbosity > settings::log_verbosity)
 		return;
 
-	std::cout << std::format("{} {}", logging::detail::generate_timestamp(), std::string(verbosity * 2, ' '))
-			  << std::format(msg_fmt, std::forward<Args>(msg_args)...)
-			  << std::endl;
+	std::cout << logging::detail::generate_msg_prefix(verbosity) << std::format(msg_fmt, std::forward<Args>(msg_args)...) << std::endl;
 }
 
 template <typename... Args>

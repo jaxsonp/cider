@@ -2,12 +2,9 @@
 
 ## TODOs
 
-Next time
-
-- Negative literals (broken right now I think)
-
 Soon:
 
+- Negative literals (broken right now I think)
 - if statements
 - loops
 - functions
@@ -26,6 +23,7 @@ Eventually:
 
 - try doing UTF8
 - labelled code blocks (for early breaks)
+- turn of colored output (automatically if not tty perhaps?)
   
 ## Notes for self
 

@@ -11,7 +11,6 @@
 
 AST::AST(Lexer &lexer)
 {
-
 	log_vv("Attempting to parse AST");
 	while (true)
 	{
@@ -23,9 +22,9 @@ AST::AST(Lexer &lexer)
 		break;
 	}
 	lexer.expect(TokenType::END_OF_FILE);
+	log_vv("Parse successful");
 
-	log_vv("Performing semantic analysis on AST");
-
+	log_vv("Hoisting top level symbols");
 	this->symbols = new GlobalSymbolTable();
 	SemanticAnalysisState state(this->symbols);
 	// top level hoisting
@@ -36,10 +35,12 @@ AST::AST(Lexer &lexer)
 	}
 
 	// semantic checks
+	log_vv("Performing semantic analysis");
 	for (const std::unique_ptr<ast::TopLevelDeclaration> &tld : this->tlds)
 	{
 		tld->check_semantics(state);
 	}
+	log_vv("AST complete");
 }
 
 void AST::debug_print() const
