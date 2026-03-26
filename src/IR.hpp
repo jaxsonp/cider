@@ -119,8 +119,8 @@ namespace ir
 		struct LoadImmInstruction : public Instruction
 		{
 			VRegId dest;
-			int32_t value;
-			LoadImmInstruction(VRegId dest, int32_t val);
+			uint32_t value;
+			LoadImmInstruction(VRegId dest, uint32_t val);
 		};
 
 		struct ReturnInstruction : public TerminalInstruction

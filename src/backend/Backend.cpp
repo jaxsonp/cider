@@ -2,16 +2,33 @@
 
 #include <iostream>
 
-void Backend::write_asm(std::string_view s)
+// A streambuffer that discards everything
+class BlackHoleBuffer : public std::streambuf
 {
-	if (this->asm_out != nullptr)
-	{
-		*(this->asm_out) << s;
-		this->asm_out->flush();
-	}
+public:
+	int overflow(int c) override { return c; }
+};
+
+// An ostream that discards everything
+class BlackHoleStream : public std::ostream
+{
+	BlackHoleBuffer buf;
+
+public:
+	BlackHoleStream() : std::ostream(&buf) {}
+};
+
+std::ostream &Backend::asm_out()
+{
+	static BlackHoleStream null_out = BlackHoleStream();
+
+	if (this->asm_out_ptr != nullptr)
+		return *this->asm_out_ptr;
+	else
+		return null_out;
 }
 
-void Backend::enable_asm_output(std::shared_ptr<std::ostream> out)
+void Backend::enable_asm_output(std::unique_ptr<std::ostream> out)
 {
-	this->asm_out = out;
+	this->asm_out_ptr = std::move(out);
 }

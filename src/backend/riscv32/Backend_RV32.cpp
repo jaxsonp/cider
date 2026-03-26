@@ -1,292 +1,171 @@
 #include "Backend_RV32.hpp"
 
 #include <format>
-#include <set>
-#include <unordered_map>
-#include <stdint.h>
-#include <array>
-#include <utility>
-#include <vector>
 
 #include "utils/logging.hpp"
 #include "utils/error.hpp"
 
-/* example prologue
-# Example: STACK_SIZE = 32
-addi sp, sp, -32      # 1. Allocate stack space (grows down)
-sw   ra, 28(sp)       # 2. Save Return Address
-sw   s0, 24(sp)       # 3. Save caller's Frame Pointer
-addi s0, sp, 32       # 4. Set up new Frame Pointer (pointing to start of frame)
-
-# 5. Save any other callee-saved registers your function uses
-sw   s1, 20(sp)
-sw   s2, 16(sp)
-*/
-
-/* example epilogue
-# 1. Restore callee-saved registers
-lw   s2, 16(sp)
-lw   s1, 20(sp)
-
-# 2. Restore FP and RA
-lw   s0, 24(sp)
-lw   ra, 28(sp)
-
-# 3. Deallocate stack space
-addi sp, sp, 32
-
-# 4. Return to caller
-ret                   # Pseudo-op for jalr x0, 0(ra)
-*/
-
 namespace backends::rv32
 {
-	/*enum class InstructionFormat
+	const uint8_t REGISTER_zero = 0;
+	const uint8_t REGISTER_ra = 1;
+	const uint8_t REGISTER_sp = 2;
+	const uint8_t REGISTER_fp = 8;
+
+	void Backend_RV32::CodeBuffer::write_label(std::string_view symbol)
 	{
-		/// register-register operations
-		RType,
-		/// register-immediate operations
-		IType,
-		/// load and store
-		SType,
-		/// branch instructions
-		BType,
-		/// upper immediate operators
-		UType,
-		/// jump instructions
-		JType,
-	};*/
+		this->labels.insert({std::string(symbol), this->cur_offset()});
+	}
 
-	struct MachineInstruction
+	void Backend_RV32::CodeBuffer::write_addi(uint8_t dest, uint8_t src, std::variant<uint32_t, std::string_view> imm)
 	{
-		uint32_t data;
-		std::string asm_text = "";
-		// InstructionFormat fmt;
-	};
+		MachineInstruction instr;
+		instr.fmt = InstructionFormat::IType;
 
-	/// @brief Register slot, for use for register allocation
-	struct RegSlot
+		uint32_t imm_value = 0;
+		if (std::holds_alternative<uint32_t>(imm))
+			imm_value = std::get<std::uint32_t>(imm);
+		else
+			instr.replace_label = std::string(std::get<std::string_view>(imm));
+
+		instr.data = encode_i_type(0b0010011u, dest, 0x0u, src, imm_value);
+
+		this->machine_code_buf.push_back(instr);
+	}
+
+	void Backend_RV32::CodeBuffer::write_lw(uint8_t dest, uint8_t addr, uint32_t addr_offset)
 	{
-		/// Physical register
-		const uint8_t physical;
-		/// Human name
-		const char *name;
+		MachineInstruction instr;
+		instr.fmt = InstructionFormat::IType;
+		instr.data = encode_i_type(0b0000011u, dest, 0x2u, addr, addr_offset);
+	}
 
-		// const bool clobbered;
-
-		/// ID of the current virtual register living here (if there is one)
-		ir::VRegId resident;
-		/// Whether there is a virtual register loaded in this register
-		bool occupied = false;
-		/// Whether the virtual register here has been written to
-		bool dirty = false;
-		/// Whether this slot has ever been used (don't unset this)
-		bool used = false;
-
-		RegSlot(uint8_t physical, const char *name)
-			: physical(physical), name(name) {}
-	};
-
-	/// Wraps the logic/state required to lower a function from IR to machine code
-	///
-	/// Stack layout:
-	/// ```
-	/// | vregs... | saved regs... | saved fp | saved ra |
-	/// ^ sp                                             ^ fp
-	/// <-- lower addresses      higher addresses -->
-	/// <-- stack grows this way
-	/// ```
-	/// virtual registers will be at: `sp - 4 * vreg_index`
-	///
-	/// Register allocation strategy:
-	/// Local allocation - Per basic-block, assign and track vregs in registers, spill to stack as needed or at end of bb.
-	/// Currently only uses caller saved registers first.
-	class FunctionHandler
+	void Backend_RV32::CodeBuffer::write_sw(uint8_t addr, uint32_t addr_offset, uint8_t src)
 	{
-		ir::Function *fn;
+		MachineInstruction instr;
+		instr.fmt = InstructionFormat::SType;
+		instr.data = encode_s_type(0b0100011u, 0x2u, addr, src, addr_offset);
+		this->machine_code_buf.push_back(instr);
+	}
 
-		std::vector<MachineInstruction> prologue;
-		std::vector<MachineInstruction> body;
-		std::vector<MachineInstruction> epilogue;
+	void Backend_RV32::CodeBuffer::write_jal(uint8_t dest, std::variant<uint32_t, std::string_view> imm)
+	{
+		MachineInstruction instr;
+		instr.fmt = InstructionFormat::JType;
 
-		std::string prologue_asm;
-		std::string body_asm;
-		std::string epilogue_asm;
+		uint32_t imm_value = 0;
+		if (std::holds_alternative<uint32_t>(imm))
+			imm_value = std::get<std::uint32_t>(imm);
+		else
+			instr.replace_label = std::string(std::get<std::string_view>(imm));
 
-		/// Required space in the stack for this frame. Starts at 8 for return address and saved frame ptr.
-		size_t stack_size = 8;
+		instr.data = encode_j_type(0b1101111u, dest, imm_value);
 
-		/// Register assignment states, in order of priority (heuristic = caller saved first (is this good? idk))
-		std::array<RegSlot, 15> registers = {
-			RegSlot(5, "t0"),
-			RegSlot(6, "t1"),
-			RegSlot(7, "t2"),
-			RegSlot(28, "t3"),
-			RegSlot(29, "t4"),
-			RegSlot(30, "t5"),
-			RegSlot(31, "t6"),
-			RegSlot(10, "a0"),
-			RegSlot(11, "a1"),
-			RegSlot(12, "a2"),
-			RegSlot(13, "a3"),
-			RegSlot(14, "a4"),
-			RegSlot(15, "a5"),
-			RegSlot(16, "a6"),
-			RegSlot(17, "a7"),
-			// TODO use s registers
-		};
+		this->machine_code_buf.push_back(instr);
+	}
 
-		/// @brief Gets a physical register loaded with the value of a virtual register
-		/// @param vreg ID of vreg to put into a register
-		/// @return The physical register containing vreg
-		RegSlot *load_src_vreg(ir::VRegId vreg)
+	void Backend_RV32::CodeBuffer::dump_to_bytes(std::vector<uint8_t> &bytes) const
+	{
+		bytes.reserve(4 * this->machine_code_buf.size());
+		for (const MachineInstruction &instr : this->machine_code_buf)
 		{
-			// check if this vreg is already loaded somewhere
-			for (RegSlot &slot : this->registers)
-			{
-				if (slot.occupied && slot.resident == vreg)
-					return &slot;
-			}
+			std::array<uint8_t, 4> instr_bytes = std::bit_cast<std::array<uint8_t, 4>>(instr.data);
+			bytes.insert(bytes.end(), instr_bytes.begin(), instr_bytes.end());
+		}
+	}
 
-			// load it
-			RegSlot *reg = this->get_empty_slot();
-			this->body_asm += std::format("\tlw   \t{}, {}(sp) # loading vreg {}", reg->name, vreg * -4, vreg);
-			reg->resident = vreg;
-			reg->occupied = true;
-			return reg;
+	Backend_RV32::RegSlot *Backend_RV32::load_src_vreg(CodeBuffer &code, ir::VRegId vreg)
+	{
+		// check if this vreg is already loaded somewhere
+		for (RegSlot &slot : this->registers)
+		{
+			if (slot.occupied && slot.resident == vreg)
+				return &slot;
 		}
 
-		/// @brief Gets a physical register to use as a destination of an operation, and marks it as dirty
-		/// @param vreg ID of vreg being written to
-		/// @return The destination register slot
-		RegSlot *load_dest_vreg(ir::VRegId vreg)
-		{
-			RegSlot *reg = this->get_empty_slot();
-			reg->resident = vreg;
-			reg->occupied = true;
-			reg->dirty = true;
-			return reg;
-		}
+		// load it
+		RegSlot *slot = this->get_empty_slot(code);
+		code.write_lw(slot->physical, REGISTER_fp, uint32_t(this->spilled_vreg_fp_offsets[vreg]));
+		slot->resident = vreg;
+		slot->occupied = true;
+		return slot;
+	}
 
-		// round robin register spilling
-		size_t next_to_spill = 0;
-
-		/// @brief Returns an unoccupied register slot by either finding already unoccupied slots, overwriting
-		/// non-dirty occupied slots, or spilling dirty slots in a round robin fashion (TODO improve this)
-		/// @return Pointer to the now vacant slot
-		RegSlot *get_empty_slot()
-		{
-			// first check for non-occupied registers
-			for (RegSlot &slot : this->registers)
-			{
-				if (!slot.occupied)
-				{
-					slot.used = true;
-					return &slot;
-				}
-			}
-
-			// then check for non-dirty slots and evict
-			for (RegSlot &slot : this->registers)
-			{
-				if (!slot.dirty)
-				{
-					slot.occupied = false;
-					slot.used = true;
-					return &slot;
-				}
-			}
-
-			// worst case: spill register
-			size_t victim_index = this->next_to_spill;
-			this->next_to_spill = (this->next_to_spill + 1) % this->registers.size();
-
-			RegSlot *victim = &this->registers.at(victim_index);
-
-			this->body_asm += std::format("\tsw   \t{}, {}(sp) # storing vreg {}", victim->name, victim->resident * -4, victim->resident);
-
-			victim->occupied = false;
-			victim->dirty = true;
-			victim->used = true;
-			return victim;
-		};
-
-	public:
-		FunctionHandler(ir::Function *function)
-			: fn(function) {}
-
-		void lower_to(Object *obj, Backend_RV32 *backend)
-		{
-			log_vvv("Lowering function \"{}\"", fn->name);
-
-			// register this function in the object
-			obj->functions.emplace_back(fn->name);
-
-			// prefix traversal of body
-			std::set<ir::BBlockId> seen;
-			std::vector<ir::BasicBlock *> to_visit;
-			to_visit.push_back(fn->entry);
-			while (!to_visit.empty())
-			{
-				ir::BasicBlock *bb = to_visit.back();
-				to_visit.pop_back();
-
-				this->body_asm += std::format("__bb_{}:{}\n", bb->id, (bb->note.empty() ? "" : (" # " + bb->note)));
-
-				ir::Instruction *cur_instr = bb->start;
-				while (cur_instr != nullptr)
-				{
-					if (ir::instr::LoadImmInstruction *instr = dynamic_cast<ir::instr::LoadImmInstruction *>(cur_instr))
-					{
-						// checking if immediate can fit in 12 bytes
-						if (instr->value >= -2048 && instr->value <= 2047)
-						{
-							RegSlot *dest = this->load_dest_vreg(instr->dest);
-							this->body_asm += std::format("\taddi \t{}, zero, {} # load immediate\n", dest->name, instr->value);
-						}
-						else
-						{
-							// TODO
-							// LUI stuff
-							throw UnimplementedError("Cant do large integer immediates yet");
-						}
-					}
-					else if (ir::instr::ReturnInstruction *instr = dynamic_cast<ir::instr::ReturnInstruction *>(cur_instr))
-					{
-						if (instr->ret_value.has_value())
-						{
-							RegSlot *ret_value = this->load_src_vreg(instr->ret_value.value());
-							this->body_asm += std::format("\taddi \ta0, {}, 0 # return\n", ret_value->name);
-							// TODO proper offset
-							this->body_asm += std::format("\tjal  \tzero, <epilogue>\n", ret_value->name);
-						}
-					}
-					else
-					{
-						throw UnimplementedError("Uncaught instruction variant");
-					}
-
-					cur_instr = cur_instr->next;
-				}
-			}
-
-			// build prologue
-
-			// build epilogue
-
-			// finalize function
-			this->write_asm();
-		}
-	};
-
-	/*void Backend_RV32::lowerFunction(ir::Function *fn, Object *obj)
+	Backend_RV32::RegSlot *Backend_RV32::load_dest_vreg(CodeBuffer &code, ir::VRegId vreg)
 	{
+		RegSlot *reg = this->get_empty_slot(code);
+		reg->resident = vreg;
+		reg->occupied = true;
+		reg->dirty = true;
+		return reg;
+	}
 
-		// labels IN ORDER
-		std::unordered_map<std::string, size_t> local_labels;
-		std::unordered_map<ir::VRegId, uint32_t> vreg_offsets;
+	void Backend_RV32::spill_slot(CodeBuffer &code, RegSlot &slot)
+	{
+		int32_t fp_offset;
+		auto preexisting = this->spilled_vreg_fp_offsets.find(slot.resident);
+		if (preexisting != this->spilled_vreg_fp_offsets.end())
+		{
+			int32_t fp_offset = preexisting->second;
+		}
+		else
+		{
+			int32_t fp_offset = -4 * (this->spilled_vreg_fp_offsets.size() + 2);
+			this->spilled_vreg_fp_offsets.insert({slot.resident, fp_offset});
+		}
+		code.write_sw(REGISTER_fp, uint32_t(fp_offset), slot.physical);
+	}
+
+	Backend_RV32::RegSlot *Backend_RV32::get_empty_slot(CodeBuffer &code)
+	{
+		// first check for non-occupied registers
+		for (RegSlot &slot : this->registers)
+		{
+			if (!slot.occupied)
+				return &slot;
+		}
+
+		// then check for non-dirty slots and evict
+		for (RegSlot &slot : this->registers)
+		{
+			if (!slot.dirty)
+			{
+				slot.occupied = false;
+				return &slot;
+			}
+		}
+
+		// worst case: spill register
+		size_t victim_index = this->next_to_spill;
+		this->next_to_spill = (this->next_to_spill + 1) % this->registers.size();
+
+		RegSlot *victim = &this->registers.at(victim_index);
+
+		// code.write_asm(std::format("\tsw   \t{}, {}(sp) # storing vreg {}", victim->name, victim->resident * -4, victim->resident));
+		this->spill_slot(code, *victim);
+
+		victim->occupied = false;
+		victim->dirty = true;
+		return victim;
+	}
+
+	void Backend_RV32::lower_function(ir::Function *fn, Object *obj)
+	{
+		log_vvv("Lowering function \"{}\"", fn->name);
+
+		// resetting state
+		this->stack_size = 8; // for saved fp and ra
+		this->next_to_spill = 0;
+		this->spilled_vreg_fp_offsets.clear();
+
+		CodeBuffer prologue;
+		CodeBuffer body;
+		CodeBuffer epilogue;
+
+		// this->body_asm += std::format("\n__{}_body:\n", fn->name);
 
 		// prefix traversal of body
+		const std::string epilogue_label(std::format("__{}_epilogue", fn->name));
 		std::set<ir::BBlockId> seen;
 		std::vector<ir::BasicBlock *> to_visit;
 		to_visit.push_back(fn->entry);
@@ -295,34 +174,31 @@ namespace backends::rv32
 			ir::BasicBlock *bb = to_visit.back();
 			to_visit.pop_back();
 
-			this->asm_buffer += std::format("__bb_{}:{}\n", bb->id, (bb->note.empty() ? "" : (" # note: " + bb->note)));
+			// this->body_asm += std::format("__{}_bb{}:{}\n", fn->name, bb->id, (bb->note.empty() ? "" : (" # " + bb->note)));
+
+			// clearing register allocator slots
+			for (RegSlot &slot : this->registers)
+			{
+				slot.occupied = false;
+				slot.dirty = false;
+			}
 
 			ir::Instruction *cur_instr = bb->start;
 			while (cur_instr != nullptr)
 			{
 				if (ir::instr::LoadImmInstruction *instr = dynamic_cast<ir::instr::LoadImmInstruction *>(cur_instr))
 				{
-					// checking if immediate can fit in 12 bytes
-					if (instr->value >= -2048 && instr->value <= 2047)
-					{
-						RegSlot *dest = this->load_dest_vreg(instr->dest);
-						this->asm_buffer += std::format("\taddi\t{}, zero, {}\n", dest->name, instr->value);
-					}
-					else
-					{
-						// TODO
-						// LUI stuff
-						throw UnimplementedError("Cant do large integer immediates yet");
-					}
+					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
+					body.write_addi(dest->physical, 0, instr->value);
 				}
 				else if (ir::instr::ReturnInstruction *instr = dynamic_cast<ir::instr::ReturnInstruction *>(cur_instr))
 				{
 					if (instr->ret_value.has_value())
 					{
-						RegSlot *ret_value = this->load_src_vreg(instr->ret_value.value());
-						this->asm_buffer += std::format("\taddi\ta0, {}, 0\n", ret_value->name);
+						RegSlot *ret_value = this->load_src_vreg(body, instr->ret_value.value());
+						body.write_addi(REGISTER_ra, ret_value->physical, uint32_t(0));
 						// TODO proper offset
-						this->asm_buffer += std::format("\tjal \tzero, <epilogue>\n", ret_value->name);
+						body.write_jal(REGISTER_zero, epilogue_label);
 					}
 				}
 				else
@@ -332,33 +208,131 @@ namespace backends::rv32
 
 				cur_instr = cur_instr->next;
 			}
+
+			// spilling dirty registers
+			for (RegSlot &slot : this->registers)
+			{
+				if (slot.dirty)
+					this->spill_slot(body, slot);
+			}
 		}
-		std::vector<uint8_t> body_machine_code;
 
-		// emit function prologue ---------
-		this->write_asm(std::format("\n\n{0}:\n_{0}_prologue:\n", fn->name));
-		// TODO check if stack space overflows 12 bits
-		this->write_asm(std::format("\taddi\tsp, sp, {}\n", required_stack_space));
+		// build prologue -------------
 
-		// emit function body ---------
-		this->dump_machine_code_buffer(obj->text);
-		this->write_asm(std::format("\n_{}_body:\n", fn->name));
-		this->write_asm(this->dump_asm_buffer());
+		this->stack_size += (this->spilled_vreg_fp_offsets.size() * 4);
+		log_vvv("calculated stack size: {}", this->stack_size);
+		int32_t padded_stack_size = ((this->stack_size + 15) / 16) * 16;
+		log_vvv("padded stack size: {}", padded_stack_size);
 
-		// emit function epilogue ---------
-		this->write_asm(std::format("\n_{}_epilogue:\n", fn->name));
-	}*/
+		// allocate stack space
+		prologue.write_addi(REGISTER_sp, REGISTER_sp, uint32_t(-padded_stack_size));
+		// save return address
+		prologue.write_sw(REGISTER_sp, uint32_t(padded_stack_size - 4), REGISTER_ra);
+		// save caller frame pointer
+		prologue.write_sw(REGISTER_sp, uint32_t(padded_stack_size - 8), REGISTER_fp);
+		// set new frame pointer
+		prologue.write_addi(REGISTER_fp, REGISTER_sp, uint32_t(padded_stack_size));
 
-	Object *Backend_RV32::lowerIr(IrObject *ir)
+		// build epilogue -------------
+
+		// restore caller frame pointer
+		epilogue.write_lw(REGISTER_fp, uint32_t(padded_stack_size - 8), REGISTER_sp);
+		// restore return address
+		epilogue.write_lw(REGISTER_ra, uint32_t(padded_stack_size - 4), REGISTER_sp);
+
+		// finalize function -------------
+
+		prologue.dump_to_bytes(obj->text);
+		body.dump_to_bytes(obj->text);
+		epilogue.dump_to_bytes(obj->text);
+
+		// register this function
+		obj->functions.emplace_back(fn->name);
+	}
+
+	Object *Backend_RV32::lower_ir(IrObject *ir)
 	{
 		log_vv("Starting lowering to RV32");
 		Object *obj = new Object();
 
 		for (auto &[name, fn] : ir->functions)
 		{
-			FunctionHandler(fn).lower_to(obj, &this);
+			this->lower_function(fn, obj);
 		}
 
 		return obj;
 	}
+
+	constexpr uint32_t bitmask_lower(size_t n)
+	{
+		if (n == 0)
+			return 0;
+		else if (n >= 32)
+			return ~uint32_t(0); // all bits set
+		else
+			return (uint32_t(1) << n) - 1;
+	}
+
+	uint32_t encode_i_type(uint32_t opcode, uint32_t rd, uint32_t funct3, uint32_t rs1, uint32_t imm)
+	{
+		uint32_t instr = opcode & bitmask_lower(7);
+		instr |= (rd & bitmask_lower(5)) << 7;
+		instr |= (funct3 & bitmask_lower(3)) << 12;
+		instr |= (rs1 & bitmask_lower(5)) << 15;
+		instr |= (imm & bitmask_lower(12)) << 20;
+		return instr;
+	}
+
+	uint32_t encode_s_type(uint32_t opcode, uint32_t funct3, uint32_t rs1, uint32_t rs2, uint32_t imm)
+	{
+		uint32_t imm_4_0 = imm & bitmask_lower(5);
+		uint32_t imm_11_5 = (imm >> 5) & bitmask_lower(7);
+
+		uint32_t instr = opcode & bitmask_lower(7);
+		instr |= imm_4_0 << 7;
+		instr |= (funct3 & bitmask_lower(3)) << 12;
+		instr |= (rs1 & bitmask_lower(5)) << 15;
+		instr |= (rs2 & bitmask_lower(5)) << 15;
+		instr |= imm_11_5 << 25;
+		return instr;
+	}
+
+	uint32_t encode_j_type(uint32_t opcode, uint32_t rd, uint32_t imm)
+	{
+		// scrambling immediate
+		uint32_t imm_19_12 = (imm >> 12) & bitmask_lower(8);
+		uint32_t imm_11 = (imm >> 11) & 0b1;
+		uint32_t imm_10_1 = (imm >> 1) & bitmask_lower(10);
+		uint32_t imm_20 = (imm >> 20) & 0b1;
+
+		uint32_t inst = opcode & bitmask_lower(7);
+		inst |= (rd & bitmask_lower(5)) << 7;
+		inst |= imm_19_12 << 12;
+		inst |= imm_11 << 20;
+		inst |= imm_10_1 << 21;
+		inst |= imm_20 << 31;
+
+		return inst;
+	}
+
+	/*uint32_t encode_b_type(uint32_t opcode, uint32_t funct3, uint32_t rs1, uint32_t rs2, int32_t imm)
+	{
+		uint32_t inst = opcode;
+		inst |= (funct3 << 12);
+		inst |= (rs1 << 15);
+		inst |= (rs2 << 20);
+
+		// scramble immediate
+		uint32_t b_12 = (imm >> 12) & 0x1;
+		uint32_t b_11 = (imm >> 11) & 0x1;
+		uint32_t b_10_5 = (imm >> 5) & 0x3F;
+		uint32_t b_4_1 = (imm >> 1) & 0xF;
+
+		inst |= (b_12 << 31);
+		inst |= (b_10_5 << 25);
+		inst |= (b_4_1 << 8);
+		inst |= (b_11 << 7);
+
+		return inst;
+	}*/
 }

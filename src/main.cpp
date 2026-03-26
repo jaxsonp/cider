@@ -119,10 +119,39 @@ void compile(const std::string &filename, CompileConfig &config)
 	if (config.asm_dump_filename.has_value())
 	{
 		log_vv("Opening file \"{}\" for writing", config.asm_dump_filename.value());
-		std::shared_ptr<std::ofstream> asm_dump_file = std::make_shared<std::ofstream>(config.asm_dump_filename.value());
+		std::unique_ptr<std::ofstream> asm_dump_file = std::make_unique<std::ofstream>(config.asm_dump_filename.value());
 		if (!asm_dump_file->is_open())
 			throw FileOpenError(std::format("Failed to open file \"{}\" for writing", filename));
-		backend->enable_asm_output(asm_dump_file);
+		backend->enable_asm_output(std::move(asm_dump_file));
 	}
-	Object *obj = backend->lowerIr(ir);
+	Object *obj = backend->lower_ir(ir);
+
+	// TEMP
+	log_v("Debug printing computed machine code");
+
+	std::ofstream hex_file("out.hex");
+	if (!hex_file.is_open())
+		throw FileOpenError(std::format("Failed to open file \"{}\" for writing", "out.hex"));
+
+	std::cout << "      24      16       8       0\n";
+	size_t i = 0;
+	std::vector<uint8_t> row;
+	while (i < obj->text.size())
+	{
+		row.push_back(obj->text.at(i));
+		if (row.size() == 4)
+		{
+			while (!row.empty())
+			{
+				hex_file << std::format("{:02x}", row.back());
+				std::cout << std::format("{1}{0:08b}", row.back(), (row.size() % 2 == 0) ? "\033[0m" : "\033[90m");
+				row.pop_back();
+			}
+			std::cout << "\033[0m " << (i - 3) << "\n";
+			hex_file << "\n";
+		}
+		++i;
+	}
+	std::cout << std::endl;
+	hex_file.close();
 }

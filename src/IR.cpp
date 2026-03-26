@@ -20,7 +20,7 @@ namespace ir
 		ReturnInstruction::ReturnInstruction(VRegId _ret_value)
 			: TerminalInstruction(Op::Return), ret_value(_ret_value) {}
 
-		LoadImmInstruction::LoadImmInstruction(VRegId _dest, int32_t _value)
+		LoadImmInstruction::LoadImmInstruction(VRegId _dest, uint32_t _value)
 			: Instruction(Op::LoadImm), dest(_dest), value(_value) {}
 	}
 

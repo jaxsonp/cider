@@ -112,7 +112,7 @@ namespace ast
 
 	struct IntegerLiteralExpression : ExpressionNode
 	{
-		int32_t value;
+		uint32_t raw_value;
 		FrontendType type;
 
 		void check_semantics(SemanticAnalysisState state) const override;
