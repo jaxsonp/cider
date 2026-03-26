@@ -2,6 +2,10 @@
 
 ## TODOs
 
+Next:
+
+- Check code for stuff that doesn't need to be in headers
+
 Soon:
 
 - Negative literals (broken right now I think)
@@ -25,8 +29,12 @@ Eventually:
 - labelled code blocks (for early breaks)
 - turn of colored output (automatically if not tty perhaps?)
 
+Maybe one day:
+
+- soft floats
+
 futuer optimizations:
-- Better register allocator
+- Better register allocator (use callee saved first on busy functions?)
 - Optimize out LUI
   
 ## Notes for self
