@@ -5,73 +5,89 @@
 #include "utils/logging.hpp"
 #include "utils/error.hpp"
 
+// helpers
+
+constexpr uint32_t bitmask_lower(size_t n)
+{
+	if (n == 0)
+		return 0;
+	else if (n >= 32)
+		return ~uint32_t(0); // all bits set
+	else
+		return (uint32_t(1) << n) - 1;
+}
+
 namespace backends::rv32
 {
 	const uint8_t REGISTER_zero = 0;
 	const uint8_t REGISTER_ra = 1;
 	const uint8_t REGISTER_sp = 2;
 	const uint8_t REGISTER_fp = 8;
-
-	void Backend_RV32::CodeBuffer::write_label(std::string_view symbol)
-	{
-		this->labels.insert({std::string(symbol), this->cur_offset()});
-	}
-
-	void Backend_RV32::CodeBuffer::write_addi(uint8_t dest, uint8_t src, std::variant<uint32_t, std::string_view> imm)
-	{
-		MachineInstruction instr;
-		instr.fmt = InstructionFormat::IType;
-
-		uint32_t imm_value = 0;
-		if (std::holds_alternative<uint32_t>(imm))
-			imm_value = std::get<std::uint32_t>(imm);
-		else
-			instr.replace_label = std::string(std::get<std::string_view>(imm));
-
-		instr.data = encode_i_type(0b0010011u, dest, 0x0u, src, imm_value);
-
-		this->machine_code_buf.push_back(instr);
-	}
-
-	void Backend_RV32::CodeBuffer::write_lw(uint8_t dest, uint8_t addr, uint32_t addr_offset)
-	{
-		MachineInstruction instr;
-		instr.fmt = InstructionFormat::IType;
-		instr.data = encode_i_type(0b0000011u, dest, 0x2u, addr, addr_offset);
-	}
-
-	void Backend_RV32::CodeBuffer::write_sw(uint8_t addr, uint32_t addr_offset, uint8_t src)
-	{
-		MachineInstruction instr;
-		instr.fmt = InstructionFormat::SType;
-		instr.data = encode_s_type(0b0100011u, 0x2u, addr, src, addr_offset);
-		this->machine_code_buf.push_back(instr);
-	}
-
-	void Backend_RV32::CodeBuffer::write_jal(uint8_t dest, std::variant<uint32_t, std::string_view> imm)
-	{
-		MachineInstruction instr;
-		instr.fmt = InstructionFormat::JType;
-
-		uint32_t imm_value = 0;
-		if (std::holds_alternative<uint32_t>(imm))
-			imm_value = std::get<std::uint32_t>(imm);
-		else
-			instr.replace_label = std::string(std::get<std::string_view>(imm));
-
-		instr.data = encode_j_type(0b1101111u, dest, imm_value);
-
-		this->machine_code_buf.push_back(instr);
-	}
+	const uint8_t REGISTER_a0 = 10;
 
 	void Backend_RV32::CodeBuffer::dump_to_bytes(std::vector<uint8_t> &bytes) const
 	{
-		bytes.reserve(4 * this->machine_code_buf.size());
-		for (const MachineInstruction &instr : this->machine_code_buf)
+		bytes.reserve(4 * this->buf.size());
+		for (const MachineInstruction &instr : this->buf)
 		{
 			std::array<uint8_t, 4> instr_bytes = std::bit_cast<std::array<uint8_t, 4>>(instr.data);
 			bytes.insert(bytes.end(), instr_bytes.begin(), instr_bytes.end());
 		}
+	}
+
+	size_t Backend_RV32::CodeBuffer::write_addi(uint8_t dest, uint8_t src, uint32_t imm)
+	{
+		size_t pos = this->buf.size();
+		this->buf.emplace_back<MachineInstruction>({
+			.data = encode_i_type(0b0010011u, dest, 0u, src, imm),
+			.fmt = InstructionFormat::IType,
+		});
+		return pos;
+	}
+
+	size_t Backend_RV32::CodeBuffer::write_lw(uint8_t dest, uint8_t addr, uint32_t imm)
+	{
+		size_t pos = this->buf.size();
+		this->buf.emplace_back<MachineInstruction>({
+			.data = encode_i_type(0b0000011u, dest, 2u, addr, imm),
+			.fmt = InstructionFormat::IType,
+		});
+		return pos;
+	}
+
+	size_t Backend_RV32::CodeBuffer::write_sw(uint8_t dest_addr, uint8_t src, uint32_t addr_offset)
+	{
+		size_t pos = this->buf.size();
+		this->buf.emplace_back<MachineInstruction>({
+			.data = encode_s_type(0b0100011u, 2u, dest_addr, src, addr_offset),
+			.fmt = InstructionFormat::SType,
+		});
+		return pos;
+	}
+
+	size_t Backend_RV32::CodeBuffer::write_jal(uint8_t dest, uint32_t imm)
+	{
+		size_t pos = this->buf.size();
+		this->buf.emplace_back<MachineInstruction>({
+			.data = encode_j_type(0b1101111u, dest, imm),
+			.fmt = InstructionFormat::JType,
+		});
+		return pos;
+	}
+
+	size_t Backend_RV32::CodeBuffer::write_jalr(uint8_t dest, uint8_t addr, uint32_t imm)
+	{
+		size_t pos = this->buf.size();
+		this->buf.emplace_back<MachineInstruction>({
+			.data = encode_i_type(0b1100111u, dest, 0u, addr, imm),
+			.fmt = InstructionFormat::IType,
+		});
+		return pos;
+	}
+
+	size_t Backend_RV32::CodeBuffer::write_nop()
+	{
+		return this->write_addi(REGISTER_zero, REGISTER_zero, 0u);
 	}
 
 	Backend_RV32::RegSlot *Backend_RV32::load_src_vreg(CodeBuffer &code, ir::VRegId vreg)
@@ -83,7 +99,7 @@ namespace backends::rv32
 				return &slot;
 		}
 
-		// load it
+		// load it from stack
 		RegSlot *slot = this->get_empty_slot(code);
 		code.write_lw(slot->physical, REGISTER_fp, uint32_t(this->spilled_vreg_fp_offsets[vreg]));
 		slot->resident = vreg;
@@ -106,14 +122,14 @@ namespace backends::rv32
 		auto preexisting = this->spilled_vreg_fp_offsets.find(slot.resident);
 		if (preexisting != this->spilled_vreg_fp_offsets.end())
 		{
-			int32_t fp_offset = preexisting->second;
+			fp_offset = preexisting->second;
 		}
 		else
 		{
-			int32_t fp_offset = -4 * (this->spilled_vreg_fp_offsets.size() + 2);
+			fp_offset = -4 * (this->spilled_vreg_fp_offsets.size() + 4);
 			this->spilled_vreg_fp_offsets.insert({slot.resident, fp_offset});
 		}
-		code.write_sw(REGISTER_fp, uint32_t(fp_offset), slot.physical);
+		code.write_sw(REGISTER_fp, slot.physical, uint32_t(fp_offset));
 	}
 
 	Backend_RV32::RegSlot *Backend_RV32::get_empty_slot(CodeBuffer &code)
@@ -136,16 +152,15 @@ namespace backends::rv32
 		}
 
 		// worst case: spill register
+
+		// choose a victim >:)
 		size_t victim_index = this->next_to_spill;
 		this->next_to_spill = (this->next_to_spill + 1) % this->registers.size();
-
 		RegSlot *victim = &this->registers.at(victim_index);
 
-		// code.write_asm(std::format("\tsw   \t{}, {}(sp) # storing vreg {}", victim->name, victim->resident * -4, victim->resident));
 		this->spill_slot(code, *victim);
 
 		victim->occupied = false;
-		victim->dirty = true;
 		return victim;
 	}
 
@@ -162,19 +177,32 @@ namespace backends::rv32
 		CodeBuffer body;
 		CodeBuffer epilogue;
 
-		// this->body_asm += std::format("\n__{}_body:\n", fn->name);
+		/// Remember offsets of basic blocks from the beginning of body
+		std::unordered_map<ir::BBlockId, size_t> body_bb_offsets;
+
+		/// Tasklist of instructions that need their immediates to be retrofitted with a basic block offset
+		std::vector<std::tuple<size_t, ir::BBlockId>> bb_backpatch_list;
+
+		/// Tasklist of instructions that need their immediates to be retrofitted with the epilogue's offset
+		std::vector<size_t> epilogue_backpatch_list;
 
 		// prefix traversal of body
-		const std::string epilogue_label(std::format("__{}_epilogue", fn->name));
 		std::set<ir::BBlockId> seen;
 		std::vector<ir::BasicBlock *> to_visit;
 		to_visit.push_back(fn->entry);
+		log_vvv("Building function body");
 		while (!to_visit.empty())
 		{
 			ir::BasicBlock *bb = to_visit.back();
 			to_visit.pop_back();
 
-			// this->body_asm += std::format("__{}_bb{}:{}\n", fn->name, bb->id, (bb->note.empty() ? "" : (" # " + bb->note)));
+			// skip basic blocks we have already emitted
+			if (seen.contains(bb->id))
+				continue;
+			seen.insert(bb->id);
+
+			// remember where this bb is
+			body_bb_offsets.insert({bb->id, body.cur_offset()});
 
 			// clearing register allocator slots
 			for (RegSlot &slot : this->registers)
@@ -188,18 +216,20 @@ namespace backends::rv32
 			{
 				if (ir::instr::LoadImmInstruction *instr = dynamic_cast<ir::instr::LoadImmInstruction *>(cur_instr))
 				{
+					// load immmediate
 					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
 					body.write_addi(dest->physical, 0, instr->value);
 				}
 				else if (ir::instr::ReturnInstruction *instr = dynamic_cast<ir::instr::ReturnInstruction *>(cur_instr))
 				{
+					// return
 					if (instr->ret_value.has_value())
 					{
 						RegSlot *ret_value = this->load_src_vreg(body, instr->ret_value.value());
-						body.write_addi(REGISTER_ra, ret_value->physical, uint32_t(0));
-						// TODO proper offset
-						body.write_jal(REGISTER_zero, epilogue_label);
+						body.write_addi(REGISTER_a0, ret_value->physical, uint32_t(0));
 					}
+					size_t pos = body.write_jal(REGISTER_zero, 0u);
+					epilogue_backpatch_list.push_back(pos);
 				}
 				else
 				{
@@ -217,6 +247,85 @@ namespace backends::rv32
 			}
 		}
 
+		// TEMP for debugging
+		body.write_nop();
+		body.write_nop();
+		body.write_nop();
+		body.write_nop();
+		body.write_nop();
+		body.write_nop();
+
+		// now go back and fill in basic block offsets for instructions that need it
+		log_vvv("Backpatching offsets in body");
+
+		// TODO basic block replacements
+
+		size_t epilogue_offset = body.cur_offset();
+		for (size_t instr_pos : epilogue_backpatch_list)
+		{
+			MachineInstruction &instr = body.buf.at(instr_pos);
+
+			uint32_t rel_offset = 4 * (epilogue_offset - instr_pos); // always positive
+
+			// backpatching the epilogue's relative offset into the isntruction
+			switch (instr.fmt)
+			{
+			case InstructionFormat::IType:
+			{
+				// imm[11:0] is at [31:20]
+				uint32_t imm_11_0 = rel_offset & bitmask_lower(12);
+
+				instr.data &= bitmask_lower(20);
+				instr.data |= imm_11_0 << 20;
+				break;
+			}
+			case InstructionFormat::SType:
+			{
+				// imm[11:5] is at [31:25], imm[4:0] is at [11:7]
+				uint32_t imm_11_5 = (rel_offset >> 5) & bitmask_lower(7);
+				uint32_t imm_4_0 = rel_offset & bitmask_lower(5);
+
+				instr.data &= 0b00000001111111111111000001111111u;
+				instr.data |= imm_11_5 << 25;
+				instr.data |= imm_4_0 << 7;
+				break;
+			}
+			case InstructionFormat::BType:
+			{
+				throw UnimplementedError("TODO B-type instructions");
+				break;
+			}
+			case InstructionFormat::UType:
+			{
+				throw UnimplementedError("TODO U-type instructions");
+				break;
+			}
+			case InstructionFormat::JType:
+			{
+				/// immediate is crazy scrambled, rtfm
+				uint32_t imm_20 = (rel_offset >> 20) & 0b1;
+				uint32_t imm_19_12 = (rel_offset >> 12) & bitmask_lower(8);
+				uint32_t imm_11 = (rel_offset >> 11) & 0b1;
+				uint32_t imm_10_1 = (rel_offset >> 1) & bitmask_lower(10);
+
+				instr.data &= bitmask_lower(12);
+				instr.data |= imm_19_12 << 12;
+				instr.data |= imm_11 << 20;
+				instr.data |= imm_10_1 << 21;
+				instr.data |= imm_20 << 31;
+				break;
+			}
+			case InstructionFormat::RType:
+			{
+				throw InternalError("Cannot backpatch R-type instruction");
+			}
+			}
+
+			// TODO handle large immediates
+		}
+
+		log_vvv("Building prologue and epilogue");
+
 		// build prologue -------------
 
 		this->stack_size += (this->spilled_vreg_fp_offsets.size() * 4);
@@ -227,20 +336,26 @@ namespace backends::rv32
 		// allocate stack space
 		prologue.write_addi(REGISTER_sp, REGISTER_sp, uint32_t(-padded_stack_size));
 		// save return address
-		prologue.write_sw(REGISTER_sp, uint32_t(padded_stack_size - 4), REGISTER_ra);
+		prologue.write_sw(REGISTER_sp, REGISTER_ra, uint32_t(padded_stack_size - 4));
 		// save caller frame pointer
-		prologue.write_sw(REGISTER_sp, uint32_t(padded_stack_size - 8), REGISTER_fp);
+		prologue.write_sw(REGISTER_sp, REGISTER_fp, uint32_t(padded_stack_size - 8));
 		// set new frame pointer
 		prologue.write_addi(REGISTER_fp, REGISTER_sp, uint32_t(padded_stack_size));
 
 		// build epilogue -------------
 
+		// TEMP for debugging
+		epilogue.write_nop();
+		// restore stack pointer/deallocate stack space
+		epilogue.write_addi(REGISTER_sp, REGISTER_fp, 0u);
 		// restore caller frame pointer
-		epilogue.write_lw(REGISTER_fp, uint32_t(padded_stack_size - 8), REGISTER_sp);
+		epilogue.write_lw(REGISTER_fp, REGISTER_sp, uint32_t(-8));
 		// restore return address
-		epilogue.write_lw(REGISTER_ra, uint32_t(padded_stack_size - 4), REGISTER_sp);
+		epilogue.write_lw(REGISTER_ra, REGISTER_sp, uint32_t(-4));
+		// return
+		epilogue.write_jalr(REGISTER_zero, REGISTER_ra, 0u);
 
-		// finalize function -------------
+		// finalize -------------
 
 		prologue.dump_to_bytes(obj->text);
 		body.dump_to_bytes(obj->text);
@@ -248,6 +363,8 @@ namespace backends::rv32
 
 		// register this function
 		obj->functions.emplace_back(fn->name);
+
+		log_vvv("Function \"{}\" done, object is now {} bytes", fn->name, obj->text.size());
 	}
 
 	Object *Backend_RV32::lower_ir(IrObject *ir)
@@ -261,16 +378,6 @@ namespace backends::rv32
 		}
 
 		return obj;
-	}
-
-	constexpr uint32_t bitmask_lower(size_t n)
-	{
-		if (n == 0)
-			return 0;
-		else if (n >= 32)
-			return ~uint32_t(0); // all bits set
-		else
-			return (uint32_t(1) << n) - 1;
 	}
 
 	uint32_t encode_i_type(uint32_t opcode, uint32_t rd, uint32_t funct3, uint32_t rs1, uint32_t imm)
@@ -292,7 +399,7 @@ namespace backends::rv32
 		instr |= imm_4_0 << 7;
 		instr |= (funct3 & bitmask_lower(3)) << 12;
 		instr |= (rs1 & bitmask_lower(5)) << 15;
-		instr |= (rs2 & bitmask_lower(5)) << 15;
+		instr |= (rs2 & bitmask_lower(5)) << 20;
 		instr |= imm_11_5 << 25;
 		return instr;
 	}
@@ -300,9 +407,9 @@ namespace backends::rv32
 	uint32_t encode_j_type(uint32_t opcode, uint32_t rd, uint32_t imm)
 	{
 		// scrambling immediate
-		uint32_t imm_19_12 = (imm >> 12) & bitmask_lower(8);
-		uint32_t imm_11 = (imm >> 11) & 0b1;
 		uint32_t imm_10_1 = (imm >> 1) & bitmask_lower(10);
+		uint32_t imm_11 = (imm >> 11) & 0b1;
+		uint32_t imm_19_12 = (imm >> 12) & bitmask_lower(8);
 		uint32_t imm_20 = (imm >> 20) & 0b1;
 
 		uint32_t inst = opcode & bitmask_lower(7);

@@ -19,16 +19,16 @@ namespace backends::rv32
 	///
 	/// Stack layout:
 	/// ```
-	/// | vregs... | saved regs... | saved fp | saved ra |
-	/// ^ sp                                             ^ fp
+	/// | vregs... | saved fp | saved ra |
+	/// ^ sp                             ^ fp
 	/// <-- lower addresses      higher addresses -->
 	/// <-- stack grows this way
 	/// ```
-	/// vregs will be at fp - (4 * (spill number + 2))
+	/// vregs will be at fp - (4 * (spill number + 3))
 	///
 	/// Register allocation strategy:
 	/// Local allocation - Per basic-block, assign and track vregs in registers, spill to stack as needed or at end of bb.
-	/// Currently only uses caller saved registers first.
+	/// Currently only uses caller saved registers
 	class Backend_RV32 : public Backend
 	{
 		/// @brief Register slot, for use for register allocation
@@ -68,57 +68,37 @@ namespace backends::rv32
 
 		struct MachineInstruction
 		{
-			/*enum class ReplaceProtocol
-			{
-				/// No replacement needed
-				None,
-				/// 12 low bits of immediate
-				ITypeImm,
-				/// 12 low bits of immediate
-				STypeImm,
-				/// 13 low bits of immediate (scrambled as hell)
-				BTypeImm,
-				/// 20 upper bits of immediate
-				UTypeImm,
-				/// 21 low bits of immediate (also scrambled as hell)
-				JTypeImm,
-			};*/
-
 			uint32_t data;
 			InstructionFormat fmt;
-
-			/// Symbol that needs replacement
-			std::string replace_label = "";
 		};
 
 		/// @brief Buffer for emission functions to write to
-		class CodeBuffer
+		struct CodeBuffer
 		{
-			std::vector<MachineInstruction> machine_code_buf;
-			// std::string assembly_buf;
-			std::unordered_map<std::string, size_t> labels;
+			std::vector<MachineInstruction> buf;
 
-			size_t cur_offset() const { return this->machine_code_buf.size(); }
-
-		public:
-			const std::vector<MachineInstruction> &get_machine_code() const { return this->machine_code_buf; }
-
-			void write_label(std::string_view symbol);
-
-			/// add immediate
-			void write_addi(uint8_t dest, uint8_t src, std::variant<uint32_t, std::string_view> imm);
-
-			/// load word
-			void write_lw(uint8_t dest, uint8_t addr, uint32_t addr_offset);
-
-			/// store word
-			void write_sw(uint8_t addr, uint32_t addr_offset, uint8_t src);
-
-			/// jump and link
-			void write_jal(uint8_t dest, std::variant<uint32_t, std::string_view> imm);
+			size_t cur_offset() const { return this->buf.size(); }
 
 			/// Copy the contents of this buffer as bytes into a byte vector
 			void dump_to_bytes(std::vector<uint8_t> &bytes) const;
+
+			/// push new addi (add immediate) instruction, return its position
+			size_t write_addi(uint8_t dest, uint8_t src, uint32_t imm);
+
+			/// push new lw (load word) instruction, return its position
+			size_t write_lw(uint8_t dest, uint8_t addr, uint32_t addr_offset);
+
+			/// push new sw (store word) instruction, return its position
+			size_t write_sw(uint8_t dest_addr, uint8_t src, uint32_t addr_offset);
+
+			/// push new jal (jump and link) instruction, return its position
+			size_t write_jal(uint8_t dest, uint32_t imm);
+
+			/// push new jalr (jump and link register) instruction, return its position
+			size_t write_jalr(uint8_t dest, uint8_t addr, uint32_t addr_offset);
+
+			/// push new nop instruction
+			size_t write_nop();
 		};
 
 		/// Required space in the stack for this frame. Starts at 8 for return address and saved frame ptr.
@@ -144,7 +124,7 @@ namespace backends::rv32
 			// TODO use s registers
 		};
 
-		/// Map of vregs that have been spilled to the offset from frame pointer that they now live (should be negative)
+		/// Map of: spilt vregs -> offset from frame pointer that they now live (should be negative)
 		std::unordered_map<ir::VRegId, int32_t> spilled_vreg_fp_offsets;
 
 		/// @brief Gets a physical register loaded with the value of a virtual register

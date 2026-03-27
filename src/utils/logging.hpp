@@ -50,3 +50,9 @@ inline void log_vvv(std::format_string<Args...> msg_fmt, Args &&...msg_args)
 {
 	log(3, msg_fmt, std::forward<Args>(msg_args)...);
 }
+
+template <typename... Args>
+inline void log_vvvv(std::format_string<Args...> msg_fmt, Args &&...msg_args)
+{
+	log(4, msg_fmt, std::forward<Args>(msg_args)...);
+}
