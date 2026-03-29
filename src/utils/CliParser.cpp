@@ -11,7 +11,7 @@
 struct CliParser::FlagSpec::Impl
 {
 	std::string long_name;
-	std::string description;
+	std::string desc;
 	std::optional<char> short_name;
 	bool allow_multi = false;
 
@@ -22,7 +22,7 @@ struct CliParser::FlagSpec::Impl
 struct CliParser::FlagArgSpec::Impl
 {
 	std::string long_name;
-	std::string description;
+	std::string desc;
 	std::optional<char> short_name;
 	bool is_required = false;
 	std::optional<std::string> default_val;
@@ -34,7 +34,7 @@ struct CliParser::FlagArgSpec::Impl
 struct CliParser::PositionalSpec::Impl
 {
 	std::string meta_name;
-	std::string description;
+	std::string desc;
 	bool is_required = false;
 	std::optional<std::string> default_val;
 
@@ -45,7 +45,7 @@ struct CliParser::PositionalSpec::Impl
 struct CliParser::Impl
 {
 	std::string program_name;
-	std::string description;
+	std::string desc;
 
 	// specs stored as unique_ptr so addresses stay stable
 	std::vector<std::unique_ptr<FlagSpec>> flags;
@@ -86,20 +86,20 @@ struct CliParser::Impl
 	}
 };
 
-CliParser::CliParser(std::string program_name, std::string description)
+CliParser::CliParser(std::string program_name, std::string desc)
 	: impl_(std::make_unique<Impl>())
 {
 	this->impl_->program_name = std::move(program_name);
-	this->impl_->description = std::move(description);
+	this->impl_->desc = std::move(desc);
 }
 
 CliParser::~CliParser() = default;
 
-CliParser::FlagSpec &CliParser::add_flag(std::string long_name, std::string description)
+CliParser::FlagSpec &CliParser::add_flag(std::string long_name, std::string desc)
 {
 	auto inner = std::make_unique<FlagSpec::Impl>();
 	inner->long_name = std::move(long_name);
-	inner->description = std::move(description);
+	inner->desc = std::move(desc);
 
 	auto spec = std::unique_ptr<FlagSpec>(new FlagSpec(std::move(inner)));
 	auto &ref = *spec;
@@ -107,11 +107,11 @@ CliParser::FlagSpec &CliParser::add_flag(std::string long_name, std::string desc
 	return ref;
 }
 
-CliParser::FlagArgSpec &CliParser::add_flag_arg(std::string long_name, std::string description)
+CliParser::FlagArgSpec &CliParser::add_flag_arg(std::string long_name, std::string desc)
 {
 	auto inner = std::make_unique<FlagArgSpec::Impl>();
 	inner->long_name = std::move(long_name);
-	inner->description = std::move(description);
+	inner->desc = std::move(desc);
 
 	auto spec = std::unique_ptr<FlagArgSpec>(new FlagArgSpec(std::move(inner)));
 	auto &ref = *spec;
@@ -119,11 +119,11 @@ CliParser::FlagArgSpec &CliParser::add_flag_arg(std::string long_name, std::stri
 	return ref;
 }
 
-CliParser::PositionalSpec &CliParser::add_positional(std::string meta_name, std::string description)
+CliParser::PositionalSpec &CliParser::add_positional(std::string meta_name, std::string desc)
 {
 	auto inner = std::make_unique<PositionalSpec::Impl>();
 	inner->meta_name = std::move(meta_name);
-	inner->description = std::move(description);
+	inner->desc = std::move(desc);
 
 	auto spec = std::unique_ptr<PositionalSpec>(new PositionalSpec(std::move(inner)));
 	auto &ref = *spec;
@@ -136,7 +136,7 @@ void CliParser::add_help_flag(std::optional<int> exit_code)
 	auto inner = std::make_unique<FlagSpec::Impl>();
 	inner->long_name = "help";
 	inner->short_name = 'h';
-	inner->description = "Show this help text";
+	inner->desc = "Show this help text";
 
 	auto spec = std::unique_ptr<FlagSpec>(new FlagSpec(std::move(inner)));
 	this->impl_->help_flag_spec = spec.get();
@@ -325,14 +325,12 @@ std::string CliParser::help_text() const
 	for (auto &pos : this->impl_->positionals)
 	{
 		auto *p = pos->impl_.get();
-		out += p->is_required
-				   ? std::format(" <{}>", p->meta_name)
-				   : std::format(" [{}]", p->meta_name);
+		out += p->is_required ? std::format(" <{}>", p->meta_name) : std::format(" [{}]", p->meta_name);
 	}
 	out += '\n';
 
-	if (!this->impl_->description.empty())
-		out += '\n' + this->impl_->description + '\n';
+	if (!this->impl_->desc.empty())
+		out += '\n' + this->impl_->desc + '\n';
 
 	auto short_str = [](std::optional<char> s) -> std::string
 	{
@@ -346,11 +344,7 @@ std::string CliParser::help_text() const
 		for (auto &fs : this->impl_->flags)
 		{
 			auto *p = fs->impl_.get();
-			out += std::format("  {}--{:<20} {}{}\n",
-							   short_str(p->short_name),
-							   p->long_name,
-							   p->description,
-							   p->allow_multi ? " (repeatable)" : "");
+			out += std::format("  {}--{:<20} {}{}\n", short_str(p->short_name), p->long_name, p->desc, p->allow_multi ? " (repeatable)" : "");
 		}
 	}
 
@@ -362,12 +356,12 @@ std::string CliParser::help_text() const
 		{
 			auto *p = fa->impl_.get();
 			std::string lhs = std::format("--{} <{}>", p->long_name, p->long_name);
-			std::string rhs = p->description;
+			std::string rhs = p->desc;
 			if (p->is_required)
 				rhs += " (required)";
 			if (p->default_val)
 				rhs += std::format(" [default: {}]", *p->default_val);
-			out += std::format("  {}  {:<24} {}\n", short_str(p->short_name), lhs, rhs);
+			out += std::format("  {}{:<22} {}\n", short_str(p->short_name), lhs, rhs);
 		}
 	}
 
@@ -378,7 +372,7 @@ std::string CliParser::help_text() const
 		for (auto &pos : this->impl_->positionals)
 		{
 			auto *p = pos->impl_.get();
-			std::string rhs = p->description;
+			std::string rhs = p->desc;
 			if (p->is_required)
 				rhs += " (required)";
 			if (p->default_val)

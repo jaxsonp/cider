@@ -1,13 +1,12 @@
 #pragma once
 
+#include <stdint.h>
 #include <istream>
-#include <variant>
 #include <vector>
 #include <optional>
 #include <unordered_map>
 #include <memory>
 #include <string>
-#include <stdint.h>
 
 #include "Lexer.hpp"
 #include "IR.hpp"
@@ -137,23 +136,6 @@ namespace ast
 		inline FrontendType return_type() const;
 	};
 
-	/*struct Block : Node
-	{
-		std::vector<std::unique_ptr<StatementNode>> statements;
-		std::unique_ptr<ExpressionNode> expr;
-		std::shared_ptr<SymbolTable> symbols;
-		bool is_function_body = false;
-
-		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
-		/// @brief Leaves writer at the end of this block's basic block
-		void emitIr(IrWriter &writer) const override;
-
-		static std::optional<std::unique_ptr<Block>> try_parse(Lexer &lexer);
-
-		Block();
-	};*/
-
 	struct ArgDefinition : Node
 	{
 		FrontendType type;
@@ -201,7 +183,7 @@ public:
 	AST(std::istream &input);
 
 	void debug_print() const;
-	IrObject *emitIr() const;
+	IrObject emitIr() const;
 
 	// no need to delete symbol tables here, they are owned and will be deleted by AST nodes
 	~AST() = default;

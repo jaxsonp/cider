@@ -29,30 +29,14 @@ namespace ir
 	{
 		this->entry = new BasicBlock(this->name + " start");
 	}
-
-	/*Value Value::new_vreg(VRegId id, Type t)
-	{
-		Value v;
-		v.type = t;
-		v.data.vreg_id = id;
-		return v;
-	}
-	Value Value::new_immediate(int32_t val)
-	{
-		Value v;
-		v.type = Type::i32();
-		v.data.imm_val = val;
-		return v;
-	}*/
 }
 
-IrWriter::IrWriter()
-	: obj(new IrObject()) {}
+IrWriter::IrWriter() = default;
 
 void IrWriter::new_function(const std::string &name)
 {
 	this->cur_function = new ir::Function(name);
-	this->obj->functions.insert({name, this->cur_function});
+	this->obj.functions.insert({name, this->cur_function});
 
 	this->cur_bblock = this->cur_function->entry;
 

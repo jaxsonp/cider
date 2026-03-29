@@ -56,7 +56,7 @@ void AST::debug_print() const
 	}
 }
 
-IrObject *AST::emitIr() const
+IrObject AST::emitIr() const
 {
 	IrWriter writer;
 

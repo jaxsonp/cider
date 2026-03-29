@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 #include <unordered_map>
 #include <optional>
@@ -199,7 +200,7 @@ class IrWriter
 	/// @brief A stack of vreg maps, mapping names to assigned virtual registers
 	std::vector<VRegMap> vreg_map_scopes;
 
-	IrObject *obj;
+	IrObject obj;
 
 public:
 	ir::Function *cur_function = nullptr;
@@ -226,6 +227,5 @@ public:
 	/// @brief Write an instruction at the current position
 	void emit(ir::Instruction *new_instr);
 
-	/// User must delete object
-	IrObject *get_obj() { return this->obj; }
+	IrObject get_obj() { return std::move(this->obj); }
 };
