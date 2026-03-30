@@ -12,8 +12,11 @@
 int main(int argc, char **argv)
 {
 	CliParser cli("sasc-compiler");
+
 	auto &input_filename_arg = cli.add_positional("file", "Input file").required();
 	auto &output_filename_arg = cli.add_flag_arg("out", "Output file").short_name('o').default_value("a.out"); // TODO change
+	auto &target_arg = cli.add_flag_arg("target", "Target architecture").short_name('A').required();
+
 	auto &verbosity_flag = cli.add_flag("verbose", "Increase compiler verbosity").short_name('v').allow_multi();
 	auto &quiet_flag = cli.add_flag("quiet", "Silence compiler output").short_name('q');
 	auto &debug_print_ast_flag = cli.add_flag("debug-print-ast", "Print a textual representation of the parsed abstract syntax tree");

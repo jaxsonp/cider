@@ -1,4 +1,4 @@
-#include "Backend_RV32.hpp"
+#include "CodeGenerator_riscv32.hpp"
 
 #include <format>
 #include <vector>
@@ -19,102 +19,110 @@ constexpr uint32_t bitmask_lower(size_t n)
 		return (uint32_t(1) << n) - 1;
 }
 
-namespace backends::rv32
+namespace codegen
 {
-	struct Backend_RV32::CodeBuffer
+	struct CodeGenerator_riscv32::CodeBuffer
 	{
 		std::vector<MachineInstruction> buf;
 
 		size_t cur_offset() const { return this->buf.size(); }
 
 		/// Copy the contents of this buffer as bytes into a byte vector
-		void dump_to_bytes(std::vector<uint8_t> &bytes) const;
+		void dump_to_bytes(std::vector<uint8_t> &bytes) const
+		{
+			bytes.reserve(4 * this->buf.size());
+			for (const MachineInstruction &instr : this->buf)
+			{
+				std::array<uint8_t, 4> instr_bytes = std::bit_cast<std::array<uint8_t, 4>>(instr.data);
+				bytes.insert(bytes.end(), instr_bytes.begin(), instr_bytes.end());
+			}
+		}
 
 		/// push new addi (add immediate) instruction, return its position
-		size_t write_addi(Register dest, Register src, uint32_t imm);
+		size_t write_addi(Register dest, Register src, uint32_t imm)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b0010011u, dest, 0u, src, imm),
+				.fmt = InstructionFormat::IType,
+			});
+			return pos;
+		}
 
 		/// push new lw (load word) instruction, return its position
-		size_t write_lw(Register dest, Register addr, uint32_t addr_offset);
+		size_t write_lw(Register dest, Register addr, uint32_t addr_offset)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b0000011u, dest, 2u, addr, addr_offset),
+				.fmt = InstructionFormat::IType,
+			});
+			return pos;
+		}
 
 		/// push new sw (store word) instruction, return its position
-		size_t write_sw(Register dest_addr, Register src, uint32_t addr_offset);
+		size_t write_sw(Register dest_addr, Register src, uint32_t addr_offset)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_s_type(0b0100011u, 2u, dest_addr, src, addr_offset),
+				.fmt = InstructionFormat::SType,
+			});
+			return pos;
+		}
 
 		/// push new jal (jump and link) instruction, return its position
-		size_t write_jal(Register dest, uint32_t imm);
+		size_t write_jal(Register dest, uint32_t imm)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_j_type(0b1101111u, dest, imm),
+				.fmt = InstructionFormat::JType,
+			});
+			return pos;
+		}
 
 		/// push new jalr (jump and link register) instruction, return its position
-		size_t write_jalr(Register dest, Register addr, uint32_t addr_offset);
+		size_t write_jalr(Register dest, Register addr, uint32_t addr_offset)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b1100111u, dest, 0u, addr, addr_offset),
+				.fmt = InstructionFormat::IType,
+			});
+			return pos;
+		}
+
+		/// push new auipc (add upper immediate to pc) instruction, return its position
+		size_t write_auipc(Register dest, uint32_t imm)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_u_type(0b0010111u, dest, imm),
+				.fmt = InstructionFormat::UType,
+			});
+			return pos;
+		}
+
+		/// push new ecall (environment call) instruction, return its position
+		size_t write_ecall()
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b1110011u, Register::zero, 0u, Register::zero, 0u),
+				.fmt = InstructionFormat::IType,
+			});
+			return pos;
+		}
 
 		/// push new nop instruction
-		size_t write_nop();
+		size_t write_nop()
+		{
+			return this->write_addi(Register::zero, Register::zero, 0u);
+		}
 	};
 
-	void Backend_RV32::CodeBuffer::dump_to_bytes(std::vector<uint8_t> &bytes) const
-	{
-		bytes.reserve(4 * this->buf.size());
-		for (const MachineInstruction &instr : this->buf)
-		{
-			std::array<uint8_t, 4> instr_bytes = std::bit_cast<std::array<uint8_t, 4>>(instr.data);
-			bytes.insert(bytes.end(), instr_bytes.begin(), instr_bytes.end());
-		}
-	}
-
-	size_t Backend_RV32::CodeBuffer::write_addi(Register dest, Register src, uint32_t imm)
-	{
-		size_t pos = this->buf.size();
-		this->buf.emplace_back<MachineInstruction>({
-			.data = encode_i_type(0b0010011u, dest, 0u, src, imm),
-			.fmt = InstructionFormat::IType,
-		});
-		return pos;
-	}
-
-	size_t Backend_RV32::CodeBuffer::write_lw(Register dest, Register addr, uint32_t imm)
-	{
-		size_t pos = this->buf.size();
-		this->buf.emplace_back<MachineInstruction>({
-			.data = encode_i_type(0b0000011u, dest, 2u, addr, imm),
-			.fmt = InstructionFormat::IType,
-		});
-		return pos;
-	}
-
-	size_t Backend_RV32::CodeBuffer::write_sw(Register dest_addr, Register src, uint32_t addr_offset)
-	{
-		size_t pos = this->buf.size();
-		this->buf.emplace_back<MachineInstruction>({
-			.data = encode_s_type(0b0100011u, 2u, dest_addr, src, addr_offset),
-			.fmt = InstructionFormat::SType,
-		});
-		return pos;
-	}
-
-	size_t Backend_RV32::CodeBuffer::write_jal(Register dest, uint32_t imm)
-	{
-		size_t pos = this->buf.size();
-		this->buf.emplace_back<MachineInstruction>({
-			.data = encode_j_type(0b1101111u, dest, imm),
-			.fmt = InstructionFormat::JType,
-		});
-		return pos;
-	}
-
-	size_t Backend_RV32::CodeBuffer::write_jalr(Register dest, Register addr, uint32_t imm)
-	{
-		size_t pos = this->buf.size();
-		this->buf.emplace_back<MachineInstruction>({
-			.data = encode_i_type(0b1100111u, dest, 0u, addr, imm),
-			.fmt = InstructionFormat::IType,
-		});
-		return pos;
-	}
-
-	size_t Backend_RV32::CodeBuffer::write_nop()
-	{
-		return this->write_addi(Register::zero, Register::zero, 0u);
-	}
-
-	Backend_RV32::RegSlot *Backend_RV32::load_src_vreg(CodeBuffer &code, ir::VRegId vreg)
+	CodeGenerator_riscv32::RegSlot *CodeGenerator_riscv32::load_src_vreg(CodeBuffer &code, ir::VRegId vreg)
 	{
 		// check if this vreg is already loaded somewhere
 		for (RegSlot &slot : this->registers)
@@ -131,7 +139,7 @@ namespace backends::rv32
 		return slot;
 	}
 
-	Backend_RV32::RegSlot *Backend_RV32::load_dest_vreg(CodeBuffer &code, ir::VRegId vreg)
+	CodeGenerator_riscv32::RegSlot *CodeGenerator_riscv32::load_dest_vreg(CodeBuffer &code, ir::VRegId vreg)
 	{
 		RegSlot *reg = this->get_empty_slot(code);
 		reg->resident = vreg;
@@ -140,7 +148,7 @@ namespace backends::rv32
 		return reg;
 	}
 
-	void Backend_RV32::spill_slot(CodeBuffer &code, RegSlot &slot)
+	void CodeGenerator_riscv32::spill_slot(CodeBuffer &code, RegSlot &slot)
 	{
 		int32_t fp_offset;
 		auto preexisting = this->spilled_vreg_fp_offsets.find(slot.resident);
@@ -156,7 +164,7 @@ namespace backends::rv32
 		code.write_sw(Register::fp, slot.physical, uint32_t(fp_offset));
 	}
 
-	Backend_RV32::RegSlot *Backend_RV32::get_empty_slot(CodeBuffer &code)
+	CodeGenerator_riscv32::RegSlot *CodeGenerator_riscv32::get_empty_slot(CodeBuffer &code)
 	{
 		// first check for non-occupied registers
 		for (RegSlot &slot : this->registers)
@@ -188,7 +196,7 @@ namespace backends::rv32
 		return victim;
 	}
 
-	void Backend_RV32::lower_function(const ir::Function &fn, Object &obj)
+	void CodeGenerator_riscv32::lower_function(const ir::Function &fn, Object &obj)
 	{
 		log_vvv("Lowering function \"{}\"", fn.name);
 
@@ -379,17 +387,21 @@ namespace backends::rv32
 
 		// finalize -------------
 
-		prologue.dump_to_bytes(obj.text);
-		body.dump_to_bytes(obj.text);
-		epilogue.dump_to_bytes(obj.text);
+		// register this function entry
+		obj.functions.push_back(Object::Function{
+			.name = fn.name,
+			.code_offset = obj.code.size(),
+		});
 
-		// register this function
-		obj.functions.emplace_back(fn.name);
+		// write to .text
+		prologue.dump_to_bytes(obj.code);
+		body.dump_to_bytes(obj.code);
+		epilogue.dump_to_bytes(obj.code);
 
-		log_vvv("Function \"{}\" done, object is now {} bytes", fn.name, obj.text.size());
+		log_vvv("Function \"{}\" done, object is now {} bytes", fn.name, obj.code.size());
 	}
 
-	Object Backend_RV32::lower_ir(const IrObject &ir)
+	Object CodeGenerator_riscv32::lower_ir(const IrObject &ir)
 	{
 		log_vv("Starting lowering to RV32");
 		Object obj;
@@ -400,6 +412,35 @@ namespace backends::rv32
 		}
 
 		return obj;
+	}
+
+	std::vector<uint8_t> CodeGenerator_riscv32::build_runtime_code(uint64_t main_offset, Target t)
+	{
+		if (t.os == Target::OS::Linux)
+		{
+			// linux kernel guarantees 16-byte alignment on entry, so no need to align here
+
+			// main will shift 4 * 4 bytes for 4 isntructons
+			uint32_t shifted_main_offset = uint32_t(main_offset) + 16;
+
+			CodeBuffer code;
+			// call main
+			code.write_auipc(Register::ra, shifted_main_offset);
+			code.write_jalr(Register::ra, Register::ra, shifted_main_offset);
+			// return value still in a0, will leave it there
+			// call linux exit syscall
+			code.write_addi(Register::a7, Register::zero, 93);
+			code.write_ecall();
+
+			std::vector<uint8_t> bytes;
+			code.dump_to_bytes(bytes);
+			return bytes;
+		}
+		else
+		{
+			throw UnimplementedError("Unsupported runtime operating system for RV32");
+		}
+		return std::vector<uint8_t>();
 	}
 
 	uint32_t encode_i_type(uint32_t opcode, Register rd, uint32_t funct3, Register rs1, uint32_t imm)
@@ -442,6 +483,14 @@ namespace backends::rv32
 		inst |= imm_20 << 31;
 
 		return inst;
+	}
+
+	uint32_t encode_u_type(uint32_t opcode, Register rd, uint32_t imm)
+	{
+		uint32_t instr = opcode & bitmask_lower(7);
+		instr |= (uint32_t(rd) & bitmask_lower(5)) << 7;
+		instr |= imm & ~bitmask_lower(12);
+		return instr;
 	}
 
 	/*uint32_t encode_b_type(uint32_t opcode, uint32_t funct3, uint32_t rs1, uint32_t rs2, int32_t imm)

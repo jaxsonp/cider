@@ -1,10 +1,17 @@
 # SAS-C Compiler
 
+### Supported Targets
+
+| Target | OS | Object format | ISA | Default ABI |
+| --- | --- | --- | --- | --- |
+| `linux-riscv32g` | Linux | ELF32 | RV32G | ILP32D |
+
 ## TODOs
 
 Next:
 
 - Check code for stuff that doesn't need to be in headers
+- Refactor errors to be one class
 
 Soon:
 

@@ -1,4 +1,4 @@
-#include "Backend.hpp"
+#include "CodeGenerator.hpp"
 
 #include <iostream>
 
@@ -18,7 +18,7 @@ public:
 	BlackHoleStream() : std::ostream(&buf) {}
 };
 
-std::ostream &Backend::asm_out()
+std::ostream &CodeGenerator::asm_out()
 {
 	static BlackHoleStream null_out = BlackHoleStream();
 
@@ -28,7 +28,7 @@ std::ostream &Backend::asm_out()
 		return null_out;
 }
 
-void Backend::enable_asm_output(std::unique_ptr<std::ostream> out)
+void CodeGenerator::enable_asm_output(std::unique_ptr<std::ostream> out)
 {
 	this->asm_out_ptr = std::move(out);
 }

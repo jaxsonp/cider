@@ -6,9 +6,9 @@
 #include <string>
 #include <string_view>
 
-#include "backend/Backend.hpp"
+#include "backend/codegen/CodeGenerator.hpp"
 
-namespace backends::rv32
+namespace codegen
 {
 	enum class Register : uint8_t
 	{
@@ -60,7 +60,7 @@ namespace backends::rv32
 	/// Register allocation strategy:
 	/// Local allocation - Per basic-block, assign and track vregs in registers, spill to stack as needed or at end of bb.
 	/// Currently only uses caller saved registers
-	class Backend_RV32 : public Backend
+	class CodeGenerator_riscv32 : public CodeGenerator
 	{
 		/// @brief Register slot, for use for register allocation
 		struct RegSlot
@@ -154,7 +154,11 @@ namespace backends::rv32
 		void lower_function(const ir::Function &fn, Object &obj);
 
 	public:
+		CodeGenerator_riscv32() = default;
+
 		Object lower_ir(const IrObject &ir) override;
+
+		virtual std::vector<uint8_t> build_runtime_code(uint64_t main_offset, Target t) override;
 	};
 
 	/// @brief Builds I-type instruction
@@ -192,4 +196,11 @@ namespace backends::rv32
 	// TODO
 	// uint32_t encode_b_type(uint32_t opcode, uint32_t funct3, uint32_t rs1, uint32_t rs2, int32_t imm);
 
+	/// @brief Builds U-type instruction
+	/// ```
+	/// 0-6   | opcode
+	/// 7-11  | rd
+	/// 12-31 | imm bits 12-31
+	/// ```
+	uint32_t encode_u_type(uint32_t opcode, Register rd, uint32_t imm);
 }
