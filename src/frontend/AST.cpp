@@ -404,7 +404,11 @@ namespace ast
 		for (const std::unique_ptr<StatementNode> &stmt : this->body_statements)
 			stmt->emitIr(writer);
 		if (this->body_return_expr != nullptr)
-			this->body_return_expr->emitIr(writer);
+		{
+			// create implicit return
+			ir::VRegId result_reg = this->body_return_expr->emitIr(writer);
+			writer.emit(new ir::instr::ReturnInstruction(result_reg));
+		}
 	}
 
 	std::optional<FunctionDefinition> FunctionDefinition::try_parse(Lexer &lexer)

@@ -15,7 +15,7 @@ int main(int argc, char **argv)
 
 	auto &input_filename_arg = cli.add_positional("file", "Input file").required();
 	auto &output_filename_arg = cli.add_flag_arg("out", "Output file").short_name('o').default_value("a.out"); // TODO change
-	auto &target_arg = cli.add_flag_arg("target", "Target architecture").short_name('A').required();
+	auto &target_arg = cli.add_flag_arg("target", "Target platform").short_name('t').required();
 
 	auto &verbosity_flag = cli.add_flag("verbose", "Increase compiler verbosity").short_name('v').allow_multi();
 	auto &quiet_flag = cli.add_flag("quiet", "Silence compiler output").short_name('q');

@@ -12,29 +12,34 @@ Next:
 
 - Check code for stuff that doesn't need to be in headers
 - Refactor errors to be one class
+- Testing improvements:
+  - Timeout
+  - finish stdout/stderr checking
+- turn off colored output (automatically if not tty perhaps?)
 
 Soon:
 
 - Negative literals (broken right now I think)
+
+Before self-hosting:
+
+- locals vars
 - if statements
 - loops
 - functions
 	- function definitions/declaration
+	- arguments
 - floats
-
-Before self-hosting:
-
 - global vars
 	- global init dependency checking
 - structs
 - traits
 - stdlib
 
-Eventually:
+maybe eventually:
 
 - try doing UTF8
 - labelled code blocks (for early breaks)
-- turn of colored output (automatically if not tty perhaps?)
 
 Maybe one day:
 
