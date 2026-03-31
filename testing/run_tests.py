@@ -22,7 +22,7 @@ TEST_DEFINITION_PAT = r"^//!\s*([^=]+)=(.*)"
 
 # All supported platforms to test. Map of target names to lambdas that create a cmd from a file
 PLATFORM_EMULATORS = {
-    "linux-riscv32g": lambda file: ["qemu-riscv32", file],
+    "linux-riscv32g": lambda file: ["qemu-riscv32-static", file],
 }
 
 
