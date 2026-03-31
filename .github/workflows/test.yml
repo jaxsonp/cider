@@ -48,7 +48,6 @@ jobs:
       uses: actions/download-artifact@v8
       with:
         name: build-output.tar
-        # auto decompresses
 
     - name: Unpack build output
       run: tar -xvf build-output.tar
