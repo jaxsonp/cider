@@ -44,6 +44,11 @@ jobs:
       with:
         python-version: '3.14'
 
+    - name: Install QEMU user emulator
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qemu-user
+
     - name: Download build artifacts
       uses: actions/download-artifact@v8
       with:
