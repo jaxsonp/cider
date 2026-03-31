@@ -5,6 +5,8 @@
 #include <memory>
 #include <vector>
 
+#include "backend/Target.hpp"
+
 struct Object
 {
 	struct Function
@@ -23,5 +25,5 @@ struct Object
 class ObjectWriter
 {
 public:
-	virtual void emit(Object &obj, std::ostream &out) = 0;
+	virtual void emit(const Object &obj, const Target &target, std::ostream &out) = 0;
 };

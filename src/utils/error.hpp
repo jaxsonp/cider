@@ -52,6 +52,20 @@ public:
 		: CompileError("Type error", ExitCode::TypeError, msg, loc) {}
 };
 
+class SemanticError : public CompileError
+{
+public:
+	SemanticError(const std::string &msg, LocVariant loc = std::monostate{})
+		: CompileError("Semantic error", ExitCode::SemanticError, msg, loc) {}
+};
+
+class UnsupportedError : public CompileError
+{
+public:
+	UnsupportedError(std::string &msg, LocVariant loc = std::monostate{})
+		: CompileError("Unsupported", ExitCode::Unsupported, msg, loc) {}
+};
+
 class FileOpenError : public CompileError
 {
 public:

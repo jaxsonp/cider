@@ -8,9 +8,6 @@
 #include <unordered_map>
 #include <memory>
 
-#include "codegen/CodeGenerator.hpp"
-#include "objwriter/ObjectWriter.hpp"
-
 class CodeGenerator;
 class ObjectWriter;
 

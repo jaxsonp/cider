@@ -222,7 +222,7 @@ namespace codegen
 		std::set<ir::BBlockId> seen;
 		std::vector<ir::BasicBlock *> to_visit;
 		to_visit.push_back(fn.entry);
-		log_vvv("Building function body");
+		log_vvvv("Building function body");
 		while (!to_visit.empty())
 		{
 			ir::BasicBlock *bb = to_visit.back();
@@ -288,7 +288,7 @@ namespace codegen
 		body.write_nop();
 
 		// now go back and fill in basic block offsets for instructions that need it
-		log_vvv("Backpatching offsets in body");
+		log_vvvv("Backpatching offsets in body");
 
 		// TODO basic block replacements
 
@@ -356,14 +356,14 @@ namespace codegen
 			// TODO handle large immediates
 		}
 
-		log_vvv("Building prologue and epilogue");
+		log_vvvv("Building prologue and epilogue");
 
 		// build prologue -------------
 
 		this->stack_size += (this->spilled_vreg_fp_offsets.size() * 4);
-		log_vvv("calculated stack size: {}", this->stack_size);
+		log_vvvv("calculated stack size: {}", this->stack_size);
 		int32_t padded_stack_size = ((this->stack_size + 15) / 16) * 16;
-		log_vvv("padded stack size: {}", padded_stack_size);
+		log_vvvv("padded stack size: {}", padded_stack_size);
 
 		// allocate stack space
 		prologue.write_addi(Register::sp, Register::sp, uint32_t(-padded_stack_size));

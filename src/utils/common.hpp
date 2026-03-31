@@ -8,10 +8,12 @@ enum class ExitCode : uint8_t
 	Success = 0,
 
 	// compilation errors
-	SyntaxError = 1,
-	NameError = 2,
-	TypeError = 3,
-	Unsupported = 4,
+	SyntaxError = 0x1,
+	NameError = 0x2,
+	TypeError = 0x3,
+	SemanticError = 0x4,
+
+	Unsupported = 0x10,
 
 	// non-compilation errors
 	FileReadError = 0xE0,
