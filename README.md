@@ -6,6 +6,49 @@
 | --- | --- | --- | --- | --- |
 | `linux-riscv32g` | Linux | ELF32 | RV32G | ILP32D |
 
+## Testing
+
+### Running tests
+
+#### Requirements:
+
+- Linux (probably)
+- Python >= 3.14
+- Qemu (specifically qemu-user-static, for binaries like `qemu-riscv32-static`, etc.)
+
+### To run:
+
+Run `testing/run_tests.py`, providing the path to the compiler binary to test.
+
+```
+usage: run_tests.py [-h] [-n N] compiler_path
+
+Test runner
+
+positional arguments:
+  compiler_path    Path of compiler binary to test
+
+options:
+  -h, --help       show this help message and exit
+  -n, --workers N  Number of concurrent workers to use
+```
+
+### Defining tests
+
+Tests are defined in the `tests/` subdirectory. Each test consists of a `.sasc` source file with comments *at the very top* defining what the expected output should be. These comments should be of the form: `//! KEY=VALUE` (note the exclamation mark). Keys are case insensitive. Below are the recognized keys:
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `BUILD_EXIT_CODE` | int | `0` | Expected return value of compilation of program |
+| `EXIT_CODE` | int | `0` | Expected return value of the program |
+| `STDOUT` | string | `""` | Expected output to stdout |
+| `STDERR` | string | `""` | Expected output to stderr |
+
+### Test groups
+
+- `00main`: Testing returning values from main
+
+
 ## TODOs
 
 Next:
@@ -38,6 +81,7 @@ Before self-hosting:
 
 maybe eventually:
 
+- executable or library
 - try doing UTF8
 - labelled code blocks (for early breaks)
 

@@ -1,21 +1,19 @@
 import argparse
 import sys
 import os
+import asyncio
 from pathlib import Path, PurePath
 import subprocess
 import dataclasses
 import re
 
 TESTS_DIR = Path(__file__).parent / "tests"
-os.makedirs(TESTS_DIR, exist_ok=True)
 
 OUTPUT_DIR = Path(__file__).parent / "output"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-RESET_COLOR = "\x1b[0m"
-GREEN = "\x1b[32m"
-RED = "\x1b[31m"
-
+COLOR_RESET = "\x1b[0m"
+COLOR_GREEN = "\x1b[32m"
+COLOR_RED = "\x1b[31m"
 
 # pattern for parsing test definition kv pairs
 TEST_DEFINITION_PAT = r"^//!\s*([^=]+)=(.*)"
@@ -37,74 +35,204 @@ class Test:
     expected_stdout: str = ""
     expected_stderr: str = ""
 
-    def run(self, compiler_path: Path, compiler_verbosity: int) -> tuple[bool, str]:
-        output_dir = OUTPUT_DIR / self.platform / self.rel_path.with_suffix("")
-        os.makedirs(output_dir, exist_ok=True)
 
-        bin_path = output_dir / self.rel_path.with_suffix("").name
-        if bin_path.exists():
-            os.remove(bin_path)
+class TestRunner:
+    def __init__(self, n_workers: int, compiler_path: Path):
+        if not compiler_path.is_file():
+            print(f'Could not find file: "{compiler_path}"')
+            sys.exit(1)
+        elif n_workers <= 0:
+            print("Worker count must >0")
+            sys.exit(1)
+        self.compiler_path = compiler_path
+        self.n_workers = n_workers
+        self.tests_ran = 0
+        self.successes = 0
 
-        # creating build command
-        cmd = [compiler_path]
-        if compiler_verbosity > 0:
-            cmd.append("-" + ("v" * compiler_verbosity))
-        cmd.extend(["--target", self.platform])
-        cmd.extend(["--out", bin_path])
-        cmd.append(self.full_path)
+        self.test_queue = asyncio.Queue(100)
 
-        # running build command
-        with (
-            open(output_dir / "build_stdout.txt", "w") as build_stdout_f,
-            open(output_dir / "build_stderr.txt", "w") as build_stderr_f,
-        ):
-            build_res = subprocess.run(
-                cmd,
-                stdout=build_stdout_f,
-                stderr=build_stderr_f,
+        # for pretty printing
+        self.print_lock = asyncio.Lock()
+        self.max_test_num = 0
+
+    async def run_tests(self) -> bool:
+        """
+        Runs tests, returns `True` if all tests ran successfully
+        """
+        try:
+            # prepare tests
+            tests: list[Test] = []
+            os.makedirs(TESTS_DIR, exist_ok=True)
+            os.makedirs(OUTPUT_DIR, exist_ok=True)
+            for f in TESTS_DIR.rglob("*.sasc"):
+                rel_path = f.relative_to(TESTS_DIR)
+                tests.extend(create_tests_from_file(rel_path))
+            print(f"Found {len(tests)} tests in {TESTS_DIR}")
+
+            # create workers
+            worker_tasks = [
+                asyncio.create_task(
+                    self.worker(i),
+                    name=f"test_runner_worker{i}",
+                )
+                for i in range(self.n_workers)
+            ]
+            print("")  # room for pretty printin
+
+            # feed tests to workers
+            for i, test in enumerate(tests):
+                await self.test_queue.put((i, test))
+
+            # wait for them to finish
+            await self.test_queue.join()
+
+            # stop workers
+            for w in worker_tasks:
+                w.cancel()
+
+            # done
+            pass_rate = 100.0 * float(self.successes) / float(self.tests_ran)
+            print(
+                f"Testing complete\n{self.successes:d}/{self.tests_ran:d} tests passing ({pass_rate:.2f}%)"
+            )
+            if self.successes == self.tests_ran:
+                print(f"{COLOR_GREEN}All tests passing{COLOR_RESET}")
+                return True
+            return False
+        except asyncio.CancelledError:
+            print("\nTesting cancelled")
+        except Exception as e:
+            print(f"\nException thrown during testing: {e}")
+
+    async def pretty_print_test_status(
+        self,
+        test_num: int,
+        test_name: str,
+        status: str,
+        color: str | None = None,
+        note: str | None = None,
+    ):
+        if color is not None:
+            status = color + status + COLOR_RESET
+        if note is not None:
+            status += f" ({note})"
+        async with self.print_lock:
+            if test_num > self.max_test_num:
+                # print(f"\x1b[{abs(target_height)}S", end="") # scroll
+                print("\n" * (test_num - self.max_test_num), end="", flush=False)
+                self.max_test_num = test_num
+
+            target_height = 1 + self.max_test_num - test_num
+
+            # move up, clear line, print line, move down
+            print(
+                f"\x1b[{target_height}F\x1b[2K {test_name} -> {status}\x1b[{target_height}E",
+                end="",
+                flush=True,
             )
 
-        # checking build output
-        if build_res.returncode != self.expected_build_exit_code:
-            # unexpected build exit code
-            return (
-                False,
-                f"{RED}failed{RESET_COLOR} (build exited with {build_res.returncode}, expected {self.expected_build_exit_code})",
-            )
-        elif build_res.returncode != 0:
-            # expected build failure
-            return (
-                True,
-                f"{GREEN}success{RESET_COLOR}",
-            )
+    async def worker(self, index: int):
+        while True:
+            try:
+                test: Test
+                test_num: int
+                test_num, test = await self.test_queue.get()
+                self.tests_ran += 1
 
-        # changing perms
-        os.chmod(bin_path, 0o700)
+                # setup files/paths
+                output_dir = OUTPUT_DIR / test.platform / test.rel_path.with_suffix("")
+                os.makedirs(output_dir, exist_ok=True)
 
-        # running program
-        cmd = PLATFORM_EMULATORS[self.platform](bin_path)
-        with (
-            open(output_dir / "stdout.txt", "w") as stdout_f,
-            open(output_dir / "stderr.txt", "w") as stderr_f,
-        ):
-            run_res = subprocess.run(
-                cmd,
-                stdout=stdout_f,
-                stderr=stderr_f,
-            )
+                bin_path = output_dir / test.rel_path.with_suffix("").name
+                if bin_path.exists():
+                    os.remove(bin_path)
 
-        # checking program output
-        if run_res.returncode != self.expected_exit_code:
-            # unexpected program exit code
-            return (
-                False,
-                f"{RED}failed{RESET_COLOR} (program exited with {run_res.returncode}, expected {self.expected_exit_code})",
-            )
-        elif self.expected_stdout != "" or self.expected_stderr != "":
-            # TODO
-            return (False, "checking stdout/stderr is not implemented yet")
+                # running build command
+                await self.pretty_print_test_status(test_num, test.name, "building...")
+                with (
+                    open(output_dir / "build_stdout.txt", "w") as build_stdout_f,
+                    open(output_dir / "build_stderr.txt", "w") as build_stderr_f,
+                ):
+                    build_res = subprocess.run(
+                        [
+                            self.compiler_path,
+                            "--target",
+                            test.platform,
+                            "--out",
+                            bin_path,
+                            test.full_path,
+                        ],
+                        stdout=build_stdout_f,
+                        stderr=build_stderr_f,
+                    )
 
-        return (True, f"{GREEN}pass{RESET_COLOR}")
+                # checking build output
+                if build_res.returncode != test.expected_build_exit_code:
+                    # unexpected build exit code
+                    await self.pretty_print_test_status(
+                        test_num,
+                        test.name,
+                        "failed",
+                        color=COLOR_RED,
+                        note=f"build exited with {build_res.returncode}, expected {test.expected_build_exit_code}",
+                    )
+                    self.test_queue.task_done()
+                    continue
+                elif build_res.returncode != 0:
+                    # successul, expected build failure
+                    await self.pretty_print_test_status(test_num, test.name, "passed")
+                    self.test_queue.task_done()
+                    self.successes += 1
+                    continue
+
+                # changing perms (TODO fix?)
+                os.chmod(bin_path, 0o700)
+
+                await self.pretty_print_test_status(test_num, test.name, "running...")
+                with (
+                    open(output_dir / "stdout.txt", "w") as stdout_f,
+                    open(output_dir / "stderr.txt", "w") as stderr_f,
+                ):
+                    run_res = subprocess.run(
+                        PLATFORM_EMULATORS[test.platform](bin_path),
+                        stdout=stdout_f,
+                        stderr=stderr_f,
+                    )
+
+                # checking program output
+                if run_res.returncode != test.expected_exit_code:
+                    # unexpected program exit code
+                    await self.pretty_print_test_status(
+                        test_num,
+                        test.name,
+                        "failed",
+                        color=COLOR_RED,
+                        note=f"program exited with {run_res.returncode}, expected {test.expected_exit_code}",
+                    )
+                    self.test_queue.task_done()
+                    continue
+                elif test.expected_stdout != "" or test.expected_stderr != "":
+                    # TODO
+                    await self.pretty_print_test_status(
+                        test_num,
+                        test.name,
+                        "???",
+                        note="STDOUT/STDERR comparison is not implemented",
+                    )
+                    self.test_queue.task_done()
+                    self.successes += 1
+                    continue
+
+                await self.pretty_print_test_status(test_num, test.name, "passed")
+                self.test_queue.task_done()
+                self.successes += 1
+                continue
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"\nException in worker {index}: {e}")
+                break
 
 
 def create_tests_from_file(rel_path: Path) -> list[Test]:
@@ -151,39 +279,27 @@ if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(description="Test runner")
     arg_parser.add_argument("compiler_path", help="Path of compiler binary to test")
     arg_parser.add_argument(
-        "--compiler-verbosity",
-        type=int,
-        default=1,
+        "-n",
+        "--workers",
+        help="Number of concurrent workers to use",
+        default=4,
         metavar="N",
-        help="Verbosity setting when setting compiler (default: 1)",
     )
     args = arg_parser.parse_args()
 
-    # validating cli args
-    compiler_path = Path(args.compiler_path)
-    if not compiler_path.is_file():
-        print(f'Could not find file: "{compiler_path}"')
-        sys.exit(1)
-    compiler_verbosity = args.compiler_verbosity
-
-    # reading tests
-    print(f"Reading tests from {TESTS_DIR}")
-    tests: list[Test] = []
-    for f in TESTS_DIR.rglob("*.sasc"):
-        rel_path = f.relative_to(TESTS_DIR)
-        tests.extend(create_tests_from_file(rel_path))
-
-    print(f"Running {len(tests)} test{'s' if len(tests) > 1 else ''}")
-
-    successes = 0
-    for test in tests:
-        print(f" {test.name} -> ", end="", flush=True)
-        success, msg = test.run(compiler_path, compiler_verbosity)
-        print(msg)
-        if success:
-            successes += 1
-    print(
-        f"Testing complete\n{successes}/{len(tests)} tests passing ({100.0 * float(successes) / float(len(tests)):.2f}%)"
+    test_runner = TestRunner(
+        n_workers=int(args.workers), compiler_path=Path(args.compiler_path)
     )
 
-    sys.exit(0 if successes == len(tests) else 1)
+    async_runner = asyncio.Runner()
+    try:
+        success = async_runner.run(test_runner.run_tests())
+        sys.exit(0 if success else 1)
+    except KeyboardInterrupt:
+        print("Keyboard interrupt")
+    except Exception as e:
+        print(f"Exception caught during testing: {e}")
+    finally:
+        async_runner.close()
+
+    sys.exit(1)
