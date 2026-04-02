@@ -33,9 +33,13 @@ expr = logical_or ;
 logical_or = logical_and, { "||", logical_and } ;
 logical_and = equality, { "&&", equality } ;
 equality = comparison, { ("==" | "!="), comparison } ;
-comparison = additive, { ("<" | ">" | "<=" | ">="), additive } ;
+comparison = bitwise_or, { ("<" | ">" | "<=" | ">="), bitwise_or } ;
+bitwise_or =  bitwise_xor, { "|", bitwise_xor } ;
+bitwise_xor = bitwise_and, { "^", bitwise_and } ;
+bitwise_and = bitshift, { "&", bitshift } ;
+bitshift = additive, { ("<<" | ">>"), additive } ;
 additive = multiplicative, { ("+" | "-"), multiplicative } ;
-multiplicative = unary, { ("*" | "/"), unary } ;
+multiplicative = unary, { ("*" | "/" | "%"), unary } ;
 
 unary = ("-" | "!"), unary
       | postfix ;

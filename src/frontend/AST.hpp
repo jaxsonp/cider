@@ -47,7 +47,7 @@ namespace ast
 		void add(std::string name, FrontendType type);
 		/// @brief Insert a symbol into this symbol table scope, throwing on collision
 		/// @param symbol Name/type pair
-		inline void add(std::pair<std::string, FrontendType> symbol);
+		inline void add(std::pair<std::string, FrontendType> symbol) { this->add(symbol.first, symbol.second); }
 
 		SymbolScope(SymbolScope *parent);
 	};
@@ -109,7 +109,9 @@ namespace ast
 		virtual void emitIr(IrWriter &writer) const = 0;
 	};
 
-	struct IntegerLiteralExpression : ExpressionNode
+	// EXPRESSIONS =============================================================
+
+	struct IntegerLiteralExpression : public ExpressionNode
 	{
 		uint32_t raw_value;
 		FrontendType type;
@@ -117,14 +119,155 @@ namespace ast
 		void check_semantics(SemanticAnalysisState state) const override;
 		void debug_print(unsigned int depth = 0) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
-
 		static std::optional<std::unique_ptr<IntegerLiteralExpression>> try_parse(Lexer &lexer);
-
 		inline FrontendType get_type() const override { return this->type; };
 	};
 
+	struct LogicalOrExpression : public ExpressionNode
+	{
+		std::unique_ptr<ExpressionNode> l_expr;
+		std::unique_ptr<ExpressionNode> r_expr;
+
+		void check_semantics(SemanticAnalysisState state) const override;
+		void debug_print(unsigned int depth = 0) const override;
+		ir::VRegId emitIr(IrWriter &writer) const override;
+		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
+		inline FrontendType get_type() const override { return l_expr->get_type(); };
+	};
+
+	struct LogicalAndExpression : public ExpressionNode
+	{
+		std::unique_ptr<ExpressionNode> l_expr;
+		std::unique_ptr<ExpressionNode> r_expr;
+
+		void check_semantics(SemanticAnalysisState state) const override;
+		void debug_print(unsigned int depth = 0) const override;
+		ir::VRegId emitIr(IrWriter &writer) const override;
+		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
+		inline FrontendType get_type() const override { return l_expr->get_type(); };
+	};
+
+	struct EqualityExpression : public ExpressionNode
+	{
+		std::unique_ptr<ExpressionNode> l_expr;
+		std::unique_ptr<ExpressionNode> r_expr;
+		/// True if not equals
+		bool notted;
+
+		void check_semantics(SemanticAnalysisState state) const override;
+		void debug_print(unsigned int depth = 0) const override;
+		ir::VRegId emitIr(IrWriter &writer) const override;
+		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
+		inline FrontendType get_type() const override { return l_expr->get_type(); };
+	};
+
+	struct ComparisonExpression : public ExpressionNode
+	{
+		enum class ComparisonKind
+		{
+			GREATER_THAN,
+			GREATER_THAN_OR_EQUAL,
+			LESS_THAN,
+			LESS_THAN_OR_EQUAL,
+		};
+
+		std::unique_ptr<ExpressionNode> l_expr;
+		std::unique_ptr<ExpressionNode> r_expr;
+		ComparisonKind kind;
+
+		void check_semantics(SemanticAnalysisState state) const override;
+		void debug_print(unsigned int depth = 0) const override;
+		ir::VRegId emitIr(IrWriter &writer) const override;
+		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
+		inline FrontendType get_type() const override { return l_expr->get_type(); };
+	};
+
+	struct BitwiseOrExpression : public ExpressionNode
+	{
+		std::unique_ptr<ExpressionNode> l_expr;
+		std::unique_ptr<ExpressionNode> r_expr;
+
+		void check_semantics(SemanticAnalysisState state) const override;
+		void debug_print(unsigned int depth = 0) const override;
+		ir::VRegId emitIr(IrWriter &writer) const override;
+		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
+		inline FrontendType get_type() const override { return l_expr->get_type(); };
+	};
+
+	struct BitwiseXorExpression : public ExpressionNode
+	{
+		std::unique_ptr<ExpressionNode> l_expr;
+		std::unique_ptr<ExpressionNode> r_expr;
+
+		void check_semantics(SemanticAnalysisState state) const override;
+		void debug_print(unsigned int depth = 0) const override;
+		ir::VRegId emitIr(IrWriter &writer) const override;
+		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
+		inline FrontendType get_type() const override { return l_expr->get_type(); };
+	};
+
+	struct BitwiseAndExpression : public ExpressionNode
+	{
+		std::unique_ptr<ExpressionNode> l_expr;
+		std::unique_ptr<ExpressionNode> r_expr;
+
+		void check_semantics(SemanticAnalysisState state) const override;
+		void debug_print(unsigned int depth = 0) const override;
+		ir::VRegId emitIr(IrWriter &writer) const override;
+		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
+		inline FrontendType get_type() const override { return l_expr->get_type(); };
+	};
+
+	struct BitshiftExpression : public ExpressionNode
+	{
+		std::unique_ptr<ExpressionNode> l_expr;
+		std::unique_ptr<ExpressionNode> r_expr;
+		bool left_shift;
+
+		void check_semantics(SemanticAnalysisState state) const override;
+		void debug_print(unsigned int depth = 0) const override;
+		ir::VRegId emitIr(IrWriter &writer) const override;
+		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
+		inline FrontendType get_type() const override { return l_expr->get_type(); };
+	};
+
+	struct AdditiveExpression : public ExpressionNode
+	{
+		std::unique_ptr<ExpressionNode> l_expr;
+		std::unique_ptr<ExpressionNode> r_expr;
+		bool plus;
+
+		void check_semantics(SemanticAnalysisState state) const override;
+		void debug_print(unsigned int depth = 0) const override;
+		ir::VRegId emitIr(IrWriter &writer) const override;
+		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
+		inline FrontendType get_type() const override { return l_expr->get_type(); };
+	};
+
+	struct MultiplicativeExpression : public ExpressionNode
+	{
+		enum class MultOperation
+		{
+			Multiplication,
+			Division,
+			Modulus
+		};
+		std::unique_ptr<ExpressionNode> l_expr;
+		std::unique_ptr<ExpressionNode> r_expr;
+		MultOperation operation;
+
+		void check_semantics(SemanticAnalysisState state) const override;
+		void debug_print(unsigned int depth = 0) const override;
+		ir::VRegId emitIr(IrWriter &writer) const override;
+		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
+		inline FrontendType get_type() const override { return l_expr->get_type(); };
+	};
+
+	// STATEMENTS ==============================================================
+
 	struct ReturnStatement : StatementNode
 	{
+		/// Null if there is no expression
 		std::unique_ptr<ExpressionNode> expr;
 
 		void check_semantics(SemanticAnalysisState state) const override;
@@ -133,8 +276,10 @@ namespace ast
 
 		static std::optional<std::unique_ptr<ReturnStatement>> try_parse(Lexer &lexer);
 
-		inline FrontendType return_type() const;
+		FrontendType return_type() const;
 	};
+
+	// FUNCTION STUFF ==========================================================
 
 	struct ArgDefinition : Node
 	{
@@ -166,10 +311,14 @@ namespace ast
 
 		static std::optional<FunctionDefinition> try_parse(Lexer &lexer);
 
-		inline std::pair<std::string, FrontendType> declares() const override;
+		inline std::pair<std::string, FrontendType> declares() const override
+		{
+			return {this->name, this->return_type};
+		};
 
 	private:
-		FunctionDefinition();
+		FunctionDefinition()
+			: scope(new SymbolScope(nullptr)) {}
 	};
 }
 

@@ -1,6 +1,5 @@
 #include "Lexer.hpp"
 
-#include <utility> // can delete?
 #include <stdexcept>
 
 #include "utils/error.hpp"
@@ -10,21 +9,12 @@ char Lexer::take_char()
 	if (done)
 		return std::char_traits<char>::eof();
 
-	char out;
-	if (peeked_char.has_value())
+	int next = in.get();
+	char out = static_cast<char>(next);
+	if (next == std::char_traits<char>::eof())
 	{
-		out = peeked_char.value();
-		peeked_char = std::nullopt;
-	}
-	else
-	{
-		int next = in.get();
-		if (next == std::char_traits<char>::eof())
-		{
-			done = true;
-			return next;
-		}
-		out = static_cast<char>(next);
+		done = true;
+		return std::char_traits<char>::eof();
 	}
 
 	if (out == '\n')
@@ -42,18 +32,10 @@ char Lexer::take_char()
 
 char Lexer::peek_char()
 {
-	if (done)
-		return std::char_traits<char>::eof();
-
-	if (!peeked_char.has_value())
-	{
-		int next = in.get();
-		peeked_char = static_cast<char>(next);
-	}
-	return peeked_char.value();
+	return static_cast<char>(in.peek());
 }
 
-Lexer::Lexer(std::istream &in_stream) : in(in_stream), peeked_char(std::nullopt), done(false)
+Lexer::Lexer(std::istream &in_stream) : in(in_stream), done(false)
 {
 	pos.line = 0;
 	pos.col = 0;
@@ -73,57 +55,132 @@ Token Lexer::take()
 
 	char c = take_char();
 
-	if (c == std::char_traits<char>::eof())
+	switch (c)
 	{
+	case std::char_traits<char>::eof():
 		tok.type = TokenType::END_OF_FILE;
-	}
-	else if (c == ';')
-	{
+		break;
+	case ';':
 		tok.type = TokenType::SEMICOLON;
-	}
-	else if (c == '(')
-	{
+		break;
+	case '(':
 		tok.type = TokenType::L_PAREN;
-	}
-	else if (c == ')')
-	{
+		break;
+	case ')':
 		tok.type = TokenType::R_PAREN;
-	}
-	else if (c == '[')
-	{
+		break;
+	case '[':
 		tok.type = TokenType::L_SQR_BRACKET;
-	}
-	else if (c == ']')
-	{
+		break;
+	case ']':
 		tok.type = TokenType::R_SQR_BRACKET;
-	}
-	else if (c == '{')
-	{
+		break;
+	case '{':
 		tok.type = TokenType::L_CURLY_BRACKET;
-	}
-	else if (c == '}')
-	{
+		break;
+	case '}':
 		tok.type = TokenType::R_CURLY_BRACKET;
-	}
-	else if (c == ',')
-	{
+		break;
+	case ',':
 		tok.type = TokenType::COMMA;
-	}
-	else if (c == '-')
-	{
-		if (peek_char() == '>')
+		break;
+	case '&':
+		if (peek_char() == '&')
 		{
-			take_char(); // consume arrow head
-			tok.type = TokenType::ARROW;
+			take_char();
+			tok.type = TokenType::AND_AND;
 		}
 		else
 		{
-			// TODO subtraction operator
-			throw UnimplementedError("'-'", tok.loc.start);
+			tok.type = TokenType::AND;
 		}
-	}
-	else if (c == '/')
-	{
+		break;
+	case '|':
+		if (peek_char() == '|')
+		{
+			take_char();
+			tok.type = TokenType::OR_OR;
+		}
+		else
+		{
+			tok.type = TokenType::OR;
+		}
+		break;
+	case '^':
+		tok.type = TokenType::CARET;
+		break;
+	case '<':
+		if (peek_char() == '<')
+		{
+			take_char();
+			tok.type = TokenType::LESS_LESS;
+		}
+		else if (peek_char() == '=')
+		{
+			take_char();
+			tok.type = TokenType::LESS_EQUAL;
+		}
+		else
+		{
+			tok.type = TokenType::LESS;
+		}
+		break;
+	case '>':
+		if (peek_char() == '>')
+		{
+			take_char();
+			tok.type = TokenType::GREATER_GREATER;
+		}
+		else if (peek_char() == '=')
+		{
+			take_char();
+			tok.type = TokenType::GREATER_EQUAL;
+		}
+		else
+		{
+			tok.type = TokenType::GREATER;
+		}
+		break;
+	case '=':
+		if (peek_char() == '=')
+		{
+			take_char();
+			tok.type = TokenType::EQUAL_EQUAL;
+		}
+		else
+		{
+			tok.type = TokenType::EQUAL;
+		}
+		break;
+	case '!':
+		if (peek_char() == '=')
+		{
+			take_char();
+			tok.type = TokenType::EXCLAMATION_EQUAL;
+		}
+		else
+		{
+			tok.type = TokenType::EXCLAMATION;
+		}
+		break;
+	case '+':
+		tok.type = TokenType::PLUS;
+		break;
+	case '-':
+		if (peek_char() == '>')
+		{
+			take_char(); // consume arrow head
+			tok.type = TokenType::THIN_ARROW;
+		}
+		else
+		{
+			tok.type = TokenType::MINUS;
+		}
+		break;
+	case '*':
+		tok.type = TokenType::ASTERISK;
+		break;
+	case '/':
 		if (peek_char() == '/')
 		{
 			// line comment, consume till newline
@@ -134,51 +191,56 @@ Token Lexer::take()
 		}
 		else
 		{
-			// TODO division operator
-			throw UnimplementedError("'/'", tok.loc.start);
+			tok.type = TokenType::FORWARD_SLASH;
 		}
-	}
-	else if (is_whitespace(c))
-	{
-		while (is_whitespace(peek_char()))
+		break;
+	case '%':
+		tok.type = TokenType::PERCENT;
+		break;
+	default:
+		if (is_whitespace(c))
 		{
-			take_char();
+			while (is_whitespace(peek_char()))
+			{
+				take_char();
+			}
+			return take();
 		}
-		return take();
-	}
-	else if (is_numeric(c) || is_alpha(c) || c == '_')
-	{
-		std::string token_str;
-		token_str += c;
+		else if (is_numeric(c) || is_alpha(c) || c == '_')
+		{
+			std::string token_str;
+			token_str += c;
 
-		while (!is_delimiter(peek_char()))
-		{
-			token_str += take_char();
-		}
+			while (!is_delimiter(peek_char()))
+			{
+				token_str += take_char();
+			}
 
-		if (is_numeric(token_str[0]))
-		{
-			tok.type = TokenType::INT_LITERAL;
-			tok.str = token_str;
-		}
-		else if (token_str == "fn")
-		{
-			tok.type = TokenType::KEYWORD_FN;
-		}
-		else if (token_str == "return")
-		{
-			tok.type = TokenType::KEYWORD_RETURN;
+			if (is_numeric(token_str[0]))
+			{
+				tok.type = TokenType::INT_LITERAL;
+				tok.str = token_str;
+			}
+			else if (token_str == "fn")
+			{
+				tok.type = TokenType::KEYWORD_FN;
+			}
+			else if (token_str == "return")
+			{
+				tok.type = TokenType::KEYWORD_RETURN;
+			}
+			else
+			{
+				tok.type = TokenType::IDENT;
+				tok.str = token_str;
+			}
 		}
 		else
 		{
-			tok.type = TokenType::IDENT;
-			tok.str = token_str;
+			tok.type = TokenType::ERROR_UNEXPECTED_CHAR;
+			tok.str = std::string(1, c);
 		}
-	}
-	else
-	{
-		tok.type = TokenType::ERROR_UNEXPECTED_CHAR;
-		tok.str = std::string(1, c);
+		break;
 	}
 
 	tok.loc.end = pos;
@@ -234,13 +296,53 @@ std::string to_string(TokenType type)
 		return "\"}\"";
 	case TokenType::COMMA:
 		return "\",\"";
-	case TokenType::ARROW:
+	case TokenType::THIN_ARROW:
 		return "\"->\"";
+	case TokenType::AND:
+		return "\"&\"";
+	case TokenType::AND_AND:
+		return "\"&&\"";
+	case TokenType::OR:
+		return "\"|\"";
+	case TokenType::OR_OR:
+		return "\"||\"";
+	case TokenType::CARET:
+		return "\"^\"";
+	case TokenType::LESS_LESS:
+		return "\"<<\"";
+	case TokenType::GREATER_GREATER:
+		return "\">>\"";
+	case TokenType::EQUAL_EQUAL:
+		return "\"==\"";
+	case TokenType::EXCLAMATION_EQUAL:
+		return "\"!=\"";
+	case TokenType::LESS:
+		return "\"<\"";
+	case TokenType::LESS_EQUAL:
+		return "\"<=\"";
+	case TokenType::GREATER:
+		return "\">\"";
+	case TokenType::GREATER_EQUAL:
+		return "\">=\"";
+	case TokenType::PLUS:
+		return "\"+\"";
+	case TokenType::MINUS:
+		return "\"-\"";
+	case TokenType::ASTERISK:
+		return "\"*\"";
+	case TokenType::FORWARD_SLASH:
+		return "\"/\"";
+	case TokenType::PERCENT:
+		return "\"%\"";
+	case TokenType::EXCLAMATION:
+		return "\"!\"";
+	case TokenType::EQUAL:
+		return "\"=\"";
 	case TokenType::ERROR_UNEXPECTED_CHAR:
 		return "Unexpected char";
 	}
 
-	throw UnimplementedError("Unhandled token type");
+	throw UnimplementedError("Unhandled token type (in TokenType::to_string)");
 }
 
 std::string to_string(Token tok)

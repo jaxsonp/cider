@@ -23,7 +23,27 @@ enum class TokenType
 	L_CURLY_BRACKET,
 	R_CURLY_BRACKET,
 	COMMA,
-	ARROW,
+	THIN_ARROW,
+	AND,
+	AND_AND,
+	OR,
+	OR_OR,
+	CARET,
+	LESS_LESS,
+	GREATER_GREATER,
+	EQUAL_EQUAL,
+	EXCLAMATION_EQUAL,
+	LESS,
+	LESS_EQUAL,
+	GREATER,
+	GREATER_EQUAL,
+	PLUS,
+	MINUS,
+	ASTERISK,
+	FORWARD_SLASH,
+	PERCENT,
+	EXCLAMATION,
+	EQUAL,
 	ERROR_UNEXPECTED_CHAR,
 };
 
@@ -55,7 +75,6 @@ public:
 
 private:
 	std::istream &in;
-	std::optional<char> peeked_char;
 	bool done;
 	std::optional<Token> peeked_token;
 

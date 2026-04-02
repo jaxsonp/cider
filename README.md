@@ -53,6 +53,8 @@ Tests are defined in the `tests/` subdirectory. Each test consists of a `.sasc` 
 
 Next:
 
+- Source locations for expressions
+- Expression testing
 - Check code for stuff that doesn't need to be in headers
 - Refactor errors to be one class
 - Testing improvements:
