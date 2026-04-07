@@ -1,0 +1,5 @@
+//! EXIT_CODE=177
+
+fn main() -> i32 {
+	return 177i32 / 1i32;
+}

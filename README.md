@@ -46,14 +46,14 @@ Tests are defined in the `tests/` subdirectory. Each test consists of a `.sasc` 
 
 ### Test groups
 
-- `00main`: Testing returning values from main
+- `00_main`: Testing returning values from main
+- `01_expressions`: Testing expressions/operators
 
 
 ## TODOs
 
 Next:
 
-- Source locations for expressions
 - Expression testing
 - Check code for stuff that doesn't need to be in headers
 - Refactor errors to be one class
@@ -109,3 +109,5 @@ futuer optimizations:
 ## tests to remember to write
 
 - overflowing int literal
+- overflowing integers with operations
+- arithmetic bitshift right

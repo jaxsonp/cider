@@ -1,0 +1,5 @@
+//! EXIT_CODE=62
+
+fn main() -> i32 {
+	return 2i32 * 31i32;
+}

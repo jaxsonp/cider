@@ -1,5 +1,5 @@
 //! EXIT_CODE=3
 
 fn main() -> u32 {
-	return 1u32 + 2u32;
+	return 9u32 / 3u32;
 }

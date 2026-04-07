@@ -1,0 +1,5 @@
+//! EXIT_CODE=34
+
+fn main() -> i32 {
+	return 100i32 - 66i32;
+}

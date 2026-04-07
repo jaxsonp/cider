@@ -1,0 +1,5 @@
+//! EXIT_CODE=19
+
+fn main() -> u32 {
+	return 9u32 + 10u32;
+}

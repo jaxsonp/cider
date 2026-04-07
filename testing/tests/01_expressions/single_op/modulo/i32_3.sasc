@@ -1,0 +1,5 @@
+//! EXIT_CODE=8
+
+fn main() -> i32 {
+	return 800i32 % 11i32;
+}

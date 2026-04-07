@@ -88,16 +88,18 @@ namespace ast
 			return std::move(maybe_l_expr.value());
 		Token op_tok = lexer.take();
 
-		std::unique_ptr<LogicalOrExpression> expr = std::make_unique<LogicalOrExpression>();
-		expr->l_expr = std::move(maybe_l_expr.value());
+		std::unique_ptr<LogicalOrExpression> ret = std::make_unique<LogicalOrExpression>();
+		ret->l_expr = std::move(maybe_l_expr.value());
 
 		// parse right hand expression
 		auto maybe_r_expr = LogicalAndExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
 			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		expr->r_expr = std::move(maybe_r_expr.value());
+		ret->r_expr = std::move(maybe_r_expr.value());
 
-		return expr;
+		ret->src_loc.start = ret->l_expr->src_loc.start;
+		ret->src_loc.end = ret->r_expr->src_loc.end;
+		return ret;
 	}
 
 	std::optional<std::unique_ptr<ExpressionNode>> LogicalAndExpression::try_parse(Lexer &lexer)
@@ -112,16 +114,18 @@ namespace ast
 			return std::move(maybe_l_expr.value());
 		Token op_tok = lexer.take();
 
-		std::unique_ptr<LogicalAndExpression> expr = std::make_unique<LogicalAndExpression>();
-		expr->l_expr = std::move(maybe_l_expr.value());
+		std::unique_ptr<LogicalAndExpression> ret = std::make_unique<LogicalAndExpression>();
+		ret->l_expr = std::move(maybe_l_expr.value());
 
 		// parse right hand expression
 		auto maybe_r_expr = EqualityExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
 			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		expr->r_expr = std::move(maybe_r_expr.value());
+		ret->r_expr = std::move(maybe_r_expr.value());
 
-		return expr;
+		ret->src_loc.start = ret->l_expr->src_loc.start;
+		ret->src_loc.end = ret->r_expr->src_loc.end;
+		return ret;
 	}
 
 	std::optional<std::unique_ptr<ExpressionNode>> EqualityExpression::try_parse(Lexer &lexer)
@@ -136,17 +140,19 @@ namespace ast
 			return std::move(maybe_l_expr.value());
 		Token op_tok = lexer.take();
 
-		std::unique_ptr<EqualityExpression> expr = std::make_unique<EqualityExpression>();
-		expr->l_expr = std::move(maybe_l_expr.value());
-		expr->notted = op_tok.type == TokenType::EXCLAMATION_EQUAL;
+		std::unique_ptr<EqualityExpression> ret = std::make_unique<EqualityExpression>();
+		ret->l_expr = std::move(maybe_l_expr.value());
+		ret->notted = op_tok.type == TokenType::EXCLAMATION_EQUAL;
 
 		// parse right hand expression
 		auto maybe_r_expr = ComparisonExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
 			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		expr->r_expr = std::move(maybe_r_expr.value());
+		ret->r_expr = std::move(maybe_r_expr.value());
 
-		return expr;
+		ret->src_loc.start = ret->l_expr->src_loc.start;
+		ret->src_loc.end = ret->r_expr->src_loc.end;
+		return ret;
 	}
 
 	std::optional<std::unique_ptr<ExpressionNode>> ComparisonExpression::try_parse(Lexer &lexer)
@@ -177,17 +183,19 @@ namespace ast
 		}
 		Token op_tok = lexer.take();
 
-		std::unique_ptr<ComparisonExpression> expr = std::make_unique<ComparisonExpression>();
-		expr->l_expr = std::move(maybe_l_expr.value());
-		expr->kind = kind;
+		std::unique_ptr<ComparisonExpression> ret = std::make_unique<ComparisonExpression>();
+		ret->l_expr = std::move(maybe_l_expr.value());
+		ret->kind = kind;
 
 		// parse right hand expression
 		auto maybe_r_expr = BitwiseOrExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
 			throw SyntaxError("Expected expression following " + to_string(TokenType::AND_AND), op_tok.loc.end);
-		expr->r_expr = std::move(maybe_r_expr.value());
+		ret->r_expr = std::move(maybe_r_expr.value());
 
-		return expr;
+		ret->src_loc.start = ret->l_expr->src_loc.start;
+		ret->src_loc.end = ret->r_expr->src_loc.end;
+		return ret;
 	}
 
 	std::optional<std::unique_ptr<ExpressionNode>> BitwiseOrExpression::try_parse(Lexer &lexer)
@@ -202,16 +210,18 @@ namespace ast
 			return std::move(maybe_l_expr.value());
 		Token op_tok = lexer.take();
 
-		std::unique_ptr<BitwiseOrExpression> expr = std::make_unique<BitwiseOrExpression>();
-		expr->l_expr = std::move(maybe_l_expr.value());
+		std::unique_ptr<BitwiseOrExpression> ret = std::make_unique<BitwiseOrExpression>();
+		ret->l_expr = std::move(maybe_l_expr.value());
 
 		// parse right hand expression
 		auto maybe_r_expr = BitwiseXorExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
 			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		expr->r_expr = std::move(maybe_r_expr.value());
+		ret->r_expr = std::move(maybe_r_expr.value());
 
-		return expr;
+		ret->src_loc.start = ret->l_expr->src_loc.start;
+		ret->src_loc.end = ret->r_expr->src_loc.end;
+		return ret;
 	}
 
 	std::optional<std::unique_ptr<ExpressionNode>> BitwiseXorExpression::try_parse(Lexer &lexer)
@@ -226,16 +236,18 @@ namespace ast
 			return std::move(maybe_l_expr.value());
 		Token op_tok = lexer.take();
 
-		std::unique_ptr<BitwiseXorExpression> expr = std::make_unique<BitwiseXorExpression>();
-		expr->l_expr = std::move(maybe_l_expr.value());
+		std::unique_ptr<BitwiseXorExpression> ret = std::make_unique<BitwiseXorExpression>();
+		ret->l_expr = std::move(maybe_l_expr.value());
 
 		// parse right hand expression
 		auto maybe_r_expr = BitwiseAndExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
 			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		expr->r_expr = std::move(maybe_r_expr.value());
+		ret->r_expr = std::move(maybe_r_expr.value());
 
-		return expr;
+		ret->src_loc.start = ret->l_expr->src_loc.start;
+		ret->src_loc.end = ret->r_expr->src_loc.end;
+		return ret;
 	}
 
 	std::optional<std::unique_ptr<ExpressionNode>> BitwiseAndExpression::try_parse(Lexer &lexer)
@@ -250,16 +262,18 @@ namespace ast
 			return std::move(maybe_l_expr.value());
 		Token op_tok = lexer.take();
 
-		std::unique_ptr<BitwiseAndExpression> expr = std::make_unique<BitwiseAndExpression>();
-		expr->l_expr = std::move(maybe_l_expr.value());
+		std::unique_ptr<BitwiseAndExpression> ret = std::make_unique<BitwiseAndExpression>();
+		ret->l_expr = std::move(maybe_l_expr.value());
 
 		// parse right hand expression
 		auto maybe_r_expr = BitshiftExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
 			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		expr->r_expr = std::move(maybe_r_expr.value());
+		ret->r_expr = std::move(maybe_r_expr.value());
 
-		return expr;
+		ret->src_loc.start = ret->l_expr->src_loc.start;
+		ret->src_loc.end = ret->r_expr->src_loc.end;
+		return ret;
 	}
 
 	std::optional<std::unique_ptr<ExpressionNode>> BitshiftExpression::try_parse(Lexer &lexer)
@@ -274,17 +288,19 @@ namespace ast
 			return std::move(maybe_l_expr.value());
 		Token op_tok = lexer.take();
 
-		std::unique_ptr<BitshiftExpression> expr = std::make_unique<BitshiftExpression>();
-		expr->l_expr = std::move(maybe_l_expr.value());
-		expr->left_shift = op_tok.type == TokenType::LESS_LESS;
+		std::unique_ptr<BitshiftExpression> ret = std::make_unique<BitshiftExpression>();
+		ret->l_expr = std::move(maybe_l_expr.value());
+		ret->left_shift = op_tok.type == TokenType::LESS_LESS;
 
 		// parse right hand expression
 		auto maybe_r_expr = AdditiveExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
 			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		expr->r_expr = std::move(maybe_r_expr.value());
+		ret->r_expr = std::move(maybe_r_expr.value());
 
-		return expr;
+		ret->src_loc.start = ret->l_expr->src_loc.start;
+		ret->src_loc.end = ret->r_expr->src_loc.end;
+		return ret;
 	}
 
 	std::optional<std::unique_ptr<ExpressionNode>> AdditiveExpression::try_parse(Lexer &lexer)
@@ -299,17 +315,19 @@ namespace ast
 			return std::move(maybe_l_expr.value());
 		Token op_tok = lexer.take();
 
-		std::unique_ptr<AdditiveExpression> expr = std::make_unique<AdditiveExpression>();
-		expr->l_expr = std::move(maybe_l_expr.value());
-		expr->plus = op_tok.type == TokenType::PLUS;
+		std::unique_ptr<AdditiveExpression> ret = std::make_unique<AdditiveExpression>();
+		ret->l_expr = std::move(maybe_l_expr.value());
+		ret->plus = op_tok.type == TokenType::PLUS;
 
 		// parse right hand expression
 		auto maybe_r_expr = MultiplicativeExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
 			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		expr->r_expr = std::move(maybe_r_expr.value());
+		ret->r_expr = std::move(maybe_r_expr.value());
 
-		return expr;
+		ret->src_loc.start = ret->l_expr->src_loc.start;
+		ret->src_loc.end = ret->r_expr->src_loc.end;
+		return ret;
 	}
 
 	std::optional<std::unique_ptr<ExpressionNode>> MultiplicativeExpression::try_parse(Lexer &lexer)
@@ -339,17 +357,19 @@ namespace ast
 		}
 		Token op_tok = lexer.take();
 
-		std::unique_ptr<MultiplicativeExpression> expr = std::make_unique<MultiplicativeExpression>();
-		expr->l_expr = std::move(maybe_l_expr.value());
-		expr->operation = op;
+		std::unique_ptr<MultiplicativeExpression> ret = std::make_unique<MultiplicativeExpression>();
+		ret->l_expr = std::move(maybe_l_expr.value());
+		ret->operation = op;
 
 		// parse right hand expression
 		auto maybe_r_expr = IntegerLiteralExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
 			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		expr->r_expr = std::move(maybe_r_expr.value());
+		ret->r_expr = std::move(maybe_r_expr.value());
 
-		return expr;
+		ret->src_loc.start = ret->l_expr->src_loc.start;
+		ret->src_loc.end = ret->r_expr->src_loc.end;
+		return ret;
 	}
 
 	std::optional<std::unique_ptr<ReturnStatement>> ReturnStatement::try_parse(Lexer &lexer)

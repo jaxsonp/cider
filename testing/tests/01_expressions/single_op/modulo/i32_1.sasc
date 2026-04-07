@@ -1,0 +1,5 @@
+//! EXIT_CODE=4
+
+fn main() -> i32 {
+	return 100i32 % 12i32;
+}
