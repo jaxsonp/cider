@@ -41,7 +41,7 @@ AST::AST(std::istream &input)
 	log_vv("Performing semantic analysis");
 	for (const std::unique_ptr<ast::TopLevelDeclaration> &tld : this->tlds)
 	{
-		// tld->check_semantics(state);
+		tld->check_semantics(state);
 	}
 	log_vv("AST complete");
 }

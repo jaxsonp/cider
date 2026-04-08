@@ -1,4 +1,5 @@
 /.vscode/*
+!/.vscode/example_tasks.json
 
 /build/
 /testing/output/

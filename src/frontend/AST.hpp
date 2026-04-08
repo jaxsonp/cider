@@ -9,7 +9,7 @@
 #include <string>
 
 #include "Lexer.hpp"
-#include "IR.hpp"
+#include "ir/IrWriter.hpp"
 #include "types.hpp"
 #include "utils/common.hpp"
 

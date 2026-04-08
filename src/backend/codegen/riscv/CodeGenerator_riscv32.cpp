@@ -6,6 +6,7 @@
 
 #include "utils/logging.hpp"
 #include "utils/error.hpp"
+#include "ir/IR_instructions.hpp"
 
 // helpers
 
@@ -36,6 +37,28 @@ namespace codegen
 				std::array<uint8_t, 4> instr_bytes = std::bit_cast<std::array<uint8_t, 4>>(instr.data);
 				bytes.insert(bytes.end(), instr_bytes.begin(), instr_bytes.end());
 			}
+		}
+
+		/// push new add (add register) instruction, return its position
+		size_t write_add(Register dest, Register op1, Register op2)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0u, op1, op2, 0u),
+				.fmt = InstructionFormat::RType,
+			});
+			return pos;
+		}
+
+		/// push new sub (subtract register) instruction, return its position
+		size_t write_sub(Register dest, Register op1, Register op2)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0u, op1, op2, 0x20u),
+				.fmt = InstructionFormat::RType,
+			});
+			return pos;
 		}
 
 		/// push new addi (add immediate) instruction, return its position
@@ -252,12 +275,59 @@ namespace codegen
 					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
 					body.write_addi(dest->physical, Register::zero, instr->value);
 				}
+				else if (ir::instr::AddInstruction *instr = dynamic_cast<ir::instr::AddInstruction *>(cur_instr))
+				{
+					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
+					if (instr->op2.is_vreg())
+					{
+						// add register to register
+						RegSlot *op2 = this->load_src_vreg(body, instr->op2.vreg_id);
+						body.write_add(dest->physical, op1->physical, op2->physical);
+					}
+					else
+					{
+						// add immediate to register
+						// TODO check type here
+						uint32_t op2 = uint32_t(instr->op2.imm_value);
+						body.write_addi(dest->physical, op1->physical, op2); // UNTESTED
+					}
+				}
+				else if (ir::instr::SubtractInstruction *instr = dynamic_cast<ir::instr::SubtractInstruction *>(cur_instr))
+				{
+					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
+					if (instr->op2.is_vreg())
+					{
+						// add register to register
+						RegSlot *op2 = this->load_src_vreg(body, instr->op2.vreg_id);
+						body.write_sub(dest->physical, op1->physical, op2->physical);
+					}
+					else
+					{
+						// add immediate to register
+						// TODO check type here
+						uint32_t op2 = uint32_t(instr->op2.imm_value);
+						// converting to negative to subtract
+						op2 = static_cast<uint32_t>(-static_cast<int32_t>(op2));
+						body.write_addi(dest->physical, op1->physical, op2); // UNTESTED
+					}
+				}
 				else if (ir::instr::ReturnInstruction *instr = dynamic_cast<ir::instr::ReturnInstruction *>(cur_instr))
 				{
 					// return
 					if (instr->ret_value.has_value())
 					{
-						RegSlot *ret_value = this->load_src_vreg(body, instr->ret_value.value());
+						RegSlot *ret_value;
+						if (instr->ret_value->type == ir::Operand::VREG)
+						{
+							ret_value = this->load_src_vreg(body, instr->ret_value->vreg_id);
+						}
+						else
+						{
+							ret_value = this->get_empty_slot(body);
+							body.write_addi(ret_value->physical, Register::zero, uint32_t(instr->ret_value->imm_value));
+						}
 						body.write_addi(Register::a0, ret_value->physical, uint32_t(0));
 					}
 					size_t pos = body.write_jal(Register::zero, 0u);
@@ -441,6 +511,17 @@ namespace codegen
 			throw UnimplementedError("Unsupported runtime operating system for RV32");
 		}
 		return std::vector<uint8_t>();
+	}
+
+	uint32_t encode_r_type(uint32_t opcode, Register rd, uint32_t funct3, Register rs1, Register rs2, uint32_t funct7)
+	{
+		uint32_t instr = opcode & bitmask_lower(7);
+		instr |= (uint32_t(rd) & bitmask_lower(5)) << 7;
+		instr |= (funct3 & bitmask_lower(3)) << 12;
+		instr |= (uint32_t(rs1) & bitmask_lower(5)) << 15;
+		instr |= (uint32_t(rs2) & bitmask_lower(5)) << 20;
+		instr |= (funct7 & bitmask_lower(7)) << 25;
+		return instr;
 	}
 
 	uint32_t encode_i_type(uint32_t opcode, Register rd, uint32_t funct3, Register rs1, uint32_t imm)

@@ -4,62 +4,72 @@
 
 #include "utils/error.hpp"
 #include "utils/logging.hpp"
+#include "ir/IR_instructions.hpp"
+
+using namespace ir;
 
 namespace ast
 {
-	ir::VRegId IntegerLiteralExpression::emitIr(IrWriter &writer) const
+	VRegId IntegerLiteralExpression::emitIr(IrWriter &writer) const
 	{
-		ir::VRegId result_reg(writer.new_vreg());
-		writer.emit(new ir::instr::LoadImmInstruction(result_reg, std::bit_cast<uint32_t>(this->raw_value)));
+		VRegId result_reg = writer.new_vreg();
+		writer.emit(new instr::LoadImmInstruction(result_reg, std::bit_cast<uint32_t>(this->raw_value)));
 		return result_reg;
 	}
 
-	ir::VRegId LogicalOrExpression::emitIr(IrWriter &writer) const
+	VRegId LogicalOrExpression::emitIr(IrWriter &writer) const
 	{
 		throw UnimplementedError("TODO: emit ir");
 	}
 
-	ir::VRegId LogicalAndExpression::emitIr(IrWriter &writer) const
+	VRegId LogicalAndExpression::emitIr(IrWriter &writer) const
 	{
 		throw UnimplementedError("TODO: emit ir");
 	}
 
-	ir::VRegId EqualityExpression::emitIr(IrWriter &writer) const
+	VRegId EqualityExpression::emitIr(IrWriter &writer) const
 	{
 		throw UnimplementedError("TODO: emit ir");
 	}
 
-	ir::VRegId ComparisonExpression::emitIr(IrWriter &writer) const
+	VRegId ComparisonExpression::emitIr(IrWriter &writer) const
 	{
 		throw UnimplementedError("TODO: emit ir");
 	}
 
-	ir::VRegId BitwiseOrExpression::emitIr(IrWriter &writer) const
+	VRegId BitwiseOrExpression::emitIr(IrWriter &writer) const
 	{
 		throw UnimplementedError("TODO: emit ir");
 	}
 
-	ir::VRegId BitwiseXorExpression::emitIr(IrWriter &writer) const
+	VRegId BitwiseXorExpression::emitIr(IrWriter &writer) const
 	{
 		throw UnimplementedError("TODO: emit ir");
 	}
 
-	ir::VRegId BitwiseAndExpression::emitIr(IrWriter &writer) const
+	VRegId BitwiseAndExpression::emitIr(IrWriter &writer) const
 	{
 		throw UnimplementedError("TODO: emit ir");
 	}
 
-	ir::VRegId BitshiftExpression::emitIr(IrWriter &writer) const
+	VRegId BitshiftExpression::emitIr(IrWriter &writer) const
 	{
 		throw UnimplementedError("TODO: emit ir");
 	}
 
-	ir::VRegId AdditiveExpression::emitIr(IrWriter &writer) const
+	VRegId AdditiveExpression::emitIr(IrWriter &writer) const
 	{
-		throw UnimplementedError("TODO: emit ir");
+		VRegId l_expr_reg = this->l_expr->emitIr(writer);
+		VRegId r_expr_reg = this->r_expr->emitIr(writer);
+		VRegId output_reg = writer.new_vreg();
+		if (this->plus)
+			writer.emit(new instr::AddInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+		else
+			writer.emit(new instr::SubtractInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+		return output_reg;
 	}
 
-	ir::VRegId MultiplicativeExpression::emitIr(IrWriter &writer) const
+	VRegId MultiplicativeExpression::emitIr(IrWriter &writer) const
 	{
 		throw UnimplementedError("TODO: emit ir");
 	}
@@ -68,12 +78,12 @@ namespace ast
 	{
 		if (this->expr != nullptr)
 		{
-			ir::VRegId result_reg = this->expr->emitIr(writer);
-			writer.emit(new ir::instr::ReturnInstruction(result_reg));
+			VRegId result_reg = this->expr->emitIr(writer);
+			writer.emit(new instr::ReturnInstruction(result_reg));
 		}
 		else
 		{
-			writer.emit(new ir::instr::ReturnInstruction());
+			writer.emit(new instr::ReturnInstruction());
 		}
 	}
 
@@ -85,7 +95,7 @@ namespace ast
 		unsigned short arg_index = 0;
 		for (const ArgDefinition &arg : this->args)
 		{
-			writer.emit(new ir::instr::LoadArgInstruction(writer.new_vreg(), arg_index));
+			writer.emit(new instr::LoadArgInstruction(writer.new_vreg(), arg_index));
 			++arg_index;
 		}
 
@@ -95,8 +105,8 @@ namespace ast
 		if (this->body_return_expr != nullptr)
 		{
 			// create implicit return
-			ir::VRegId result_reg = this->body_return_expr->emitIr(writer);
-			writer.emit(new ir::instr::ReturnInstruction(result_reg));
+			VRegId result_reg = this->body_return_expr->emitIr(writer);
+			writer.emit(new instr::ReturnInstruction(result_reg));
 		}
 	}
 }

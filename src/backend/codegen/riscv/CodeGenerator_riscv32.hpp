@@ -161,6 +161,17 @@ namespace codegen
 		virtual std::vector<uint8_t> build_runtime_code(uint64_t main_offset, Target t) override;
 	};
 
+	/// @brief Builds R-type instruction
+	/// ```
+	/// 0-6   | opcode
+	/// 7-11  | rd
+	/// 12-14 | funct3
+	/// 15-19 | rs1
+	/// 20-24 | rs2
+	/// 25-31 | funct7
+	/// ```
+	uint32_t encode_r_type(uint32_t opcode, Register rd, uint32_t funct3, Register rs1, Register rs2, uint32_t funct7);
+
 	/// @brief Builds I-type instruction
 	/// ```
 	/// 0-6   | opcode

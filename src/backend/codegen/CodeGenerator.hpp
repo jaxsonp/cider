@@ -5,7 +5,7 @@
 #include <memory>
 #include <vector>
 
-#include "IR.hpp"
+#include "ir/IR.hpp"
 #include "backend/objwriter/ObjectWriter.hpp"
 #include "backend/Target.hpp"
 

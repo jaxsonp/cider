@@ -1,35 +1,8 @@
-#include "IR.hpp"
+#include "ir/IrWriter.hpp"
+
+#include <format>
 
 #include "utils/error.hpp"
-
-namespace ir
-{
-	// autoassign id to new bbs
-	static unsigned int bb_count = 0;
-	BasicBlock::BasicBlock(std::string _note)
-		: id(bb_count++), note(_note) {}
-
-	namespace instr
-	{
-		LoadArgInstruction::LoadArgInstruction(VRegId _dest, unsigned short index)
-			: Instruction(Op::LoadArg), arg_index(index), dest(_dest) {}
-
-		ReturnInstruction::ReturnInstruction()
-			: TerminalInstruction(Op::Return) {}
-
-		ReturnInstruction::ReturnInstruction(VRegId _ret_value)
-			: TerminalInstruction(Op::Return), ret_value(_ret_value) {}
-
-		LoadImmInstruction::LoadImmInstruction(VRegId _dest, uint32_t _value)
-			: Instruction(Op::LoadImm), dest(_dest), value(_value) {}
-	}
-
-	Function::Function(const std::string &_name)
-		: name(_name), vreg_count(0)
-	{
-		this->entry = new BasicBlock(this->name + " start");
-	}
-}
 
 IrWriter::IrWriter() = default;
 

@@ -11,7 +11,14 @@
 namespace ir
 {
 	using BBlockId = unsigned int;
-	using VRegId = unsigned short;
+	using VRegId = unsigned int;
+
+	// TODO generalize for structs etc
+	enum class Type
+	{
+		U32,
+		I32,
+	};
 
 	/*enum class TypeVariant
 	{
@@ -83,6 +90,34 @@ namespace ir
 
 	class BasicBlock;
 
+	/// @brief For operands that can be either a register or a constant value
+	struct Operand
+	{
+		enum
+		{
+			VREG,
+			IMMEDIATE
+		} type;
+		union
+		{
+			VRegId vreg_id;
+			struct
+			{
+				uint64_t imm_value;
+				Type imm_type;
+			};
+		};
+
+		Operand(VRegId vreg_id)
+			: type(VREG), vreg_id(vreg_id) {}
+
+		Operand(uint64_t immediate_value, Type type)
+			: type(VREG), imm_value(immediate_value), imm_type(type) {}
+
+		inline bool is_vreg() { return this->type == VREG; }
+		inline bool is_immediate() { return this->type == IMMEDIATE; }
+	};
+
 	/// @brief Instruction base class
 	struct Instruction
 	{
@@ -110,40 +145,6 @@ namespace ir
 
 	namespace instr
 	{
-		struct LoadArgInstruction : public Instruction
-		{
-			unsigned short arg_index;
-			VRegId dest;
-			LoadArgInstruction(VRegId dest, unsigned short index);
-		};
-
-		struct LoadImmInstruction : public Instruction
-		{
-			VRegId dest;
-			uint32_t value;
-			LoadImmInstruction(VRegId dest, uint32_t val);
-		};
-
-		struct ReturnInstruction : public TerminalInstruction
-		{
-			std::optional<VRegId> ret_value = std::nullopt;
-
-			ReturnInstruction();
-			ReturnInstruction(VRegId ret_value);
-
-			std::vector<BasicBlock *> successors() const override { return std::vector<BasicBlock *>(); }
-		};
-
-		/// @brief Unconditional jump
-		struct JumpInstruction : public TerminalInstruction
-		{
-			BasicBlock *target;
-
-			JumpInstruction(BasicBlock *t)
-				: TerminalInstruction(Op::Jump), target(t) {}
-
-			std::vector<BasicBlock *> successors() const override { return std::vector<BasicBlock *>{this->target}; }
-		};
 	}
 
 	/// TODO conditional jump
@@ -190,42 +191,4 @@ namespace ir
 struct IrObject
 {
 	std::unordered_map<std::string, ir::Function *> functions;
-};
-
-/// @brief Wrapper around logic for building an IrObject. User must claim and clean up resultant object
-class IrWriter
-{
-	using VRegMap = std::unordered_map<std::string, ir::VRegId>;
-
-	/// @brief A stack of vreg maps, mapping names to assigned virtual registers
-	std::vector<VRegMap> vreg_map_scopes;
-
-	IrObject obj;
-
-public:
-	ir::Function *cur_function = nullptr;
-	ir::BasicBlock *cur_bblock = nullptr;
-	ir::Instruction *cur_instr = nullptr;
-
-	IrWriter();
-
-	/// @brief Creates a new function, and sets this writer's context there
-	void new_function(const std::string &name);
-
-	/// @brief Creates a new local in the current scope, returning its vreg
-	ir::VRegId new_local(const std::string &name);
-
-	/// @brief Find the vreg allocation of a name in the current or surrounding scopes (throws if cannot find)
-	ir::VRegId get_local(const std::string &name) const;
-
-	void push_scope();
-	void pop_scope();
-
-	/// @brief Reserve a new virtual reg
-	ir::VRegId new_vreg();
-
-	/// @brief Write an instruction at the current position
-	void emit(ir::Instruction *new_instr);
-
-	IrObject get_obj() { return std::move(this->obj); }
 };

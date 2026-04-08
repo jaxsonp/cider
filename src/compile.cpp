@@ -5,7 +5,7 @@
 #include "utils/logging.hpp"
 #include "utils/error.hpp"
 #include "frontend/AST.hpp"
-#include "IR.hpp"
+#include "ir/IR.hpp"
 #include "backend/codegen/CodeGenerator.hpp"
 #include "backend/objwriter/ObjectWriter.hpp"
 
