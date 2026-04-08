@@ -71,7 +71,24 @@ namespace ast
 
 	VRegId MultiplicativeExpression::emitIr(IrWriter &writer) const
 	{
-		throw UnimplementedError("TODO: emit ir");
+		VRegId l_expr_reg = this->l_expr->emitIr(writer);
+		VRegId r_expr_reg = this->r_expr->emitIr(writer);
+		VRegId output_reg = writer.new_vreg();
+		switch (this->operation)
+		{
+		case MultOperation::Multiplication:
+			writer.emit(new instr::MultiplyInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+			break;
+		case MultOperation::Division:
+			writer.emit(new instr::DivideInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+			break;
+		case MultOperation::Modulus:
+			writer.emit(new instr::ModuloInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+			break;
+		default:
+			throw InternalError("Uncaught multiplication operation variant");
+		};
+		return output_reg;
 	}
 
 	void ReturnStatement::emitIr(IrWriter &writer) const

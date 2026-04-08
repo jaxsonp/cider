@@ -61,6 +61,61 @@ namespace codegen
 			return pos;
 		}
 
+		/// push new mul (multiply lower) instruction, return its position
+		size_t write_mul(Register dest, Register op1, Register op2)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0u, op1, op2, 0x01u),
+				.fmt = InstructionFormat::RType,
+			});
+			return pos;
+		}
+
+		/// push new div (signed divide) instruction, return its position
+		size_t write_div(Register dest, Register op1, Register op2)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0x4u, op1, op2, 0x01u),
+				.fmt = InstructionFormat::RType,
+			});
+			return pos;
+		}
+
+		/// push new divu (unsigned divide) instruction, return its position
+		size_t write_divu(Register dest, Register op1, Register op2)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0x5u, op1, op2, 0x01u),
+				.fmt = InstructionFormat::RType,
+			});
+			return pos;
+		}
+
+		/// push new rem (signed division remainder) instruction, return its position
+		size_t write_rem(Register dest, Register op1, Register op2)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0x6u, op1, op2, 0x01u),
+				.fmt = InstructionFormat::RType,
+			});
+			return pos;
+		}
+
+		/// push new remu (unsigned division remainder) instruction, return its position
+		size_t write_remu(Register dest, Register op1, Register op2)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0x7u, op1, op2, 0x01u),
+				.fmt = InstructionFormat::RType,
+			});
+			return pos;
+		}
+
 		/// push new addi (add immediate) instruction, return its position
 		size_t write_addi(Register dest, Register src, uint32_t imm)
 		{
@@ -299,19 +354,81 @@ namespace codegen
 					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
 					if (instr->op2.is_vreg())
 					{
-						// add register to register
+						// subtact register from register
 						RegSlot *op2 = this->load_src_vreg(body, instr->op2.vreg_id);
 						body.write_sub(dest->physical, op1->physical, op2->physical);
 					}
 					else
 					{
-						// add immediate to register
+						// subtract immediate from register
 						// TODO check type here
 						uint32_t op2 = uint32_t(instr->op2.imm_value);
 						// converting to negative to subtract
 						op2 = static_cast<uint32_t>(-static_cast<int32_t>(op2));
 						body.write_addi(dest->physical, op1->physical, op2); // UNTESTED
 					}
+				}
+				else if (ir::instr::MultiplyInstruction *instr = dynamic_cast<ir::instr::MultiplyInstruction *>(cur_instr))
+				{
+					// TODO check for m extension
+					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
+					RegSlot *op2;
+					if (instr->op2.is_vreg())
+					{
+						// register to register
+						op2 = this->load_src_vreg(body, instr->op2.vreg_id);
+					}
+					else
+					{
+						// immediate to register
+						// TODO check type here
+						op2 = this->get_empty_slot(body);
+						body.write_addi(op2->physical, Register::zero, instr->op2.imm_value);
+					}
+					body.write_mul(dest->physical, op1->physical, op2->physical);
+				}
+				else if (ir::instr::DivideInstruction *instr = dynamic_cast<ir::instr::DivideInstruction *>(cur_instr))
+				{
+					// TODO check for m extension
+					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
+					RegSlot *op2;
+					if (instr->op2.is_vreg())
+					{
+						// register to register
+						op2 = this->load_src_vreg(body, instr->op2.vreg_id);
+					}
+					else
+					{
+						// immediate to register
+						// TODO check type here
+						op2 = this->get_empty_slot(body);
+						body.write_addi(op2->physical, Register::zero, instr->op2.imm_value); // UNCHECKED
+					}
+					// TODO use div if signed type
+					body.write_divu(dest->physical, op1->physical, op2->physical);
+				}
+				else if (ir::instr::ModuloInstruction *instr = dynamic_cast<ir::instr::ModuloInstruction *>(cur_instr))
+				{
+					// TODO check for m extension
+					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
+					RegSlot *op2;
+					if (instr->op2.is_vreg())
+					{
+						// register to register
+						op2 = this->load_src_vreg(body, instr->op2.vreg_id);
+					}
+					else
+					{
+						// immediate to register
+						// TODO check type here
+						op2 = this->get_empty_slot(body);
+						body.write_addi(op2->physical, Register::zero, instr->op2.imm_value); // UNCHECKED
+					}
+					// TODO use div if signed type
+					body.write_remu(dest->physical, op1->physical, op2->physical);
 				}
 				else if (ir::instr::ReturnInstruction *instr = dynamic_cast<ir::instr::ReturnInstruction *>(cur_instr))
 				{

@@ -105,9 +105,11 @@ futuer optimizations:
 - ok main return values: void, i32, u32
 - all top level functions are hoisted (global var initialization is calculated with DAG)
 - exit codes found in utils/common.hpp
+- binary operators are left associative (except for equality/comparison, needs parens)
 
 ## tests to remember to write
 
 - overflowing int literal
 - overflowing integers with operations
 - arithmetic bitshift right
+- left/right associativity

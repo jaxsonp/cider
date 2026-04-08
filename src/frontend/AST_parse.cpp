@@ -310,24 +310,28 @@ namespace ast
 		if (!maybe_l_expr.has_value())
 			return std::nullopt;
 
-		// check for operator
-		if (lexer.peek().type != TokenType::PLUS && lexer.peek().type != TokenType::MINUS)
-			return std::move(maybe_l_expr.value());
-		Token op_tok = lexer.take();
+		std::unique_ptr<ExpressionNode> ret = std::move(maybe_l_expr.value());
+		while (true)
+		{
+			// check for operator
+			if (lexer.peek().type != TokenType::PLUS && lexer.peek().type != TokenType::MINUS)
+				return ret;
+			Token op_tok = lexer.take();
 
-		std::unique_ptr<AdditiveExpression> ret = std::make_unique<AdditiveExpression>();
-		ret->l_expr = std::move(maybe_l_expr.value());
-		ret->plus = op_tok.type == TokenType::PLUS;
+			auto add_expr = std::make_unique<AdditiveExpression>();
+			add_expr->l_expr = std::move(ret);
+			add_expr->plus = op_tok.type == TokenType::PLUS;
 
-		// parse right hand expression
-		auto maybe_r_expr = MultiplicativeExpression::try_parse(lexer);
-		if (!maybe_r_expr.has_value())
-			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		ret->r_expr = std::move(maybe_r_expr.value());
+			// parse right hand expression
+			auto maybe_r_expr = MultiplicativeExpression::try_parse(lexer);
+			if (!maybe_r_expr.has_value())
+				throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			add_expr->r_expr = std::move(maybe_r_expr.value());
 
-		ret->src_loc.start = ret->l_expr->src_loc.start;
-		ret->src_loc.end = ret->r_expr->src_loc.end;
-		return ret;
+			add_expr->src_loc.start = add_expr->l_expr->src_loc.start;
+			add_expr->src_loc.end = add_expr->r_expr->src_loc.end;
+			ret = std::move(add_expr);
+		}
 	}
 
 	std::optional<std::unique_ptr<ExpressionNode>> MultiplicativeExpression::try_parse(Lexer &lexer)
@@ -339,37 +343,41 @@ namespace ast
 		if (!maybe_l_expr.has_value())
 			return std::nullopt;
 
-		// check for operator
-		MultOperation op;
-		switch (lexer.peek().type)
+		std::unique_ptr<ExpressionNode> ret = std::move(maybe_l_expr.value());
+		while (true)
 		{
-		case TokenType::ASTERISK:
-			op = MultOperation::Multiplication;
-			break;
-		case TokenType::FORWARD_SLASH:
-			op = MultOperation::Division;
-			break;
-		case TokenType::PERCENT:
-			op = MultOperation::Modulus;
-			break;
-		default:
-			return std::move(maybe_l_expr.value());
+			// check for operator
+			MultOperation op;
+			switch (lexer.peek().type)
+			{
+			case TokenType::ASTERISK:
+				op = MultOperation::Multiplication;
+				break;
+			case TokenType::FORWARD_SLASH:
+				op = MultOperation::Division;
+				break;
+			case TokenType::PERCENT:
+				op = MultOperation::Modulus;
+				break;
+			default:
+				return ret;
+			}
+			Token op_tok = lexer.take();
+
+			auto mult = std::make_unique<MultiplicativeExpression>();
+			mult->l_expr = std::move(ret);
+			mult->operation = op;
+
+			// parse right hand expression
+			auto maybe_r_expr = IntegerLiteralExpression::try_parse(lexer);
+			if (!maybe_r_expr.has_value())
+				throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			mult->r_expr = std::move(maybe_r_expr.value());
+
+			mult->src_loc.start = mult->l_expr->src_loc.start;
+			mult->src_loc.end = mult->r_expr->src_loc.end;
+			ret = std::move(mult);
 		}
-		Token op_tok = lexer.take();
-
-		std::unique_ptr<MultiplicativeExpression> ret = std::make_unique<MultiplicativeExpression>();
-		ret->l_expr = std::move(maybe_l_expr.value());
-		ret->operation = op;
-
-		// parse right hand expression
-		auto maybe_r_expr = IntegerLiteralExpression::try_parse(lexer);
-		if (!maybe_r_expr.has_value())
-			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		ret->r_expr = std::move(maybe_r_expr.value());
-
-		ret->src_loc.start = ret->l_expr->src_loc.start;
-		ret->src_loc.end = ret->r_expr->src_loc.end;
-		return ret;
 	}
 
 	std::optional<std::unique_ptr<ReturnStatement>> ReturnStatement::try_parse(Lexer &lexer)

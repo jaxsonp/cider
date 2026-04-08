@@ -1,4 +1,5 @@
 #include "ir/IR_instructions.hpp"
+#include "IR_instructions.hpp"
 
 namespace ir::instr
 {
@@ -11,6 +12,15 @@ namespace ir::instr
 
 	SubtractInstruction::SubtractInstruction(VRegId dest, VRegId op1, Operand op2)
 		: Instruction(Op::Sub), dest(dest), op1(op1), op2(op2) {}
+
+	MultiplyInstruction::MultiplyInstruction(VRegId dest, VRegId op1, Operand op2)
+		: Instruction(Op::Mul), dest(dest), op1(op1), op2(op2) {}
+
+	DivideInstruction::DivideInstruction(VRegId dest, VRegId op1, Operand op2)
+		: Instruction(Op::Mul), dest(dest), op1(op1), op2(op2) {}
+
+	ModuloInstruction::ModuloInstruction(VRegId dest, VRegId op1, Operand op2)
+		: Instruction(Op::Mul), dest(dest), op1(op1), op2(op2) {}
 
 	ReturnInstruction::ReturnInstruction()
 		: TerminalInstruction(Op::Return) {}

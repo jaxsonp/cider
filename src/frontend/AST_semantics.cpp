@@ -78,7 +78,19 @@ namespace ast
 
 	void MultiplicativeExpression::check_semantics(SemanticAnalysisState state) const
 	{
-		throw UnimplementedError("TODO check semantics");
+		if (this->l_expr == nullptr || this->r_expr == nullptr || (this->operation != MultOperation::Multiplication && this->operation != MultOperation::Division && this->operation != MultOperation::Modulus))
+			throw InternalError("Invalid AST node (Multiplicative expresssion)");
+
+		// make sure subexpression types match
+		FrontendType l_type = this->l_expr->get_type();
+		FrontendType r_type = this->r_expr->get_type();
+		if (l_type != r_type)
+			throw TypeError(
+				std::format(
+					"Binary expression contains mix-matched types, {} and {}",
+					l_type.to_string(),
+					r_type.to_string()),
+				this->src_loc);
 	}
 
 	void ReturnStatement::check_semantics(SemanticAnalysisState state) const

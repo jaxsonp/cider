@@ -23,7 +23,7 @@ namespace ir::instr
 		LoadImmInstruction(VRegId dest, uint64_t val);
 	};
 
-	/// @brief Operands must not be immediate-immediate
+	/// Operands must not be immediate-immediate
 	struct AddInstruction : public Instruction
 	{
 		VRegId dest;
@@ -33,7 +33,7 @@ namespace ir::instr
 		AddInstruction(VRegId dest, VRegId op1, Operand op2);
 	};
 
-	/// @brief Operands must not be immediate-immediate
+	/// Operands must not be immediate-immediate
 	struct SubtractInstruction : public Instruction
 	{
 		VRegId dest;
@@ -41,6 +41,33 @@ namespace ir::instr
 		Operand op2;
 		SubtractInstruction() = delete;
 		SubtractInstruction(VRegId dest, VRegId op1, Operand op2);
+	};
+
+	struct MultiplyInstruction : public Instruction
+	{
+		VRegId dest;
+		VRegId op1;
+		Operand op2;
+		MultiplyInstruction() = delete;
+		MultiplyInstruction(VRegId dest, VRegId op1, Operand op2);
+	};
+
+	struct DivideInstruction : public Instruction
+	{
+		VRegId dest;
+		VRegId op1;
+		Operand op2;
+		DivideInstruction() = delete;
+		DivideInstruction(VRegId dest, VRegId op1, Operand op2);
+	};
+
+	struct ModuloInstruction : public Instruction
+	{
+		VRegId dest;
+		VRegId op1;
+		Operand op2;
+		ModuloInstruction() = delete;
+		ModuloInstruction(VRegId dest, VRegId op1, Operand op2);
 	};
 
 	struct ReturnInstruction : public TerminalInstruction
