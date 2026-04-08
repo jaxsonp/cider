@@ -6,7 +6,7 @@
 
 #include "utils/common.hpp"
 
-class CompileError : public std::exception
+class CompilerError : public std::exception
 {
 public:
 	using LocVariant = std::variant<std::monostate, SourceLoc, SourceLocRange>;
@@ -16,7 +16,7 @@ private:
 
 protected:
 	// ctor for implementors
-	CompileError(
+	CompilerError(
 		const char *type_name,
 		ExitCode code,
 		const std::string &msg,
@@ -29,60 +29,21 @@ public:
 	inline ExitCode exit_code() const noexcept { return this->code; }
 
 	inline const char *what() const noexcept override { return display.c_str(); };
-};
 
-class SyntaxError : public CompileError
-{
-public:
-	SyntaxError(const std::string &msg, LocVariant loc = std::monostate{})
-		: CompileError("Syntax error", ExitCode::SyntaxError, msg, loc) {}
-};
-
-class NameError : public CompileError
-{
-public:
-	NameError(const std::string &msg, LocVariant loc = std::monostate{})
-		: CompileError("Name error", ExitCode::NameError, msg, loc) {}
-};
-
-class TypeError : public CompileError
-{
-public:
-	TypeError(const std::string &msg, LocVariant loc = std::monostate{})
-		: CompileError("Type error", ExitCode::TypeError, msg, loc) {}
-};
-
-class SemanticError : public CompileError
-{
-public:
-	SemanticError(const std::string &msg, LocVariant loc = std::monostate{})
-		: CompileError("Semantic error", ExitCode::SemanticError, msg, loc) {}
-};
-
-class UnsupportedError : public CompileError
-{
-public:
-	UnsupportedError(std::string &msg, LocVariant loc = std::monostate{})
-		: CompileError("Unsupported", ExitCode::Unsupported, msg, loc) {}
-};
-
-class FileOpenError : public CompileError
-{
-public:
-	FileOpenError(const std::string &msg, LocVariant loc = std::monostate{})
-		: CompileError("File open error", ExitCode::FileReadError, msg, loc) {}
-};
-
-class UnimplementedError : public CompileError
-{
-public:
-	UnimplementedError(const std::string &msg, LocVariant loc = std::monostate{})
-		: CompileError("Unimplemented", ExitCode::Unimplemented, msg, loc) {}
-};
-
-class InternalError : public CompileError
-{
-public:
-	InternalError(const std::string &msg, LocVariant loc = std::monostate{})
-		: CompileError("Internal error", ExitCode::InternalError, msg, loc) {}
+	/// @brief Intantiate a compiler error related to invalid syntax
+	static CompilerError syntax_error(const std::string &msg, LocVariant loc = std::monostate{});
+	/// @brief Intantiate a compiler error related to an erroneous name
+	static CompilerError name_error(const std::string &msg, LocVariant loc = std::monostate{});
+	/// @brief Intantiate a compiler error related to types
+	static CompilerError type_error(const std::string &msg, LocVariant loc = std::monostate{});
+	/// @brief Intantiate a compiler error related to language semantics
+	static CompilerError semantic_error(const std::string &msg, LocVariant loc = std::monostate{});
+	/// @brief Intantiate a compiler error indicating a feature/function is unsupported
+	static CompilerError unsupported(const std::string &msg, LocVariant loc = std::monostate{});
+	/// @brief Intantiate a compiler error related to opening/reading/writing with OS files
+	static CompilerError file_io_error(const std::string &msg, LocVariant loc = std::monostate{});
+	/// @brief Intantiate a compiler error for an unimplemented feature/function (generally for TODOs)
+	static CompilerError unimplemented(const std::string &msg, LocVariant loc = std::monostate{});
+	/// @brief Intantiate a compiler error for a state that _should_ not be thrown, indicating invalid state internally. Jaxson is a bad programmer if this one is thrown
+	static CompilerError internal(const std::string &msg, LocVariant loc = std::monostate{});
 };

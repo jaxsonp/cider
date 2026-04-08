@@ -54,7 +54,7 @@ std::string FrontendType::to_string() const
 		case ConcreteType::I32:
 			return "i32";
 		default:
-			throw UnimplementedError("unhandled concrete type variant");
+			throw CompilerError::unimplemented("unhandled concrete type variant");
 		}
 	}
 	else if (std::holds_alternative<Unknown>(this->variant))
@@ -63,7 +63,7 @@ std::string FrontendType::to_string() const
 	}
 	else
 	{
-		throw UnimplementedError("unhandled frontend type variant");
+		throw CompilerError::unimplemented("unhandled frontend type variant");
 	}
 }
 
@@ -78,7 +78,7 @@ std::string to_string(ConcreteType &t)
 	case ConcreteType::I32:
 		return "i32";
 	default:
-		throw UnimplementedError("unhandled concrete type variant");
+		throw CompilerError::unimplemented("unhandled concrete type variant");
 	}
 }
 

@@ -54,9 +54,7 @@ Tests are defined in the `tests/` subdirectory. Each test consists of a `.sasc` 
 
 Next:
 
-- Expression testing
 - Check code for stuff that doesn't need to be in headers
-- Refactor errors to be one class
 - Testing improvements:
   - Timeout
   - finish stdout/stderr checking

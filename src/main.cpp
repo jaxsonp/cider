@@ -64,7 +64,7 @@ int main(int argc, char **argv)
 		compile(filename, settings);
 		log("{}: compilation complete", filename);
 	}
-	catch (const CompileError &e)
+	catch (const CompilerError &e)
 	{
 		std::cerr << "\n"
 				  << e.what() << "\n";

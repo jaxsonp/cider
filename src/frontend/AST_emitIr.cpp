@@ -19,42 +19,42 @@ namespace ast
 
 	VRegId LogicalOrExpression::emitIr(IrWriter &writer) const
 	{
-		throw UnimplementedError("TODO: emit ir");
+		throw CompilerError::unimplemented("TODO: emit ir");
 	}
 
 	VRegId LogicalAndExpression::emitIr(IrWriter &writer) const
 	{
-		throw UnimplementedError("TODO: emit ir");
+		throw CompilerError::unimplemented("TODO: emit ir");
 	}
 
 	VRegId EqualityExpression::emitIr(IrWriter &writer) const
 	{
-		throw UnimplementedError("TODO: emit ir");
+		throw CompilerError::unimplemented("TODO: emit ir");
 	}
 
 	VRegId ComparisonExpression::emitIr(IrWriter &writer) const
 	{
-		throw UnimplementedError("TODO: emit ir");
+		throw CompilerError::unimplemented("TODO: emit ir");
 	}
 
 	VRegId BitwiseOrExpression::emitIr(IrWriter &writer) const
 	{
-		throw UnimplementedError("TODO: emit ir");
+		throw CompilerError::unimplemented("TODO: emit ir");
 	}
 
 	VRegId BitwiseXorExpression::emitIr(IrWriter &writer) const
 	{
-		throw UnimplementedError("TODO: emit ir");
+		throw CompilerError::unimplemented("TODO: emit ir");
 	}
 
 	VRegId BitwiseAndExpression::emitIr(IrWriter &writer) const
 	{
-		throw UnimplementedError("TODO: emit ir");
+		throw CompilerError::unimplemented("TODO: emit ir");
 	}
 
 	VRegId BitshiftExpression::emitIr(IrWriter &writer) const
 	{
-		throw UnimplementedError("TODO: emit ir");
+		throw CompilerError::unimplemented("TODO: emit ir");
 	}
 
 	VRegId AdditiveExpression::emitIr(IrWriter &writer) const
@@ -86,7 +86,7 @@ namespace ast
 			writer.emit(new instr::ModuloInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
 			break;
 		default:
-			throw InternalError("Uncaught multiplication operation variant");
+			throw CompilerError::internal("Uncaught multiplication operation variant");
 		};
 		return output_reg;
 	}

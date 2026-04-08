@@ -452,7 +452,7 @@ namespace codegen
 				}
 				else
 				{
-					throw UnimplementedError("Uncaught instruction variant");
+					throw CompilerError::unimplemented("Uncaught instruction variant");
 				}
 
 				cur_instr = cur_instr->next;
@@ -511,12 +511,12 @@ namespace codegen
 			}
 			case InstructionFormat::BType:
 			{
-				throw UnimplementedError("TODO B-type instructions");
+				throw CompilerError::unimplemented("TODO B-type instructions");
 				break;
 			}
 			case InstructionFormat::UType:
 			{
-				throw UnimplementedError("TODO U-type instructions");
+				throw CompilerError::unimplemented("TODO U-type instructions");
 				break;
 			}
 			case InstructionFormat::JType:
@@ -536,7 +536,7 @@ namespace codegen
 			}
 			case InstructionFormat::RType:
 			{
-				throw InternalError("Cannot backpatch R-type instruction");
+				throw CompilerError::internal("Cannot backpatch R-type instruction");
 			}
 			}
 
@@ -625,7 +625,7 @@ namespace codegen
 		}
 		else
 		{
-			throw UnimplementedError("Unsupported runtime operating system for RV32");
+			throw CompilerError::unsupported("Unsupported runtime operating system for RV32");
 		}
 		return std::vector<uint8_t>();
 	}

@@ -15,7 +15,7 @@ void compile(const std::string &filename, const CompileSettings &settings)
 	log_vv("Opening file \"{}\" for reading", filename);
 	std::ifstream file(filename);
 	if (!file.is_open())
-		throw FileOpenError(std::format("Failed to open file \"{}\" for reading", filename));
+		throw CompilerError::file_io_error(std::format("Failed to open file \"{}\" for reading", filename));
 	log_vv("File opened");
 
 	log_v("Building AST");
@@ -48,7 +48,7 @@ void compile(const std::string &filename, const CompileSettings &settings)
 		}
 	}
 	if (!found_main)
-		throw SemanticError("Missing main function");
+		throw CompilerError::semantic_error("Missing main function");
 	std::vector<uint8_t> runtime_code = code_generator->build_runtime_code(main_offset, settings.target);
 	obj.code.reserve(runtime_code.size());
 	obj.code.insert(obj.code.begin(), runtime_code.begin(), runtime_code.end()); // is this slow? (eh runtime code isnt big)
@@ -56,7 +56,7 @@ void compile(const std::string &filename, const CompileSettings &settings)
 	log_vv("Opening file \"{}\" for writing", settings.output_filename);
 	std::ofstream out_file(settings.output_filename, std::ios::binary);
 	if (!out_file.is_open())
-		throw FileOpenError(std::format("Failed to open file \"{}\" for writing", settings.output_filename));
+		throw CompilerError::file_io_error(std::format("Failed to open file \"{}\" for writing", settings.output_filename));
 
 	log_v("Emitting ELF object");
 	auto obj_writer = settings.target.get_object_writer();

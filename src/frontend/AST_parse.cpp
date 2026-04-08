@@ -59,7 +59,7 @@ namespace ast
 		{
 			long long value_ll = std::stoll(value_str);
 			if (!std::in_range<int32_t>(value_ll))
-				throw TypeError("Integer literal out of bounds for type: i32");
+				throw CompilerError::type_error("Integer literal out of bounds for type: i32");
 			uint32_t value_int32 = uint32_t(value_ll);
 			ret->raw_value = std::bit_cast<uint32_t, int32_t>(value_int32);
 		}
@@ -67,11 +67,11 @@ namespace ast
 		{
 			long long value_ll = std::stoll(value_str);
 			if (!std::in_range<uint32_t>(value_ll))
-				throw TypeError("Integer literal out of bounds for type: u32");
+				throw CompilerError::type_error("Integer literal out of bounds for type: u32");
 			ret->raw_value = uint32_t(value_ll);
 		}
 		else
-			throw TypeError(std::format("Invalid type for integer literal: {}", ret->type.to_string()), ret->src_loc);
+			throw CompilerError::type_error(std::format("Invalid type for integer literal: {}", ret->type.to_string()), ret->src_loc);
 
 		return ret;
 	}
@@ -94,7 +94,7 @@ namespace ast
 		// parse right hand expression
 		auto maybe_r_expr = LogicalAndExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
-			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
 		ret->r_expr = std::move(maybe_r_expr.value());
 
 		ret->src_loc.start = ret->l_expr->src_loc.start;
@@ -120,7 +120,7 @@ namespace ast
 		// parse right hand expression
 		auto maybe_r_expr = EqualityExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
-			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
 		ret->r_expr = std::move(maybe_r_expr.value());
 
 		ret->src_loc.start = ret->l_expr->src_loc.start;
@@ -147,7 +147,7 @@ namespace ast
 		// parse right hand expression
 		auto maybe_r_expr = ComparisonExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
-			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
 		ret->r_expr = std::move(maybe_r_expr.value());
 
 		ret->src_loc.start = ret->l_expr->src_loc.start;
@@ -190,7 +190,7 @@ namespace ast
 		// parse right hand expression
 		auto maybe_r_expr = BitwiseOrExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
-			throw SyntaxError("Expected expression following " + to_string(TokenType::AND_AND), op_tok.loc.end);
+			throw CompilerError::syntax_error("Expected expression following " + to_string(TokenType::AND_AND), op_tok.loc.end);
 		ret->r_expr = std::move(maybe_r_expr.value());
 
 		ret->src_loc.start = ret->l_expr->src_loc.start;
@@ -216,7 +216,7 @@ namespace ast
 		// parse right hand expression
 		auto maybe_r_expr = BitwiseXorExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
-			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
 		ret->r_expr = std::move(maybe_r_expr.value());
 
 		ret->src_loc.start = ret->l_expr->src_loc.start;
@@ -242,7 +242,7 @@ namespace ast
 		// parse right hand expression
 		auto maybe_r_expr = BitwiseAndExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
-			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
 		ret->r_expr = std::move(maybe_r_expr.value());
 
 		ret->src_loc.start = ret->l_expr->src_loc.start;
@@ -268,7 +268,7 @@ namespace ast
 		// parse right hand expression
 		auto maybe_r_expr = BitshiftExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
-			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
 		ret->r_expr = std::move(maybe_r_expr.value());
 
 		ret->src_loc.start = ret->l_expr->src_loc.start;
@@ -295,7 +295,7 @@ namespace ast
 		// parse right hand expression
 		auto maybe_r_expr = AdditiveExpression::try_parse(lexer);
 		if (!maybe_r_expr.has_value())
-			throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
 		ret->r_expr = std::move(maybe_r_expr.value());
 
 		ret->src_loc.start = ret->l_expr->src_loc.start;
@@ -325,7 +325,7 @@ namespace ast
 			// parse right hand expression
 			auto maybe_r_expr = MultiplicativeExpression::try_parse(lexer);
 			if (!maybe_r_expr.has_value())
-				throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+				throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
 			add_expr->r_expr = std::move(maybe_r_expr.value());
 
 			add_expr->src_loc.start = add_expr->l_expr->src_loc.start;
@@ -371,7 +371,7 @@ namespace ast
 			// parse right hand expression
 			auto maybe_r_expr = IntegerLiteralExpression::try_parse(lexer);
 			if (!maybe_r_expr.has_value())
-				throw SyntaxError("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+				throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
 			mult->r_expr = std::move(maybe_r_expr.value());
 
 			mult->src_loc.start = mult->l_expr->src_loc.start;
@@ -398,7 +398,7 @@ namespace ast
 		if (auto parsed_expr = ExpressionNode::try_parse(lexer))
 			ret->expr = std::move(parsed_expr.value());
 		else
-			throw SyntaxError("Expected expression", expr_start);
+			throw CompilerError::syntax_error("Expected expression", expr_start);
 
 		ret->src_loc.end = lexer.expect(TokenType::SEMICOLON).loc.end;
 

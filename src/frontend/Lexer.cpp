@@ -260,7 +260,7 @@ Token Lexer::expect(TokenType expected_type)
 {
 	Token tok = this->take();
 	if (tok.type != expected_type)
-		throw SyntaxError(std::format("Unexpected token: {}, expected {}", to_string(tok), to_string(expected_type)), tok.loc);
+		throw CompilerError::syntax_error(std::format("Unexpected token: {}, expected {}", to_string(tok), to_string(expected_type)), tok.loc);
 	return tok;
 }
 
@@ -342,7 +342,7 @@ std::string to_string(TokenType type)
 		return "Unexpected char";
 	}
 
-	throw UnimplementedError("Unhandled token type (in TokenType::to_string)");
+	throw CompilerError::unimplemented("Unhandled token type (in TokenType::to_string)");
 }
 
 std::string to_string(Token tok)

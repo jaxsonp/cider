@@ -8,6 +8,7 @@ enum class ExitCode : uint8_t
 	Success = 0,
 
 	// compilation errors
+
 	SyntaxError = 0x1,
 	NameError = 0x2,
 	TypeError = 0x3,
@@ -16,12 +17,17 @@ enum class ExitCode : uint8_t
 	Unsupported = 0x10,
 
 	// non-compilation errors
-	FileReadError = 0xE0,
+
+	FileIoError = 0xE0,
 	UsageError = 0xE1,
 
 	// internal errors
+
+	// glorified TODO
 	Unimplemented = 0xFD,
+	// internal error thrown manually during compilation
 	InternalError = 0xFE,
+	// exception not caught by compilation code
 	UncaughtInternalError = 0xFF,
 };
 

@@ -36,7 +36,7 @@ ir::VRegId IrWriter::get_local(const std::string &name) const
 			return found->second;
 		}
 	}
-	throw InternalError(std::format("Failed to find vreg allocation for name \"{}\"", name));
+	throw CompilerError::internal(std::format("Failed to find vreg allocation for name \"{}\"", name));
 }
 
 void IrWriter::push_scope()
@@ -52,14 +52,14 @@ void IrWriter::pop_scope()
 ir::VRegId IrWriter::new_vreg()
 {
 	if (this->cur_function == nullptr)
-		throw InternalError("Attempted to reserve vreg before a function was created");
+		throw CompilerError::internal("Attempted to reserve vreg before a function was created");
 	return this->cur_function->vreg_count++;
 }
 
 void IrWriter::emit(ir::Instruction *new_instr)
 {
 	if (this->cur_bblock == nullptr)
-		throw InternalError("Attempted to emit IR instruction before a basic block was \"chosen\"");
+		throw CompilerError::internal("Attempted to emit IR instruction before a basic block was \"chosen\"");
 
 	this->cur_function->instr_count += 1;
 	if (this->cur_instr == nullptr)

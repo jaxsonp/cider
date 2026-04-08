@@ -71,10 +71,10 @@ namespace ast
 	void SymbolScope::add(std::string name, FrontendType type)
 	{
 		if (this->symbols.contains(name))
-			throw NameError(std::format("Name \"{}\" is already defined at this point", name));
+			throw CompilerError::name_error(std::format("Name \"{}\" is already defined at this point", name));
 		auto [_, success] = this->symbols.insert({name, Symbol(name, type)});
 		if (!success)
-			throw InternalError(std::format("Failed to insert symbol \"{}\": {}", name, type.to_string()));
+			throw CompilerError::internal(std::format("Failed to insert symbol \"{}\": {}", name, type.to_string()));
 	}
 
 	SymbolScope::SymbolScope(SymbolScope *_parent)
@@ -86,7 +86,7 @@ namespace ast
 		  fn_return_type(std::nullopt)
 	{
 		if (_symbols == nullptr)
-			throw InternalError("Attempted to initialize semantic analysis state with nullptr");
+			throw CompilerError::internal("Attempted to initialize semantic analysis state with nullptr");
 	}
 
 	FrontendType ReturnStatement::return_type() const

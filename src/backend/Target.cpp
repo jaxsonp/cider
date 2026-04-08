@@ -19,7 +19,7 @@ std::unique_ptr<CodeGenerator> Target::get_code_generator() const
 		ret = std::make_unique<codegen::CodeGenerator_riscv32>();
 		break;
 	default:
-		throw InternalError("Uncaught ISA variant");
+		throw CompilerError::internal("Uncaught ISA variant");
 	}
 	return ret;
 }
@@ -33,7 +33,7 @@ std::unique_ptr<ObjectWriter> Target::get_object_writer() const
 		ret = std::make_unique<objwriter::ObjectWriter_ELF32>();
 		break;
 	default:
-		throw InternalError("Uncaught object format variant");
+		throw CompilerError::internal("Uncaught object format variant");
 	}
 	return ret;
 }
