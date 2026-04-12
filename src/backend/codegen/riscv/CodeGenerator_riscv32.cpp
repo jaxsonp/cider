@@ -61,6 +61,39 @@ namespace codegen
 			return pos;
 		}
 
+		/// push new xor (bitwise xor) instruction, return its position
+		size_t write_xor(Register dest, Register op1, Register op2)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0x4u, op1, op2, 0u),
+				.fmt = InstructionFormat::RType,
+			});
+			return pos;
+		}
+
+		/// push new or (bitwise or) instruction, return its position
+		size_t write_or(Register dest, Register op1, Register op2)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0x6u, op1, op2, 0u),
+				.fmt = InstructionFormat::RType,
+			});
+			return pos;
+		}
+
+		/// push new and (bitwise and) instruction, return its position
+		size_t write_and(Register dest, Register op1, Register op2)
+		{
+			size_t pos = this->buf.size();
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0x7u, op1, op2, 0u),
+				.fmt = InstructionFormat::RType,
+			});
+			return pos;
+		}
+
 		/// push new mul (multiply lower) instruction, return its position
 		size_t write_mul(Register dest, Register op1, Register op2)
 		{
@@ -429,6 +462,63 @@ namespace codegen
 					}
 					// TODO use div if signed type
 					body.write_remu(dest->physical, op1->physical, op2->physical);
+				}
+				else if (ir::instr::BitwiseOrInstruction *instr = dynamic_cast<ir::instr::BitwiseOrInstruction *>(cur_instr))
+				{
+					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
+					RegSlot *op2;
+					if (instr->op2.is_vreg())
+					{
+						// register to register
+						op2 = this->load_src_vreg(body, instr->op2.vreg_id);
+					}
+					else
+					{
+						// immediate to register
+						// TODO check type here
+						op2 = this->get_empty_slot(body);
+						body.write_addi(op2->physical, Register::zero, instr->op2.imm_value); // UNCHECKED
+					}
+					body.write_or(dest->physical, op1->physical, op2->physical);
+				}
+				else if (ir::instr::BitwiseXorInstruction *instr = dynamic_cast<ir::instr::BitwiseXorInstruction *>(cur_instr))
+				{
+					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
+					RegSlot *op2;
+					if (instr->op2.is_vreg())
+					{
+						// register to register
+						op2 = this->load_src_vreg(body, instr->op2.vreg_id);
+					}
+					else
+					{
+						// immediate to register
+						// TODO check type here
+						op2 = this->get_empty_slot(body);
+						body.write_addi(op2->physical, Register::zero, instr->op2.imm_value); // UNCHECKED
+					}
+					body.write_xor(dest->physical, op1->physical, op2->physical);
+				}
+				else if (ir::instr::BitwiseAndInstruction *instr = dynamic_cast<ir::instr::BitwiseAndInstruction *>(cur_instr))
+				{
+					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
+					RegSlot *op2;
+					if (instr->op2.is_vreg())
+					{
+						// register to register
+						op2 = this->load_src_vreg(body, instr->op2.vreg_id);
+					}
+					else
+					{
+						// immediate to register
+						// TODO check type here
+						op2 = this->get_empty_slot(body);
+						body.write_addi(op2->physical, Register::zero, instr->op2.imm_value); // UNCHECKED
+					}
+					body.write_and(dest->physical, op1->physical, op2->physical);
 				}
 				else if (ir::instr::ReturnInstruction *instr = dynamic_cast<ir::instr::ReturnInstruction *>(cur_instr))
 				{

@@ -12,10 +12,6 @@ namespace ir
 	BasicBlock::BasicBlock(std::string _note)
 		: id(bb_count++), note(_note) {}
 
-	namespace instr
-	{
-	}
-
 	Function::Function(const std::string &_name)
 		: name(_name), vreg_count(0)
 	{

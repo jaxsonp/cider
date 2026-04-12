@@ -1,5 +1,5 @@
 //! EXIT_CODE=31
 
 fn main() -> u32 {
-	return 31u32 & 8u32;
+	return 31u32 | 8u32;
 }

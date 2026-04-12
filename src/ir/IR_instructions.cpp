@@ -22,6 +22,15 @@ namespace ir::instr
 	ModuloInstruction::ModuloInstruction(VRegId dest, VRegId op1, Operand op2)
 		: Instruction(Op::Mul), dest(dest), op1(op1), op2(op2) {}
 
+	BitwiseOrInstruction::BitwiseOrInstruction(VRegId dest, VRegId op1, Operand op2)
+		: Instruction(Op::BitOr), dest(dest), op1(op1), op2(op2) {}
+
+	BitwiseXorInstruction::BitwiseXorInstruction(VRegId dest, VRegId op1, Operand op2)
+		: Instruction(Op::BitXor), dest(dest), op1(op1), op2(op2) {}
+
+	BitwiseAndInstruction::BitwiseAndInstruction(VRegId dest, VRegId op1, Operand op2)
+		: Instruction(Op::BitAnd), dest(dest), op1(op1), op2(op2) {}
+
 	ReturnInstruction::ReturnInstruction()
 		: TerminalInstruction(Op::Return) {}
 

@@ -70,6 +70,32 @@ namespace ir::instr
 		ModuloInstruction(VRegId dest, VRegId op1, Operand op2);
 	};
 
+	struct BitwiseOrInstruction : public Instruction
+	{
+		VRegId dest;
+		VRegId op1;
+		Operand op2;
+		BitwiseOrInstruction() = delete;
+		BitwiseOrInstruction(VRegId dest, VRegId op1, Operand op2);
+	};
+
+	struct BitwiseXorInstruction : public Instruction
+	{
+		VRegId dest;
+		VRegId op1;
+		Operand op2;
+		BitwiseXorInstruction() = delete;
+		BitwiseXorInstruction(VRegId dest, VRegId op1, Operand op2);
+	};
+	struct BitwiseAndInstruction : public Instruction
+	{
+		VRegId dest;
+		VRegId op1;
+		Operand op2;
+		BitwiseAndInstruction() = delete;
+		BitwiseAndInstruction(VRegId dest, VRegId op1, Operand op2);
+	};
+
 	struct ReturnInstruction : public TerminalInstruction
 	{
 		std::optional<Operand> ret_value = std::nullopt;

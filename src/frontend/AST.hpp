@@ -9,8 +9,8 @@
 #include <string>
 
 #include "Lexer.hpp"
+#include "frontend/FrontendType.hpp"
 #include "ir/IrWriter.hpp"
-#include "types.hpp"
 #include "utils/common.hpp"
 
 namespace ast

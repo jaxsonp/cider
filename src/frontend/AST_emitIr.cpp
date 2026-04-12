@@ -39,17 +39,29 @@ namespace ast
 
 	VRegId BitwiseOrExpression::emitIr(IrWriter &writer) const
 	{
-		throw CompilerError::unimplemented("TODO: emit ir");
+		VRegId l_expr_reg = this->l_expr->emitIr(writer);
+		VRegId r_expr_reg = this->r_expr->emitIr(writer);
+		VRegId output_reg = writer.new_vreg();
+		writer.emit(new instr::BitwiseOrInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+		return output_reg;
 	}
 
 	VRegId BitwiseXorExpression::emitIr(IrWriter &writer) const
 	{
-		throw CompilerError::unimplemented("TODO: emit ir");
+		VRegId l_expr_reg = this->l_expr->emitIr(writer);
+		VRegId r_expr_reg = this->r_expr->emitIr(writer);
+		VRegId output_reg = writer.new_vreg();
+		writer.emit(new instr::BitwiseXorInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+		return output_reg;
 	}
 
 	VRegId BitwiseAndExpression::emitIr(IrWriter &writer) const
 	{
-		throw CompilerError::unimplemented("TODO: emit ir");
+		VRegId l_expr_reg = this->l_expr->emitIr(writer);
+		VRegId r_expr_reg = this->r_expr->emitIr(writer);
+		VRegId output_reg = writer.new_vreg();
+		writer.emit(new instr::BitwiseAndInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+		return output_reg;
 	}
 
 	VRegId BitshiftExpression::emitIr(IrWriter &writer) const

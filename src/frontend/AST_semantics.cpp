@@ -18,10 +18,7 @@ namespace ast
 
 	void LogicalOrExpression::check_semantics(SemanticAnalysisState state) const
 	{
-		FrontendType l_type = this->l_expr->get_type();
-		FrontendType r_type = this->r_expr->get_type();
-		if (l_type != r_type)
-			throw CompilerError::type_error(std::format("Mix-matched types in binary expression, {} != {}", l_type.to_string(), r_type.to_string()), this->src_loc);
+		throw CompilerError::unimplemented("TODO check semantics");
 	}
 
 	void LogicalAndExpression::check_semantics(SemanticAnalysisState state) const
@@ -41,17 +38,59 @@ namespace ast
 
 	void BitwiseOrExpression::check_semantics(SemanticAnalysisState state) const
 	{
-		throw CompilerError::unimplemented("TODO check semantics");
+		if (this->l_expr == nullptr || this->r_expr == nullptr)
+			throw CompilerError::internal("Invalid AST node (BitwiseOrExpression)");
+
+		// make sure subexpression types match
+		FrontendType l_type = this->l_expr->get_type();
+		FrontendType r_type = this->r_expr->get_type();
+		if (l_type != r_type)
+			throw CompilerError::type_error(
+				std::format(
+					"Binary operation contains mix-matched types, {} and {}",
+					l_type.to_string(),
+					r_type.to_string()),
+				this->src_loc);
+
+		// make sure type is integral TODO
 	}
 
 	void BitwiseXorExpression::check_semantics(SemanticAnalysisState state) const
 	{
-		throw CompilerError::unimplemented("TODO check semantics");
+		if (this->l_expr == nullptr || this->r_expr == nullptr)
+			throw CompilerError::internal("Invalid AST node (BitwiseXorExpression)");
+
+		// make sure subexpression types match
+		FrontendType l_type = this->l_expr->get_type();
+		FrontendType r_type = this->r_expr->get_type();
+		if (l_type != r_type)
+			throw CompilerError::type_error(
+				std::format(
+					"Binary operation contains mix-matched types, {} and {}",
+					l_type.to_string(),
+					r_type.to_string()),
+				this->src_loc);
+
+		// make sure type is integral TODO
 	}
 
 	void BitwiseAndExpression::check_semantics(SemanticAnalysisState state) const
 	{
-		throw CompilerError::unimplemented("TODO check semantics");
+		if (this->l_expr == nullptr || this->r_expr == nullptr)
+			throw CompilerError::internal("Invalid AST node (BitwiseAndExpression)");
+
+		// make sure subexpression types match
+		FrontendType l_type = this->l_expr->get_type();
+		FrontendType r_type = this->r_expr->get_type();
+		if (l_type != r_type)
+			throw CompilerError::type_error(
+				std::format(
+					"Binary operation contains mix-matched types, {} and {}",
+					l_type.to_string(),
+					r_type.to_string()),
+				this->src_loc);
+
+		// make sure type is integral TODO
 	}
 
 	void BitshiftExpression::check_semantics(SemanticAnalysisState state) const
@@ -70,7 +109,7 @@ namespace ast
 		if (l_type != r_type)
 			throw CompilerError::type_error(
 				std::format(
-					"Binary expression contains mix-matched types, {} and {}",
+					"Binary operation contains mix-matched types, {} and {}",
 					l_type.to_string(),
 					r_type.to_string()),
 				this->src_loc);
@@ -87,7 +126,7 @@ namespace ast
 		if (l_type != r_type)
 			throw CompilerError::type_error(
 				std::format(
-					"Binary expression contains mix-matched types, {} and {}",
+					"Binary operation contains mix-matched types, {} and {}",
 					l_type.to_string(),
 					r_type.to_string()),
 				this->src_loc);
@@ -151,7 +190,7 @@ namespace ast
 			if (state.fn_return_type.has_value() && expr_type != state.fn_return_type.value())
 				throw CompilerError::type_error(
 					std::format(
-						"Invalid return expression type, function requires {}, found: {}",
+						"Invalid return type, function requires {}, found: {}",
 						state.fn_return_type.value().to_string(),
 						expr_type.to_string()),
 					this->src_loc);

@@ -1,4 +1,4 @@
-//! EXIT_CODE=12
+//! EXIT_CODE=8
 
 fn main() -> i32 {
 	return 0i32 | 8i32;

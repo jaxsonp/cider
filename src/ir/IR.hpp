@@ -6,7 +6,7 @@
 #include <optional>
 #include <stdint.h>
 
-#include "types.hpp"
+#include "ir/IrType.hpp"
 
 namespace ir
 {
@@ -20,42 +20,6 @@ namespace ir
 		I32,
 	};
 
-	/*enum class TypeVariant
-	{
-		U32,
-		I32,
-	};
-
-	struct Type
-	{
-		TypeVariant variant;
-
-		inline static Type u32() { return Type{TypeVariant::U32}; }
-		inline static Type i32() { return Type{TypeVariant::I32}; }
-	};
-
-	enum class ValueVariant
-	{
-		VirtualReg,
-		Immediate,
-	};
-
-	struct Value
-	{
-		ValueVariant variant;
-		Type type;
-		union
-		{
-			/// Used if variant is virtual register
-			int vreg_id;
-			/// Used if variant is immediate
-			int32_t imm_val;
-		} data;
-
-		static Value new_vreg(VRegId id, Type t);
-		static Value new_immediate(int32_t val);
-	};*/
-
 	enum class Op
 	{
 		// arithmetic ---
@@ -64,11 +28,11 @@ namespace ir
 		Mul,
 		Div,
 		Rem,
-		And,
-		Or,
-		Xor,
-		Shl,
-		Shr,
+		BitAnd,
+		BitOr,
+		BitXor,
+		BitShl,
+		BitShr,
 		// memory ---
 		Load,
 		Store,

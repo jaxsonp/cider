@@ -24,7 +24,7 @@ public:
 		std::string str;
 		SourceLocRange loc;
 
-		bool operator==(const Unknown &other) const = default;
+		bool operator==(const Unknown &other) const { return this->str == other.str; };
 	};
 
 	FrontendType();
