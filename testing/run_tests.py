@@ -64,7 +64,7 @@ class TestRunner:
             tests: list[Test] = []
             os.makedirs(TESTS_DIR, exist_ok=True)
             os.makedirs(OUTPUT_DIR, exist_ok=True)
-            for f in TESTS_DIR.rglob("*.sasc"):
+            for f in TESTS_DIR.rglob("*.cdr"):
                 rel_path = f.relative_to(TESTS_DIR)
                 tests.extend(create_tests_from_file(rel_path))
             print(f"Found {len(tests)} tests in {TESTS_DIR}")

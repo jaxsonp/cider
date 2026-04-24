@@ -1,4 +1,4 @@
-# SAS-C Compiler
+# Cider Compiler
 
 ### Supported Targets
 
@@ -35,7 +35,7 @@ options:
 
 ### Defining tests
 
-Tests are defined in the `tests/` subdirectory. Each test consists of a `.sasc` source file with comments *at the very top* defining what the expected output should be. These comments should be of the form: `//! KEY=VALUE` (note the exclamation mark). Keys are case insensitive. Below are the recognized keys:
+Tests are defined in the `tests/` subdirectory. Each test consists of a `.cdr` source file with comments *at the very top* defining what the expected output should be. These comments should be of the form: `//! KEY=VALUE` (note the exclamation mark). Keys are case insensitive. Below are the recognized keys:
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |

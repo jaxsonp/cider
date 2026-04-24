@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(SASC CXX)
+project(cider-compiler CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,4 +14,4 @@ include_directories("src")
 file(GLOB_RECURSE SRCS "src/*.cpp")
 
 # Define target executable name
-add_executable(sasc-compiler ${SRCS})
+add_executable(ciderc ${SRCS})
