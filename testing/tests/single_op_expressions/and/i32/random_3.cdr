@@ -1,0 +1,5 @@
+//! EXIT_CODE=160
+
+fn main() -> i32 {
+	return 181i32 & 160i32;
+}

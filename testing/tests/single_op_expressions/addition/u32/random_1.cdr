@@ -1,0 +1,5 @@
+//! EXIT_CODE=32
+
+fn main() -> u32 {
+	return 30u32 + 2u32;
+}

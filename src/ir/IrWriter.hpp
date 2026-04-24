@@ -27,16 +27,16 @@ public:
 	void new_function(const std::string &name);
 
 	/// @brief Creates a new local in the current scope, returning its vreg
-	ir::VRegId new_local(const std::string &name);
+	// ir::VRegId new_local(const std::string &name);
 
 	/// @brief Find the vreg allocation of a name in the current or surrounding scopes (throws if cannot find)
-	ir::VRegId get_local(const std::string &name) const;
+	// ir::VRegId get_local(const std::string &name) const;
 
 	void push_scope();
 	void pop_scope();
 
 	/// @brief Reserve a new virtual reg
-	ir::VRegId new_vreg();
+	ir::VRegId new_vreg(ir::IrType);
 
 	/// @brief Write an instruction at the current position
 	void emit(ir::Instruction *new_instr);

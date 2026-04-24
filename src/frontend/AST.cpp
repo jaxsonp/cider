@@ -94,7 +94,7 @@ namespace ast
 		if (this->expr != nullptr)
 			return this->expr->get_type();
 		else
-			return FrontendType(ConcreteType::VOID);
+			return FrontendType::void_type();
 	}
 
 }

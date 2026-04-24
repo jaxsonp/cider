@@ -1,0 +1,5 @@
+//! EXIT_CODE=122
+
+fn main() -> u32 {
+	return 228u32 ^ 158u32;
+}

@@ -1,0 +1,5 @@
+//! EXIT_CODE=107
+
+fn main() -> u16 {
+	return 131u16 - 24u16;
+}

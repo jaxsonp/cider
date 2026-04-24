@@ -1,0 +1,5 @@
+//! EXIT_CODE=4
+
+fn main() -> i8 {
+	return 119i8 - 115i8;
+}

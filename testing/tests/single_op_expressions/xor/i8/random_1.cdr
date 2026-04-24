@@ -1,0 +1,5 @@
+//! EXIT_CODE=153
+
+fn main() -> i8 {
+	return 234i8 ^ 115i8;
+}

@@ -1,0 +1,5 @@
+//! EXIT_CODE=47
+
+fn main() -> i16 {
+	return 41i16 | 46i16;
+}

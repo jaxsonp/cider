@@ -19,7 +19,7 @@
 			"type": "shell",
 			"command": "cmake -S ${workspaceFolder} -B ${workspaceFolder}/build",
 			"group": {
-				"kind": "build",
+				"kind": "build"
 			}
 		}
 	]

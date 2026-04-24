@@ -1,0 +1,5 @@
+//! EXIT_CODE=14
+
+fn main() -> u16 {
+	return 178u16 ^ 188u16;
+}

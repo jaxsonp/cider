@@ -44,34 +44,48 @@ namespace ast
 		auto ret = std::make_unique<IntegerLiteralExpression>();
 		Token tok = lexer.take();
 		ret->src_loc = tok.loc;
+		std::string str(tok.str);
+
+		int base = 10;
+		if (str.size() == 0)
+			throw CompilerError::internal("Empty string for int literal token");
+		else if (str[0] == '0' && str.size() >= 2)
+		{
+			if (str[1] == 'b')
+			{
+				// binary
+				base = 2;
+				str = str.substr(2, str.size() - 2);
+			}
+			else if (str[1] == 'o')
+			{
+				// octal
+				base = 8;
+				str = str.substr(2, str.size() - 2);
+			}
+			else if (str[1] == 'x')
+			{
+				// hex
+				base = 16;
+				str = str.substr(2, str.size() - 2);
+			}
+		}
 
 		// finding where numbers stop
-		auto type_annotation_pos = tok.str.begin();
-		while (type_annotation_pos != tok.str.end() && is_numeric(*type_annotation_pos))
+		auto type_annotation_pos = str.begin();
+		while (type_annotation_pos != str.end() && is_numeric(*type_annotation_pos))
 			++type_annotation_pos;
 
-		std::string value_str(tok.str.begin(), type_annotation_pos);
-		std::string type_str(type_annotation_pos, tok.str.end());
+		std::string value_str(str.begin(), type_annotation_pos);
+		std::string type_str(type_annotation_pos, str.end());
 
 		// parsing type and value
-		ret->type = FrontendType(type_str, tok.loc);
-		if (ret->type == ConcreteType::I32)
-		{
-			long long value_ll = std::stoll(value_str);
-			if (!std::in_range<int32_t>(value_ll))
-				throw CompilerError::type_error("Integer literal out of bounds for type: i32");
-			uint32_t value_int32 = uint32_t(value_ll);
-			ret->raw_value = std::bit_cast<uint32_t, int32_t>(value_int32);
-		}
-		else if (ret->type == ConcreteType::U32)
-		{
-			long long value_ll = std::stoll(value_str);
-			if (!std::in_range<uint32_t>(value_ll))
-				throw CompilerError::type_error("Integer literal out of bounds for type: u32");
-			ret->raw_value = uint32_t(value_ll);
-		}
-		else
-			throw CompilerError::type_error(std::format("Invalid type for integer literal: {}", ret->type.to_string()), ret->src_loc);
+		ret->type = FrontendType::from_string(type_str);
+		if (!ret->type.is_integer())
+			throw CompilerError::type_error("Invalid type annotation on integer literal, must be an integer type", tok.loc);
+
+		long long value_ll = std::stoll(value_str, nullptr, base);
+		ret->raw_value = uint32_t(value_ll);
 
 		return ret;
 	}
@@ -419,7 +433,7 @@ namespace ast
 		lexer.expect(TokenType::COLON);
 
 		Token type_tok = lexer.expect(TokenType::IDENT);
-		ret.type = FrontendType(type_tok);
+		ret.type = FrontendType::from_string(type_tok.str);
 		ret.src_loc.end = type_tok.loc.end;
 
 		return ret;
@@ -460,11 +474,12 @@ namespace ast
 		}
 
 		// return type
-		ret.return_type = FrontendType(ConcreteType::VOID);
+		ret.return_type = FrontendType::void_type();
 		if (lexer.peek().type == TokenType::THIN_ARROW)
 		{
 			lexer.take();
-			ret.return_type = FrontendType(lexer.expect(TokenType::IDENT));
+			Token type_tok = lexer.expect(TokenType::IDENT);
+			ret.return_type = FrontendType::from_string(type_tok.str);
 		}
 
 		// body

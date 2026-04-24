@@ -1,0 +1,5 @@
+//! EXIT_CODE=56
+
+fn main() -> i16 {
+	return 8i16 * 7i16;
+}

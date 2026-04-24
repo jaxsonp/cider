@@ -1,46 +1,57 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <variant>
 
-#include "frontend/Lexer.hpp"
-
-/// @brief A "physical" type
-enum class ConcreteType
-{
-	VOID,
-	U32,
-	I32,
-};
-
-std::string to_string(ConcreteType &t);
+#include "ir/IrType.hpp"
+#include "utils/common.hpp"
 
 /// @brief A type in the context of the source code
-class FrontendType
+struct FrontendType
 {
-public:
-	struct Unknown
+	enum class Variant
 	{
-		std::string str;
-		SourceLocRange loc;
-
-		bool operator==(const Unknown &other) const { return this->str == other.str; };
+		VOID,
+		BOOL,
+		U8,
+		U16,
+		U32,
+		I8,
+		I16,
+		I32,
+		UNRESOLVED,
+		UNRESOLVED_INT,
+		UNKNOWN,
 	};
 
-	FrontendType();
-	FrontendType(ConcreteType type);
-	FrontendType(Token tok);
-	FrontendType(std::string s, SourceLocRange loc);
+	Variant variant;
+	/// Name, if an unknown type
+	std::string name;
 
-	bool is_concrete() const;
-	std::optional<Unknown> is_unknown() const;
+	FrontendType() : variant(Variant::VOID) {}
+	FrontendType(Variant variant) : variant(variant) {}
+
+	// convenience factories
+	static FrontendType void_type() { return FrontendType(Variant::VOID); }
+	static FrontendType i8() { return FrontendType(Variant::I8); }
+	static FrontendType i16() { return FrontendType(Variant::I16); }
+	static FrontendType i32() { return FrontendType(Variant::I32); }
+	static FrontendType u8() { return FrontendType(Variant::U8); }
+	static FrontendType u16() { return FrontendType(Variant::U16); }
+	static FrontendType u32() { return FrontendType(Variant::U32); }
+	static FrontendType boolean() { return FrontendType(Variant::BOOL); }
+	static FrontendType unresolved() { return FrontendType(Variant::UNRESOLVED); }
+	static FrontendType unresolved_int() { return FrontendType(Variant::UNRESOLVED_INT); }
+	static FrontendType unknown() { return FrontendType(Variant::UNKNOWN); }
+
+	bool is_integer() const;
 
 	std::string to_string() const;
+	static FrontendType from_string(std::string_view s);
 
-	friend bool operator==(const FrontendType &lhs, const FrontendType &rhs);
-	friend bool operator==(const FrontendType &lhs, const ConcreteType &rhs);
-	friend bool operator==(const ConcreteType &lhs, const FrontendType &rhs);
+	/// @brief Attempts to convert/resolve self into IR type, throwing if not possible
+	ir::IrType resolveType() const;
 
-private:
-	std::variant<ConcreteType, Unknown> variant;
+	bool operator==(const FrontendType &other) const;
 };

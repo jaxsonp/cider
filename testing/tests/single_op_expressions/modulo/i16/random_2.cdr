@@ -1,0 +1,5 @@
+//! EXIT_CODE=0
+
+fn main() -> i16 {
+	return 192i16 % 6i16;
+}

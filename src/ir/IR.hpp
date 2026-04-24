@@ -52,10 +52,21 @@ namespace ir
 		LoadArg, // load argument into reg
 	};
 
+	struct VReg
+	{
+		IrType type;
+	};
+
+	struct Immediate
+	{
+		IrType type;
+		uint64_t value;
+	};
+
 	class BasicBlock;
 
 	/// @brief For operands that can be either a register or a constant value
-	struct Operand
+	struct IrValue
 	{
 		enum
 		{
@@ -65,18 +76,14 @@ namespace ir
 		union
 		{
 			VRegId vreg_id;
-			struct
-			{
-				uint64_t imm_value;
-				Type imm_type;
-			};
+			Immediate imm;
 		};
 
-		Operand(VRegId vreg_id)
+		IrValue(VRegId vreg_id)
 			: type(VREG), vreg_id(vreg_id) {}
 
-		Operand(uint64_t immediate_value, Type type)
-			: type(VREG), imm_value(immediate_value), imm_type(type) {}
+		IrValue(uint64_t immediate_value, IrType type)
+			: type(VREG), imm({type, immediate_value}) {}
 
 		inline bool is_vreg() { return this->type == VREG; }
 		inline bool is_immediate() { return this->type == IMMEDIATE; }
@@ -107,12 +114,6 @@ namespace ir
 		virtual std::vector<BasicBlock *> successors() const = 0;
 	};
 
-	namespace instr
-	{
-	}
-
-	/// TODO conditional jump
-
 	class BasicBlock
 	{
 	public:
@@ -130,7 +131,7 @@ namespace ir
 		Label	   // For branch/jump targets
 	};
 
-	struct Operand
+	struct IrValue
 	{
 		OperandType type;
 		union
@@ -145,7 +146,7 @@ namespace ir
 	{
 		std::string name = "";
 		BasicBlock *entry = nullptr;
-		unsigned short vreg_count = 0;
+		std::unordered_map<VRegId, IrType> vregs;
 		unsigned long long instr_count = 0;
 
 		Function(const std::string &name);

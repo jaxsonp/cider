@@ -1,0 +1,5 @@
+//! EXIT_CODE=84
+
+fn main() -> u32 {
+	return 252u32 / 3u32;
+}

@@ -1,5 +1,0 @@
-//! EXIT_CODE=13
-
-fn main() -> u32 {
-	return 200u32 % 17u32;
-}

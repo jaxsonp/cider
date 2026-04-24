@@ -1,0 +1,5 @@
+//! EXIT_CODE=255
+
+fn main() -> u32 {
+	return 227u32 | 127u32;
+}

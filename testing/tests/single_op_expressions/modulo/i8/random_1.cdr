@@ -1,0 +1,5 @@
+//! EXIT_CODE=1
+
+fn main() -> i8 {
+	return 173i8 % 2i8;
+}

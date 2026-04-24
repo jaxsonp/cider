@@ -1,0 +1,5 @@
+//! EXIT_CODE=56
+
+fn main() -> i32 {
+	return 147i32 - 91i32;
+}

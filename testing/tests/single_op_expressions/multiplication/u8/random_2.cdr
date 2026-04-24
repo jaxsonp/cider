@@ -1,0 +1,5 @@
+//! EXIT_CODE=55
+
+fn main() -> u8 {
+	return 11u8 * 5u8;
+}

@@ -1,0 +1,5 @@
+//! EXIT_CODE=95
+
+fn main() -> u16 {
+	return 95u16 | 70u16;
+}

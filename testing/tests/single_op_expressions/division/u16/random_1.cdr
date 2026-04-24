@@ -1,0 +1,5 @@
+//! EXIT_CODE=9
+
+fn main() -> u16 {
+	return 138u16 / 14u16;
+}

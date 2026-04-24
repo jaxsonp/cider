@@ -1,0 +1,5 @@
+//! EXIT_CODE=143
+
+fn main() -> u16 {
+	return 11u16 * 13u16;
+}

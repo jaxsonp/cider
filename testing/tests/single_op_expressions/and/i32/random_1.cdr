@@ -1,0 +1,5 @@
+//! EXIT_CODE=234
+
+fn main() -> i32 {
+	return 234i32 & 251i32;
+}

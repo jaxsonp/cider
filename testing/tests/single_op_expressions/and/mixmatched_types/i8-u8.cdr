@@ -1,0 +1,5 @@
+//! BUILD_EXIT_CODE=3
+
+fn main() -> i8 {
+	return 60i8 & 80u8;
+}

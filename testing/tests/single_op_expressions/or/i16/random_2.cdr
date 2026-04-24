@@ -1,0 +1,5 @@
+//! EXIT_CODE=191
+
+fn main() -> i16 {
+	return 26i16 | 189i16;
+}

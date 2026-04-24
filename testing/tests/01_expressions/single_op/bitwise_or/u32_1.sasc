@@ -1,5 +1,0 @@
-//! EXIT_CODE=55
-
-fn main() -> u32 {
-	return 3u32 | 53u32;
-}

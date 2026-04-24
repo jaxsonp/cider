@@ -1,0 +1,5 @@
+//! EXIT_CODE=21
+
+fn main() -> i32 {
+	return 7i32 * 3i32;
+}

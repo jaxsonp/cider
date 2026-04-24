@@ -1,0 +1,5 @@
+//! EXIT_CODE=21
+
+fn main() -> i8 {
+	return 21i8 & 95i8;
+}

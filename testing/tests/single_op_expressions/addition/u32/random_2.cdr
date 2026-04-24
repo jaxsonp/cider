@@ -1,0 +1,5 @@
+//! EXIT_CODE=102
+
+fn main() -> u32 {
+	return 15u32 + 87u32;
+}

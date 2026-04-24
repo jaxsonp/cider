@@ -1,5 +1,0 @@
-//! EXIT_CODE=89
-
-fn main() -> u32 {
-	return 61u32 ^ 100u32;
-}

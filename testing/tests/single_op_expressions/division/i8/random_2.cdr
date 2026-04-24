@@ -1,0 +1,5 @@
+//! EXIT_CODE=114
+
+fn main() -> i8 {
+	return 229i8 / 2i8;
+}

@@ -1,0 +1,5 @@
+//! EXIT_CODE=247
+
+fn main() -> u8 {
+	return 71u8 | 179u8;
+}

@@ -42,188 +42,231 @@ namespace codegen
 		/// push new add (add register) instruction, return its position
 		size_t write_add(Register dest, Register op1, Register op2)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_r_type(0b0110011u, dest, 0u, op1, op2, 0u),
 				.fmt = InstructionFormat::RType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new sub (subtract register) instruction, return its position
 		size_t write_sub(Register dest, Register op1, Register op2)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_r_type(0b0110011u, dest, 0u, op1, op2, 0x20u),
 				.fmt = InstructionFormat::RType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new xor (bitwise xor) instruction, return its position
 		size_t write_xor(Register dest, Register op1, Register op2)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_r_type(0b0110011u, dest, 0x4u, op1, op2, 0u),
 				.fmt = InstructionFormat::RType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new or (bitwise or) instruction, return its position
 		size_t write_or(Register dest, Register op1, Register op2)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_r_type(0b0110011u, dest, 0x6u, op1, op2, 0u),
 				.fmt = InstructionFormat::RType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new and (bitwise and) instruction, return its position
 		size_t write_and(Register dest, Register op1, Register op2)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_r_type(0b0110011u, dest, 0x7u, op1, op2, 0u),
 				.fmt = InstructionFormat::RType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new mul (multiply lower) instruction, return its position
 		size_t write_mul(Register dest, Register op1, Register op2)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_r_type(0b0110011u, dest, 0u, op1, op2, 0x01u),
 				.fmt = InstructionFormat::RType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new div (signed divide) instruction, return its position
 		size_t write_div(Register dest, Register op1, Register op2)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_r_type(0b0110011u, dest, 0x4u, op1, op2, 0x01u),
 				.fmt = InstructionFormat::RType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new divu (unsigned divide) instruction, return its position
 		size_t write_divu(Register dest, Register op1, Register op2)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_r_type(0b0110011u, dest, 0x5u, op1, op2, 0x01u),
 				.fmt = InstructionFormat::RType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new rem (signed division remainder) instruction, return its position
 		size_t write_rem(Register dest, Register op1, Register op2)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_r_type(0b0110011u, dest, 0x6u, op1, op2, 0x01u),
 				.fmt = InstructionFormat::RType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new remu (unsigned division remainder) instruction, return its position
 		size_t write_remu(Register dest, Register op1, Register op2)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_r_type(0b0110011u, dest, 0x7u, op1, op2, 0x01u),
 				.fmt = InstructionFormat::RType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new addi (add immediate) instruction, return its position
 		size_t write_addi(Register dest, Register src, uint32_t imm)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_i_type(0b0010011u, dest, 0u, src, imm),
 				.fmt = InstructionFormat::IType,
 			});
-			return pos;
+			return this->buf.size() - 1;
+		}
+
+		/// push new lb (load byte) instruction, return its position
+		size_t write_lb(Register dest, Register addr, uint32_t addr_offset)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b0000011u, dest, 0x0u, addr, addr_offset),
+				.fmt = InstructionFormat::IType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new lh (load half word) instruction, return its position
+		size_t write_lh(Register dest, Register addr, uint32_t addr_offset)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b0000011u, dest, 0x1u, addr, addr_offset),
+				.fmt = InstructionFormat::IType,
+			});
+			return this->buf.size() - 1;
 		}
 
 		/// push new lw (load word) instruction, return its position
 		size_t write_lw(Register dest, Register addr, uint32_t addr_offset)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
-				.data = encode_i_type(0b0000011u, dest, 2u, addr, addr_offset),
+				.data = encode_i_type(0b0000011u, dest, 0x2u, addr, addr_offset),
 				.fmt = InstructionFormat::IType,
 			});
-			return pos;
+			return this->buf.size() - 1;
+		}
+
+		/// push new lbu (load byte unsigned) instruction, return its position
+		size_t write_lbu(Register dest, Register addr, uint32_t addr_offset)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b0000011u, dest, 0x4u, addr, addr_offset),
+				.fmt = InstructionFormat::IType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new lhu (load half word unsigned) instruction, return its position
+		size_t write_lhu(Register dest, Register addr, uint32_t addr_offset)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b0000011u, dest, 0x5u, addr, addr_offset),
+				.fmt = InstructionFormat::IType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new sb (store byte) instruction, return its position
+		size_t write_sb(Register dest_addr, Register src, uint32_t addr_offset)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_s_type(0b0100011u, 0x0u, dest_addr, src, addr_offset),
+				.fmt = InstructionFormat::SType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new sh (store half word) instruction, return its position
+		size_t write_sh(Register dest_addr, Register src, uint32_t addr_offset)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_s_type(0b0100011u, 0x1u, dest_addr, src, addr_offset),
+				.fmt = InstructionFormat::SType,
+			});
+			return this->buf.size() - 1;
 		}
 
 		/// push new sw (store word) instruction, return its position
 		size_t write_sw(Register dest_addr, Register src, uint32_t addr_offset)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
-				.data = encode_s_type(0b0100011u, 2u, dest_addr, src, addr_offset),
+				.data = encode_s_type(0b0100011u, 0x2u, dest_addr, src, addr_offset),
 				.fmt = InstructionFormat::SType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new jal (jump and link) instruction, return its position
 		size_t write_jal(Register dest, uint32_t imm)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_j_type(0b1101111u, dest, imm),
 				.fmt = InstructionFormat::JType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new jalr (jump and link register) instruction, return its position
 		size_t write_jalr(Register dest, Register addr, uint32_t addr_offset)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_i_type(0b1100111u, dest, 0u, addr, addr_offset),
 				.fmt = InstructionFormat::IType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new auipc (add upper immediate to pc) instruction, return its position
 		size_t write_auipc(Register dest, uint32_t imm)
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_u_type(0b0010111u, dest, imm),
 				.fmt = InstructionFormat::UType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new ecall (environment call) instruction, return its position
 		size_t write_ecall()
 		{
-			size_t pos = this->buf.size();
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_i_type(0b1110011u, Register::zero, 0u, Register::zero, 0u),
 				.fmt = InstructionFormat::IType,
 			});
-			return pos;
+			return this->buf.size() - 1;
 		}
 
 		/// push new nop instruction
@@ -377,7 +420,7 @@ namespace codegen
 					{
 						// add immediate to register
 						// TODO check type here
-						uint32_t op2 = uint32_t(instr->op2.imm_value);
+						uint32_t op2 = uint32_t(instr->op2.imm.value);
 						body.write_addi(dest->physical, op1->physical, op2); // UNTESTED
 					}
 				}
@@ -395,7 +438,7 @@ namespace codegen
 					{
 						// subtract immediate from register
 						// TODO check type here
-						uint32_t op2 = uint32_t(instr->op2.imm_value);
+						uint32_t op2 = uint32_t(instr->op2.imm.value);
 						// converting to negative to subtract
 						op2 = static_cast<uint32_t>(-static_cast<int32_t>(op2));
 						body.write_addi(dest->physical, op1->physical, op2); // UNTESTED
@@ -417,7 +460,7 @@ namespace codegen
 						// immediate to register
 						// TODO check type here
 						op2 = this->get_empty_slot(body);
-						body.write_addi(op2->physical, Register::zero, instr->op2.imm_value);
+						body.write_addi(op2->physical, Register::zero, instr->op2.imm.value);
 					}
 					body.write_mul(dest->physical, op1->physical, op2->physical);
 				}
@@ -437,7 +480,7 @@ namespace codegen
 						// immediate to register
 						// TODO check type here
 						op2 = this->get_empty_slot(body);
-						body.write_addi(op2->physical, Register::zero, instr->op2.imm_value); // UNCHECKED
+						body.write_addi(op2->physical, Register::zero, instr->op2.imm.value); // UNCHECKED
 					}
 					// TODO use div if signed type
 					body.write_divu(dest->physical, op1->physical, op2->physical);
@@ -458,7 +501,7 @@ namespace codegen
 						// immediate to register
 						// TODO check type here
 						op2 = this->get_empty_slot(body);
-						body.write_addi(op2->physical, Register::zero, instr->op2.imm_value); // UNCHECKED
+						body.write_addi(op2->physical, Register::zero, instr->op2.imm.value); // UNCHECKED
 					}
 					// TODO use div if signed type
 					body.write_remu(dest->physical, op1->physical, op2->physical);
@@ -478,7 +521,7 @@ namespace codegen
 						// immediate to register
 						// TODO check type here
 						op2 = this->get_empty_slot(body);
-						body.write_addi(op2->physical, Register::zero, instr->op2.imm_value); // UNCHECKED
+						body.write_addi(op2->physical, Register::zero, instr->op2.imm.value); // UNCHECKED
 					}
 					body.write_or(dest->physical, op1->physical, op2->physical);
 				}
@@ -497,7 +540,7 @@ namespace codegen
 						// immediate to register
 						// TODO check type here
 						op2 = this->get_empty_slot(body);
-						body.write_addi(op2->physical, Register::zero, instr->op2.imm_value); // UNCHECKED
+						body.write_addi(op2->physical, Register::zero, instr->op2.imm.value); // UNCHECKED
 					}
 					body.write_xor(dest->physical, op1->physical, op2->physical);
 				}
@@ -516,7 +559,7 @@ namespace codegen
 						// immediate to register
 						// TODO check type here
 						op2 = this->get_empty_slot(body);
-						body.write_addi(op2->physical, Register::zero, instr->op2.imm_value); // UNCHECKED
+						body.write_addi(op2->physical, Register::zero, instr->op2.imm.value); // UNCHECKED
 					}
 					body.write_and(dest->physical, op1->physical, op2->physical);
 				}
@@ -526,14 +569,14 @@ namespace codegen
 					if (instr->ret_value.has_value())
 					{
 						RegSlot *ret_value;
-						if (instr->ret_value->type == ir::Operand::VREG)
+						if (instr->ret_value->type == ir::IrValue::VREG)
 						{
 							ret_value = this->load_src_vreg(body, instr->ret_value->vreg_id);
 						}
 						else
 						{
 							ret_value = this->get_empty_slot(body);
-							body.write_addi(ret_value->physical, Register::zero, uint32_t(instr->ret_value->imm_value));
+							body.write_addi(ret_value->physical, Register::zero, uint32_t(instr->ret_value->imm.value));
 						}
 						body.write_addi(Register::a0, ret_value->physical, uint32_t(0));
 					}

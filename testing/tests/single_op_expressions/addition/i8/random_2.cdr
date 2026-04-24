@@ -1,0 +1,5 @@
+//! EXIT_CODE=171
+
+fn main() -> i8 {
+	return 76i8 + 95i8;
+}

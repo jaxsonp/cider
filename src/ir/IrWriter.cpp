@@ -3,6 +3,7 @@
 #include <format>
 
 #include "utils/error.hpp"
+#include "IrWriter.hpp"
 
 IrWriter::IrWriter() = default;
 
@@ -18,7 +19,7 @@ void IrWriter::new_function(const std::string &name)
 	this->vreg_map_scopes.emplace_back();
 }
 
-ir::VRegId IrWriter::new_local(const std::string &name)
+/*ir::VRegId IrWriter::new_local(const std::string &name)
 {
 	ir::VRegId id = this->new_vreg();
 	this->vreg_map_scopes.back().insert({name, id});
@@ -37,7 +38,7 @@ ir::VRegId IrWriter::get_local(const std::string &name) const
 		}
 	}
 	throw CompilerError::internal(std::format("Failed to find vreg allocation for name \"{}\"", name));
-}
+}*/
 
 void IrWriter::push_scope()
 {
@@ -49,11 +50,13 @@ void IrWriter::pop_scope()
 	this->vreg_map_scopes.pop_back();
 }
 
-ir::VRegId IrWriter::new_vreg()
+ir::VRegId IrWriter::new_vreg(ir::IrType ty)
 {
 	if (this->cur_function == nullptr)
 		throw CompilerError::internal("Attempted to reserve vreg before a function was created");
-	return this->cur_function->vreg_count++;
+	ir::VRegId id(this->cur_function->vregs.size());
+	this->cur_function->vregs.insert({id, ty});
+	return id;
 }
 
 void IrWriter::emit(ir::Instruction *new_instr)

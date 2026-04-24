@@ -1,5 +1,0 @@
-//! EXIT_CODE=56
-
-fn main() -> u32 {
-	return 7u32 * 8u32;
-}

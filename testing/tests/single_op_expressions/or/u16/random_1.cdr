@@ -1,0 +1,5 @@
+//! EXIT_CODE=221
+
+fn main() -> u16 {
+	return 84u16 | 201u16;
+}

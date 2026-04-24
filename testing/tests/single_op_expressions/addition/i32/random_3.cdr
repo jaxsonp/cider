@@ -1,0 +1,5 @@
+//! EXIT_CODE=144
+
+fn main() -> i32 {
+	return 78i32 + 66i32;
+}

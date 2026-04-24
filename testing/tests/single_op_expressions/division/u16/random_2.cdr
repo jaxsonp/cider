@@ -1,0 +1,5 @@
+//! EXIT_CODE=34
+
+fn main() -> u16 {
+	return 205u16 / 6u16;
+}

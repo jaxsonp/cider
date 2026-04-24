@@ -1,0 +1,5 @@
+//! BUILD_EXIT_CODE=3
+
+fn main() -> u32 {
+	return 40u32 ^ 11i32;
+}

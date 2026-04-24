@@ -1,0 +1,5 @@
+//! EXIT_CODE=20
+
+fn main() -> i32 {
+	return 226i32 / 11i32;
+}

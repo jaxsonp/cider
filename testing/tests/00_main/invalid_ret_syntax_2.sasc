@@ -1,5 +1,0 @@
-//! BUILD_EXIT_CODE=1
-
-fn main() {
-	return = 0;
-}

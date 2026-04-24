@@ -68,6 +68,8 @@ class TestRunner:
                 rel_path = f.relative_to(TESTS_DIR)
                 tests.extend(create_tests_from_file(rel_path))
             print(f"Found {len(tests)} tests in {TESTS_DIR}")
+            if len(tests) == 0:
+                return True
 
             # create workers
             worker_tasks = [

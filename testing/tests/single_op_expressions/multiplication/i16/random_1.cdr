@@ -1,0 +1,5 @@
+//! EXIT_CODE=121
+
+fn main() -> i16 {
+	return 11i16 * 11i16;
+}

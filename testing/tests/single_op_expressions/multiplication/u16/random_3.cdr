@@ -1,0 +1,5 @@
+//! EXIT_CODE=72
+
+fn main() -> u16 {
+	return 9u16 * 8u16;
+}

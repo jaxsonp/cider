@@ -1,0 +1,5 @@
+//! EXIT_CODE=104
+
+fn main() -> i8 {
+	return 13i8 * 8i8;
+}

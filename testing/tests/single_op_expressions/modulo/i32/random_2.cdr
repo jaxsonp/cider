@@ -1,0 +1,5 @@
+//! EXIT_CODE=0
+
+fn main() -> i32 {
+	return 144i32 % 8i32;
+}

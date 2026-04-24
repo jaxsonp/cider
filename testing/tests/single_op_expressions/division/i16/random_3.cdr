@@ -1,0 +1,5 @@
+//! EXIT_CODE=25
+
+fn main() -> i16 {
+	return 231i16 / 9i16;
+}

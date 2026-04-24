@@ -174,8 +174,7 @@ namespace ast
 			arg.check_semantics(state);
 		}
 		// check return type
-		if (std::optional<FrontendType::Unknown> unknown = this->return_type.is_unknown())
-			throw CompilerError::type_error(std::format("Unknown type: \"{}\"", unknown->str), unknown->loc);
+		// TODO
 
 		// check body
 		for (const std::unique_ptr<StatementNode> &stmt : this->body_statements)

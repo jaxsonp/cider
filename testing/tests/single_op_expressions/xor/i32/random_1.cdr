@@ -1,0 +1,5 @@
+//! EXIT_CODE=107
+
+fn main() -> i32 {
+	return 59i32 ^ 80i32;
+}

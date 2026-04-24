@@ -1,5 +1,0 @@
-//! EXIT_CODE=2
-
-fn main() -> u32 {
-	return 5u32 - 3u32;
-}

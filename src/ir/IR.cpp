@@ -13,7 +13,7 @@ namespace ir
 		: id(bb_count++), note(_note) {}
 
 	Function::Function(const std::string &_name)
-		: name(_name), vreg_count(0)
+		: name(_name)
 	{
 		this->entry = new BasicBlock(this->name + " start");
 	}

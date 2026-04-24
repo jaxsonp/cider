@@ -1,0 +1,5 @@
+//! EXIT_CODE=50
+
+fn main() -> i8 {
+	return 151i8 - 101i8;
+}

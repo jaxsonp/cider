@@ -1,0 +1,5 @@
+//! EXIT_CODE=89
+
+fn main() -> i8 {
+	return 64i8 ^ 25i8;
+}

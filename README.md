@@ -1,12 +1,14 @@
 # Cider Compiler
 
+Cider is a systems programming language focused on marrying the ergonomics of modern languages with the advantages of less-abstracted, low-level languages.
+
 ### Supported Targets
 
-| Target | OS | Object format | ISA | Default ABI |
+| Target | OS | Object format | ISA | ABI |
 | --- | --- | --- | --- | --- |
 | `linux-riscv32g` | Linux | ELF32 | RV32G | ILP32D |
 
-## Testing
+## Tests
 
 ### Running tests
 
@@ -44,25 +46,26 @@ Tests are defined in the `tests/` subdirectory. Each test consists of a `.cdr` s
 | `STDOUT` | string | `""` | Expected output to stdout |
 | `STDERR` | string | `""` | Expected output to stderr |
 
-### Test groups
-
-- `00_main`: Testing returning values from main
-- `01_expressions`: Testing expressions/operators
-
-
 ## TODOs
 
+_For Jaxson's eyes only_
+
 Next:
+
+- Finish machine code generation of smaller int types.
+
+Soon:
 
 - Check code for stuff that doesn't need to be in headers
 - Testing improvements:
   - Timeout
   - finish stdout/stderr checking
 - turn off colored output (automatically if not tty perhaps?)
+- Improve int literals
+  - negative ints (broken rn perhaps?)
 
-Soon:
-
-- Negative literals (broken right now I think)
+Fixes:
+- Convert int literal AST to by 64 bits
 
 Before self-hosting:
 
@@ -78,34 +81,27 @@ Before self-hosting:
 - structs
 - traits
 - stdlib
+- executable or library
 
 maybe eventually:
 
-- executable or library
+- 64 bit
 - try doing UTF8
 - labelled code blocks (for early breaks)
-
-Maybe one day:
-
 - soft floats
+- soft multiplication
 
-futuer optimizations:
+future optimizations:
 - Better register allocator (use callee saved first on busy functions?)
-- Optimize out LUI
+- Optimize out LUI?
   
-## Notes for self
+### notes for documentation
 
-- RISC-V addi only supports a 12-bit signed immediate. The code generator will eventually have to "expand" a large LoadImm into a sequence like lui and addi.
-
-## Notes for documentation
-
-- only supporting 32-bit
-- ok main return values: void, i32, u32
 - all top level functions are hoisted (global var initialization is calculated with DAG)
-- exit codes found in utils/common.hpp
 - binary operators are left associative (except for equality/comparison, needs parens)
+- type names must start with letters, numbers signifiy number literal
 
-## tests to remember to write
+### tests to remember to write
 
 - overflowing int literal
 - overflowing integers with operations

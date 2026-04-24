@@ -12,7 +12,9 @@ namespace ast
 {
 	VRegId IntegerLiteralExpression::emitIr(IrWriter &writer) const
 	{
-		VRegId result_reg = writer.new_vreg();
+		ir::IrType irType = this->type.resolveType();
+
+		VRegId result_reg = writer.new_vreg(irType);
 		writer.emit(new instr::LoadImmInstruction(result_reg, std::bit_cast<uint32_t>(this->raw_value)));
 		return result_reg;
 	}
@@ -39,28 +41,34 @@ namespace ast
 
 	VRegId BitwiseOrExpression::emitIr(IrWriter &writer) const
 	{
+		ir::IrType irType = this->get_type().resolveType();
+
 		VRegId l_expr_reg = this->l_expr->emitIr(writer);
 		VRegId r_expr_reg = this->r_expr->emitIr(writer);
-		VRegId output_reg = writer.new_vreg();
-		writer.emit(new instr::BitwiseOrInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+		VRegId output_reg = writer.new_vreg(irType);
+		writer.emit(new instr::BitwiseOrInstruction(output_reg, l_expr_reg, IrValue(r_expr_reg)));
 		return output_reg;
 	}
 
 	VRegId BitwiseXorExpression::emitIr(IrWriter &writer) const
 	{
+		ir::IrType irType = this->get_type().resolveType();
+
 		VRegId l_expr_reg = this->l_expr->emitIr(writer);
 		VRegId r_expr_reg = this->r_expr->emitIr(writer);
-		VRegId output_reg = writer.new_vreg();
-		writer.emit(new instr::BitwiseXorInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+		VRegId output_reg = writer.new_vreg(irType);
+		writer.emit(new instr::BitwiseXorInstruction(output_reg, l_expr_reg, IrValue(r_expr_reg)));
 		return output_reg;
 	}
 
 	VRegId BitwiseAndExpression::emitIr(IrWriter &writer) const
 	{
+		ir::IrType irType = this->get_type().resolveType();
+
 		VRegId l_expr_reg = this->l_expr->emitIr(writer);
 		VRegId r_expr_reg = this->r_expr->emitIr(writer);
-		VRegId output_reg = writer.new_vreg();
-		writer.emit(new instr::BitwiseAndInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+		VRegId output_reg = writer.new_vreg(irType);
+		writer.emit(new instr::BitwiseAndInstruction(output_reg, l_expr_reg, IrValue(r_expr_reg)));
 		return output_reg;
 	}
 
@@ -71,31 +79,35 @@ namespace ast
 
 	VRegId AdditiveExpression::emitIr(IrWriter &writer) const
 	{
+		ir::IrType irType = this->get_type().resolveType();
+
 		VRegId l_expr_reg = this->l_expr->emitIr(writer);
 		VRegId r_expr_reg = this->r_expr->emitIr(writer);
-		VRegId output_reg = writer.new_vreg();
+		VRegId output_reg = writer.new_vreg(irType);
 		if (this->plus)
-			writer.emit(new instr::AddInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+			writer.emit(new instr::AddInstruction(output_reg, l_expr_reg, IrValue(r_expr_reg)));
 		else
-			writer.emit(new instr::SubtractInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+			writer.emit(new instr::SubtractInstruction(output_reg, l_expr_reg, IrValue(r_expr_reg)));
 		return output_reg;
 	}
 
 	VRegId MultiplicativeExpression::emitIr(IrWriter &writer) const
 	{
+		ir::IrType irType = this->get_type().resolveType();
+
 		VRegId l_expr_reg = this->l_expr->emitIr(writer);
 		VRegId r_expr_reg = this->r_expr->emitIr(writer);
-		VRegId output_reg = writer.new_vreg();
+		VRegId output_reg = writer.new_vreg(irType);
 		switch (this->operation)
 		{
 		case MultOperation::Multiplication:
-			writer.emit(new instr::MultiplyInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+			writer.emit(new instr::MultiplyInstruction(output_reg, l_expr_reg, IrValue(r_expr_reg)));
 			break;
 		case MultOperation::Division:
-			writer.emit(new instr::DivideInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+			writer.emit(new instr::DivideInstruction(output_reg, l_expr_reg, IrValue(r_expr_reg)));
 			break;
 		case MultOperation::Modulus:
-			writer.emit(new instr::ModuloInstruction(output_reg, l_expr_reg, Operand(r_expr_reg)));
+			writer.emit(new instr::ModuloInstruction(output_reg, l_expr_reg, IrValue(r_expr_reg)));
 			break;
 		default:
 			throw CompilerError::internal("Uncaught multiplication operation variant");
@@ -124,7 +136,8 @@ namespace ast
 		unsigned short arg_index = 0;
 		for (const ArgDefinition &arg : this->args)
 		{
-			writer.emit(new instr::LoadArgInstruction(writer.new_vreg(), arg_index));
+			// TODO
+			// writer.emit(new instr::LoadArgInstruction(writer.new_vreg(), arg_index));
 			++arg_index;
 		}
 

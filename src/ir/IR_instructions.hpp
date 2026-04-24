@@ -23,85 +23,83 @@ namespace ir::instr
 		LoadImmInstruction(VRegId dest, uint64_t val);
 	};
 
-	/// Operands must not be immediate-immediate
 	struct AddInstruction : public Instruction
 	{
 		VRegId dest;
 		VRegId op1;
-		Operand op2;
+		IrValue op2;
 		AddInstruction() = delete;
-		AddInstruction(VRegId dest, VRegId op1, Operand op2);
+		AddInstruction(VRegId dest, VRegId op1, IrValue op2);
 	};
 
-	/// Operands must not be immediate-immediate
 	struct SubtractInstruction : public Instruction
 	{
 		VRegId dest;
 		VRegId op1;
-		Operand op2;
+		IrValue op2;
 		SubtractInstruction() = delete;
-		SubtractInstruction(VRegId dest, VRegId op1, Operand op2);
+		SubtractInstruction(VRegId dest, VRegId op1, IrValue op2);
 	};
 
 	struct MultiplyInstruction : public Instruction
 	{
 		VRegId dest;
 		VRegId op1;
-		Operand op2;
+		IrValue op2;
 		MultiplyInstruction() = delete;
-		MultiplyInstruction(VRegId dest, VRegId op1, Operand op2);
+		MultiplyInstruction(VRegId dest, VRegId op1, IrValue op2);
 	};
 
 	struct DivideInstruction : public Instruction
 	{
 		VRegId dest;
 		VRegId op1;
-		Operand op2;
+		IrValue op2;
 		DivideInstruction() = delete;
-		DivideInstruction(VRegId dest, VRegId op1, Operand op2);
+		DivideInstruction(VRegId dest, VRegId op1, IrValue op2);
 	};
 
 	struct ModuloInstruction : public Instruction
 	{
 		VRegId dest;
 		VRegId op1;
-		Operand op2;
+		IrValue op2;
 		ModuloInstruction() = delete;
-		ModuloInstruction(VRegId dest, VRegId op1, Operand op2);
+		ModuloInstruction(VRegId dest, VRegId op1, IrValue op2);
 	};
 
 	struct BitwiseOrInstruction : public Instruction
 	{
 		VRegId dest;
 		VRegId op1;
-		Operand op2;
+		IrValue op2;
 		BitwiseOrInstruction() = delete;
-		BitwiseOrInstruction(VRegId dest, VRegId op1, Operand op2);
+		BitwiseOrInstruction(VRegId dest, VRegId op1, IrValue op2);
 	};
 
 	struct BitwiseXorInstruction : public Instruction
 	{
 		VRegId dest;
 		VRegId op1;
-		Operand op2;
+		IrValue op2;
 		BitwiseXorInstruction() = delete;
-		BitwiseXorInstruction(VRegId dest, VRegId op1, Operand op2);
+		BitwiseXorInstruction(VRegId dest, VRegId op1, IrValue op2);
 	};
 	struct BitwiseAndInstruction : public Instruction
 	{
 		VRegId dest;
 		VRegId op1;
-		Operand op2;
+		IrValue op2;
 		BitwiseAndInstruction() = delete;
-		BitwiseAndInstruction(VRegId dest, VRegId op1, Operand op2);
+		BitwiseAndInstruction(VRegId dest, VRegId op1, IrValue op2);
 	};
 
 	struct ReturnInstruction : public TerminalInstruction
 	{
-		std::optional<Operand> ret_value = std::nullopt;
+		std::optional<IrValue> ret_value = std::nullopt;
 
 		ReturnInstruction();
-		ReturnInstruction(Operand ret_value);
+		ReturnInstruction(IrValue ret_value);
 
 		std::vector<BasicBlock *> successors() const override { return std::vector<BasicBlock *>(); }
 	};

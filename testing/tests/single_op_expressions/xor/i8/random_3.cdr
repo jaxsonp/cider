@@ -1,0 +1,5 @@
+//! EXIT_CODE=120
+
+fn main() -> i8 {
+	return 90i8 ^ 34i8;
+}

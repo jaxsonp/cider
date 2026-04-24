@@ -1,0 +1,5 @@
+//! EXIT_CODE=63
+
+fn main() -> u32 {
+	return 60u32 | 27u32;
+}

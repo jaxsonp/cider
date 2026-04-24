@@ -1,5 +1,0 @@
-//! EXIT_CODE=15
-
-fn main() -> i32 {
-	return 25i32 - 10i32;
-}

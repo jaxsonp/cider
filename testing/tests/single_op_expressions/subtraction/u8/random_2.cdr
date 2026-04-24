@@ -1,0 +1,5 @@
+//! EXIT_CODE=108
+
+fn main() -> u8 {
+	return 115u8 - 7u8;
+}
