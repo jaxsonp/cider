@@ -1,5 +1,0 @@
-//! EXIT_CODE=5
-
-fn main() -> u8 {
-	return 3u8 + 2u8;
-}

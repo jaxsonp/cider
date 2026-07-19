@@ -1,0 +1,5 @@
+//! EXIT_CODE=172
+
+fn main() -> u8 {
+	return 201u8 ^ 101u8;
+}

@@ -1,5 +1,0 @@
-//! EXIT_CODE=5
-
-fn main() -> i16 {
-	return 149i16 % 6i16;
-}

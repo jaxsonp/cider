@@ -1,5 +1,0 @@
-//! EXIT_CODE=46
-
-fn main() -> i8 {
-	return 34i8 | 44i8;
-}

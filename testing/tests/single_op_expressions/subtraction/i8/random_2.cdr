@@ -1,5 +1,0 @@
-//! EXIT_CODE=121
-
-fn main() -> i8 {
-	return 189i8 - 68i8;
-}

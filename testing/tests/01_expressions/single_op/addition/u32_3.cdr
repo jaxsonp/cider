@@ -1,0 +1,5 @@
+//! EXIT_CODE=93
+
+fn main() -> u32 {
+	return 75u32 + 18u32;
+}

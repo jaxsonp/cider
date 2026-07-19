@@ -1,0 +1,5 @@
+//! EXIT_CODE=60
+
+fn main() -> i32 {
+	return 12i32 * 5i32;
+}

@@ -1,5 +1,0 @@
-//! EXIT_CODE=52
-
-fn main() -> u8 {
-	return 138u8 - 86u8;
-}

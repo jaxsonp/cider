@@ -1,0 +1,5 @@
+//! EXIT_CODE=88
+
+fn main() -> i16 {
+	return 139i16 - 51i16;
+}

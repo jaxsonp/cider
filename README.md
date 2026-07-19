@@ -50,53 +50,59 @@ Tests are defined in the `tests/` subdirectory. Each test consists of a `.cdr` s
 
 _For Jaxson's eyes only_
 
-Next:
-
-- Finish machine code generation of smaller int types.
-
-Soon:
-
-- Check code for stuff that doesn't need to be in headers
-- Testing improvements:
-  - Timeout
-  - finish stdout/stderr checking
-- turn off colored output (automatically if not tty perhaps?)
-- Improve int literals
-  - negative ints (broken rn perhaps?)
-
-Fixes:
-- Convert int literal AST to by 64 bits
-
-Before self-hosting:
-
-- locals vars
-- if statements
-- loops
-- functions
-	- function definitions/declaration
-	- arguments
-- floats
-- global vars
-	- global init dependency checking
-- structs
-- traits
-- stdlib
-- executable or library
-
-maybe eventually:
-
-- 64 bit
-- try doing UTF8
-- labelled code blocks (for early breaks)
-- soft floats
-- soft multiplication
-
-future optimizations:
-- Better register allocator (use callee saved first on busy functions?)
-- Optimize out LUI?
+- Soon:
+  - riscv type truncation for small types (before comparison, right shift, division, or explicit casts)
+  - Check code for stuff that doesn't need to be in headers
+  - Testing improvements:
+    - Test timeouts
+    - Improve test runner tui
+    - finish stdout/stderr checking
+    - widen test observability past the 8-bit process exit code (e.g. have
+      the runtime trailer `write()` the raw return value to stdout before
+      exiting) — until then, tests can't distinguish bugs that only show up
+      above the low byte: sign vs. zero extension, 16/32-bit truncation,
+      etc. See note under "notes for documentation" below.
+  - turn off colored output (automatically if not tty perhaps?)
+  - Improve int literals
+    - Basic type inference
+    - negative ints (broken rn perhaps?)
+- Before self-hosting:
+  - locals vars
+  - if statements
+  - loops
+  - functions
+    - function definitions/declaration
+    - arguments
+  - floats
+  - global vars
+    - global init dependency checking
+  - structs
+  - traits
+  - stdlib
+  - executable or library
+- Maybe:
+  - 64 bit
+  - try doing UTF8
+  - labelled code blocks (for early breaks)
+  - soft floats/multiplication for embedded ISAs
+- Future optimizations:
+  - Better register allocator (use callee saved first on busy functions?)
+  - Optimize out LUI?
   
 ### notes for documentation
 
+- **Test harness can only observe the low 8 bits of a result.** `run_tests.py`
+  checks a POSIX process exit code, which the OS always truncates to 8 bits,
+  and STDOUT/STDERR comparison isn't implemented yet. Every currently-
+  implemented binary op (`+ - * / % & | ^`) is "mod-256-homomorphic" — the
+  low byte of the result only depends on the low bytes of the operands, never
+  on how the upper bits were padded — so no `.cdr` test can currently prove
+  sign-extension vs. zero-extension is correct, or that 16/32-bit truncation
+  actually happens, regardless of what values are chosen. This blocks
+  meaningful tests for: right shift, comparisons, casts, and negative/
+  overflowing int literals, once those land. Fix is the observability item
+  above (stdout-based result reporting) — not a language feature, a test
+  harness one.
 - all top level functions are hoisted (global var initialization is calculated with DAG)
 - binary operators are left associative (except for equality/comparison, needs parens)
 - type names must start with letters, numbers signifiy number literal

@@ -1,5 +1,0 @@
-//! EXIT_CODE=21
-
-fn main() -> u8 {
-	return 7u8 * 3u8;
-}

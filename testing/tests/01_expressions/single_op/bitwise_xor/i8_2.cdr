@@ -1,0 +1,5 @@
+//! EXIT_CODE=63
+
+fn main() -> i8 {
+	return 125i8 ^ 66i8;
+}

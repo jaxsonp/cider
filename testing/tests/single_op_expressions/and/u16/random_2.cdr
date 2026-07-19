@@ -1,5 +1,0 @@
-//! EXIT_CODE=16
-
-fn main() -> u16 {
-	return 60u16 & 17u16;
-}

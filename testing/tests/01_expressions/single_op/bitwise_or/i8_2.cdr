@@ -1,0 +1,5 @@
+//! EXIT_CODE=146
+
+fn main() -> i8 {
+	return 130i8 | 146i8;
+}

@@ -1,5 +1,0 @@
-//! EXIT_CODE=48
-
-fn main() -> u32 {
-	return 4u32 * 12u32;
-}

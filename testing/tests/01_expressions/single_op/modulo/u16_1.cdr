@@ -1,0 +1,5 @@
+//! EXIT_CODE=3
+
+fn main() -> u16 {
+	return 135u16 % 4u16;
+}

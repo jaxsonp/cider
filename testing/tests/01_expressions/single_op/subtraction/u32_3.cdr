@@ -1,0 +1,5 @@
+//! EXIT_CODE=17
+
+fn main() -> u32 {
+	return 130u32 - 113u32;
+}

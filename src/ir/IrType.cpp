@@ -44,4 +44,21 @@ namespace ir
 		};
 		return 4;
 	}
+
+	bool IrType::is_signed() const
+	{
+		switch (this->variant)
+		{
+		case Variant::I8:
+		case Variant::I16:
+		case Variant::I32:
+			return true;
+		case Variant::BOOL:
+		case Variant::U8:
+		case Variant::U16:
+		case Variant::U32:
+			return false;
+		};
+		throw CompilerError::internal("Uncaught IR type variant");
+	}
 }

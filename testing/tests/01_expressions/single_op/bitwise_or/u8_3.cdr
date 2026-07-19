@@ -1,0 +1,5 @@
+//! EXIT_CODE=251
+
+fn main() -> u8 {
+	return 203u8 | 249u8;
+}

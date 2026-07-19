@@ -1,5 +1,0 @@
-//! EXIT_CODE=186
-
-fn main() -> i8 {
-	return 186i8 | 10i8;
-}

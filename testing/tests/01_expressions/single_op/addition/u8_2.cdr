@@ -1,0 +1,5 @@
+//! EXIT_CODE=196
+
+fn main() -> u8 {
+	return 108u8 + 88u8;
+}

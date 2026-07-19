@@ -1,5 +1,0 @@
-//! EXIT_CODE=3
-
-fn main() -> i16 {
-	return 248i16 % 5i16;
-}

@@ -83,7 +83,7 @@ namespace ir
 			: type(VREG), vreg_id(vreg_id) {}
 
 		IrValue(uint64_t immediate_value, IrType type)
-			: type(VREG), imm({type, immediate_value}) {}
+			: type(IMMEDIATE), imm({type, immediate_value}) {}
 
 		inline bool is_vreg() { return this->type == VREG; }
 		inline bool is_immediate() { return this->type == IMMEDIATE; }

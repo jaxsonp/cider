@@ -1,5 +1,0 @@
-//! EXIT_CODE=199
-
-fn main() -> u16 {
-	return 140u16 + 59u16;
-}

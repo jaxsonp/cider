@@ -1,5 +1,0 @@
-//! BUILD_EXIT_CODE=3
-
-fn main() -> u16 {
-	return 61u16 % 20u8;
-}

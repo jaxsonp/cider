@@ -1,5 +1,0 @@
-//! EXIT_CODE=166
-
-fn main() -> u8 {
-	return 38u8 | 130u8;
-}

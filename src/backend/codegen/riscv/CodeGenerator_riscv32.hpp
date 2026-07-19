@@ -130,6 +130,9 @@ namespace codegen
 		/// Map of: spilt vregs -> offset from frame pointer that they now live (should be negative)
 		std::unordered_map<ir::VRegId, int32_t> spilled_vreg_fp_offsets;
 
+		/// Function currently being lowered, for looking up vreg types (spill width, div/rem signedness, etc.)
+		const ir::Function *cur_fn = nullptr;
+
 		/// @brief Gets a physical register loaded with the value of a virtual register
 		/// @param vreg ID of vreg to put into a register
 		/// @return The physical register containing vreg

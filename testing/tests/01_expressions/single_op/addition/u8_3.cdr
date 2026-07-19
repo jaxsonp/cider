@@ -1,0 +1,5 @@
+//! EXIT_CODE=12
+
+fn main() -> u8 {
+	return 5u8 + 7u8;
+}

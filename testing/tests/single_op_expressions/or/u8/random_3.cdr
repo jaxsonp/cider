@@ -1,5 +1,0 @@
-//! EXIT_CODE=239
-
-fn main() -> u8 {
-	return 76u8 | 175u8;
-}

@@ -1,5 +1,0 @@
-//! EXIT_CODE=2
-
-fn main() -> u8 {
-	return 194u8 % 8u8;
-}

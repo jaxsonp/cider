@@ -1,0 +1,5 @@
+//! EXIT_CODE=91
+
+fn main() -> i16 {
+	return 7i16 * 13i16;
+}

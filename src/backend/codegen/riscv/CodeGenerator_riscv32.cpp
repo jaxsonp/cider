@@ -287,7 +287,26 @@ namespace codegen
 
 		// load it from stack
 		RegSlot *slot = this->get_empty_slot(code);
-		code.write_lw(slot->physical, Register::fp, uint32_t(this->spilled_vreg_fp_offsets[vreg]));
+		uint32_t offset = uint32_t(this->spilled_vreg_fp_offsets[vreg]);
+		ir::IrType vreg_type = this->cur_fn->vregs.at(vreg);
+		switch (vreg_type.get_size())
+		{
+		case 1:
+			if (vreg_type.is_signed())
+				code.write_lb(slot->physical, Register::fp, offset);
+			else
+				code.write_lbu(slot->physical, Register::fp, offset);
+			break;
+		case 2:
+			if (vreg_type.is_signed())
+				code.write_lh(slot->physical, Register::fp, offset);
+			else
+				code.write_lhu(slot->physical, Register::fp, offset);
+			break;
+		default:
+			code.write_lw(slot->physical, Register::fp, offset);
+			break;
+		}
 		slot->resident = vreg;
 		slot->occupied = true;
 		return slot;
@@ -306,8 +325,8 @@ namespace codegen
 	{
 		int32_t fp_offset;
 		ir::VRegId vreg_id = slot.resident;
-		ir::IrType vreg_type =
-			auto preexisting = this->spilled_vreg_fp_offsets.find(vreg_id);
+		ir::IrType vreg_type = this->cur_fn->vregs.at(vreg_id);
+		auto preexisting = this->spilled_vreg_fp_offsets.find(vreg_id);
 		if (preexisting != this->spilled_vreg_fp_offsets.end())
 		{
 			fp_offset = preexisting->second;
@@ -317,7 +336,18 @@ namespace codegen
 			fp_offset = -4 * (this->spilled_vreg_fp_offsets.size() + 4);
 			this->spilled_vreg_fp_offsets.insert({vreg_id, fp_offset});
 		}
-		code.write_sw(Register::fp, slot.physical, uint32_t(fp_offset));
+		switch (vreg_type.get_size())
+		{
+		case 1:
+			code.write_sb(Register::fp, slot.physical, uint32_t(fp_offset));
+			break;
+		case 2:
+			code.write_sh(Register::fp, slot.physical, uint32_t(fp_offset));
+			break;
+		default:
+			code.write_sw(Register::fp, slot.physical, uint32_t(fp_offset));
+			break;
+		}
 	}
 
 	CodeGenerator_riscv32::RegSlot *CodeGenerator_riscv32::get_empty_slot(CodeBuffer &code)
@@ -357,6 +387,7 @@ namespace codegen
 		log_vvv("Lowering function \"{}\"", fn.name);
 
 		// resetting state
+		this->cur_fn = &fn;
 		this->stack_size = 8; // for saved fp and ra
 		this->next_to_spill = 0;
 		this->spilled_vreg_fp_offsets.clear();
@@ -484,8 +515,10 @@ namespace codegen
 						op2 = this->get_empty_slot(body);
 						body.write_addi(op2->physical, Register::zero, instr->op2.imm.value); // UNCHECKED
 					}
-					// TODO use div if signed type
-					body.write_divu(dest->physical, op1->physical, op2->physical);
+					if (this->cur_fn->vregs.at(instr->dest).is_signed())
+						body.write_div(dest->physical, op1->physical, op2->physical);
+					else
+						body.write_divu(dest->physical, op1->physical, op2->physical);
 				}
 				else if (ir::instr::ModuloInstruction *instr = dynamic_cast<ir::instr::ModuloInstruction *>(cur_instr))
 				{
@@ -505,8 +538,10 @@ namespace codegen
 						op2 = this->get_empty_slot(body);
 						body.write_addi(op2->physical, Register::zero, instr->op2.imm.value); // UNCHECKED
 					}
-					// TODO use div if signed type
-					body.write_remu(dest->physical, op1->physical, op2->physical);
+					if (this->cur_fn->vregs.at(instr->dest).is_signed())
+						body.write_rem(dest->physical, op1->physical, op2->physical);
+					else
+						body.write_remu(dest->physical, op1->physical, op2->physical);
 				}
 				else if (ir::instr::BitwiseOrInstruction *instr = dynamic_cast<ir::instr::BitwiseOrInstruction *>(cur_instr))
 				{

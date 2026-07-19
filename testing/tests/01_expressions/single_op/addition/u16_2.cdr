@@ -1,0 +1,5 @@
+//! EXIT_CODE=126
+
+fn main() -> u16 {
+	return 52u16 + 74u16;
+}

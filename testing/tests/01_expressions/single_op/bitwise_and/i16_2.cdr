@@ -1,0 +1,5 @@
+//! EXIT_CODE=152
+
+fn main() -> i16 {
+	return 153i16 & 252i16;
+}

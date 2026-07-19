@@ -1,0 +1,5 @@
+//! EXIT_CODE=131
+
+fn main() -> i8 {
+	return 36i8 + 95i8;
+}

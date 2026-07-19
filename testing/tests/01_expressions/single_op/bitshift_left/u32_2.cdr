@@ -1,0 +1,5 @@
+//! EXIT_CODE=24
+
+fn main() -> u32 {
+	return 3u32 << 3u32;
+}

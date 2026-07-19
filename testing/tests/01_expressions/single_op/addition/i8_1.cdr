@@ -1,0 +1,5 @@
+//! EXIT_CODE=230
+
+fn main() -> i8 {
+	return 56i8 + 174i8;
+}

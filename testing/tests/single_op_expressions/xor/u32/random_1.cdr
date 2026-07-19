@@ -1,5 +1,0 @@
-//! EXIT_CODE=54
-
-fn main() -> u32 {
-	return 125u32 ^ 75u32;
-}

@@ -1,5 +1,0 @@
-//! EXIT_CODE=4
-
-fn main() -> u32 {
-	return 136u32 % 12u32;
-}

@@ -1,0 +1,5 @@
+//! EXIT_CODE=207
+
+fn main() -> u32 {
+	return 205u32 | 6u32;
+}

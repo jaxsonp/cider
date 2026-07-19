@@ -1,5 +1,0 @@
-//! EXIT_CODE=26
-
-fn main() -> u8 {
-	return 6u8 + 20u8;
-}

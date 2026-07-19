@@ -1,5 +1,0 @@
-//! EXIT_CODE=129
-
-fn main() -> i32 {
-	return 105i32 ^ 232i32;
-}

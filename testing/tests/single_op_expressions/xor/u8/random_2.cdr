@@ -1,5 +1,0 @@
-//! EXIT_CODE=180
-
-fn main() -> u8 {
-	return 124u8 ^ 200u8;
-}

@@ -1,0 +1,5 @@
+//! EXIT_CODE=111
+
+fn main() -> i8 {
+	return 47i8 | 78i8;
+}

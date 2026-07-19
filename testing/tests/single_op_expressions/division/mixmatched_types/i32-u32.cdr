@@ -1,5 +1,0 @@
-//! BUILD_EXIT_CODE=3
-
-fn main() -> i32 {
-	return 67i32 / 80u32;
-}

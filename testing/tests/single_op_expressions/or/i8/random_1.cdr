@@ -1,5 +1,0 @@
-//! EXIT_CODE=173
-
-fn main() -> i8 {
-	return 140i8 | 173i8;
-}

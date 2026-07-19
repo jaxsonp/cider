@@ -33,5 +33,8 @@ namespace ir
 
 		/// @brief Get the alignment size (in bytes) of this type
 		unsigned int get_alignment() const;
+
+		/// @brief Whether this is a signed integer type
+		bool is_signed() const;
 	};
 }

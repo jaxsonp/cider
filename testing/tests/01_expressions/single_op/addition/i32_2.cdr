@@ -1,0 +1,5 @@
+//! EXIT_CODE=81
+
+fn main() -> i32 {
+	return 13i32 + 68i32;
+}

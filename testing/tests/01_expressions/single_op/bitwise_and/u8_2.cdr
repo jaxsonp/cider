@@ -1,0 +1,5 @@
+//! EXIT_CODE=36
+
+fn main() -> u8 {
+	return 174u8 & 52u8;
+}

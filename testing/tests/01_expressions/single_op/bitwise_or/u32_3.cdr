@@ -1,0 +1,5 @@
+//! EXIT_CODE=191
+
+fn main() -> u32 {
+	return 1u32 | 190u32;
+}

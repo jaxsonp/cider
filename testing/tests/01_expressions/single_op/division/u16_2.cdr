@@ -1,0 +1,5 @@
+//! EXIT_CODE=27
+
+fn main() -> u16 {
+	return 111u16 / 4u16;
+}

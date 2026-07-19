@@ -1,0 +1,5 @@
+//! EXIT_CODE=237
+
+fn main() -> u16 {
+	return 201u16 + 36u16;
+}

@@ -1,0 +1,5 @@
+//! EXIT_CODE=49
+
+fn main() -> i32 {
+	return 210i32 ^ 227i32;
+}

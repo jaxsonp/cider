@@ -1,5 +1,0 @@
-//! EXIT_CODE=195
-
-fn main() -> i16 {
-	return 43i16 ^ 232i16;
-}

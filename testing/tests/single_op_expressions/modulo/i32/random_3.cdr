@@ -1,5 +1,0 @@
-//! EXIT_CODE=2
-
-fn main() -> i32 {
-	return 186i32 % 4i32;
-}

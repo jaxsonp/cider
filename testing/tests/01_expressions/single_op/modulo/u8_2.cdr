@@ -1,0 +1,5 @@
+//! EXIT_CODE=9
+
+fn main() -> u8 {
+	return 196u8 % 11u8;
+}

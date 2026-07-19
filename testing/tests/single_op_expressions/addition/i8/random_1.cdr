@@ -1,5 +1,0 @@
-//! EXIT_CODE=91
-
-fn main() -> i8 {
-	return 76i8 + 15i8;
-}

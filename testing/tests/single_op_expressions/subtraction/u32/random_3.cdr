@@ -1,5 +1,0 @@
-//! EXIT_CODE=30
-
-fn main() -> u32 {
-	return 126u32 - 96u32;
-}

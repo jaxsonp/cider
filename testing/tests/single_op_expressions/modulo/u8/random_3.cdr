@@ -1,5 +1,0 @@
-//! EXIT_CODE=7
-
-fn main() -> u8 {
-	return 139u8 % 12u8;
-}
