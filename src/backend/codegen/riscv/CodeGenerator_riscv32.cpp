@@ -305,7 +305,9 @@ namespace codegen
 	void CodeGenerator_riscv32::spill_slot(CodeBuffer &code, RegSlot &slot)
 	{
 		int32_t fp_offset;
-		auto preexisting = this->spilled_vreg_fp_offsets.find(slot.resident);
+		ir::VRegId vreg_id = slot.resident;
+		ir::IrType vreg_type =
+			auto preexisting = this->spilled_vreg_fp_offsets.find(vreg_id);
 		if (preexisting != this->spilled_vreg_fp_offsets.end())
 		{
 			fp_offset = preexisting->second;
@@ -313,7 +315,7 @@ namespace codegen
 		else
 		{
 			fp_offset = -4 * (this->spilled_vreg_fp_offsets.size() + 4);
-			this->spilled_vreg_fp_offsets.insert({slot.resident, fp_offset});
+			this->spilled_vreg_fp_offsets.insert({vreg_id, fp_offset});
 		}
 		code.write_sw(Register::fp, slot.physical, uint32_t(fp_offset));
 	}
