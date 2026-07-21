@@ -16,6 +16,16 @@ namespace ast
 		// TODO
 	}
 
+	void BooleanLiteralExpression::check_semantics(SemanticAnalysisState state) const
+	{
+		// nothing to do
+	}
+
+	void PrimaryExpression::check_semantics(SemanticAnalysisState state) const
+	{
+		this->expr->check_semantics(state);
+	}
+
 	void LogicalOrExpression::check_semantics(SemanticAnalysisState state) const
 	{
 		throw CompilerError::unimplemented("TODO check semantics");

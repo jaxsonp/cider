@@ -50,7 +50,8 @@ postfix_op = "(", [ arg_list ], ")" (* function call *)
            | "[", expr, "]" ; (* array indexing *)
 
 primary = ident
-        | literal
+        | boolean_literal
+        | integer_literal
         | if_expr (* if as expression *)
         | block (* block as expression *)
         | "(", expr, ")" ;

@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <memory>
 #include <string>
+#include <variant>
 
 #include "Lexer.hpp"
 #include "frontend/FrontendType.hpp"
@@ -111,6 +112,7 @@ namespace ast
 
 	// EXPRESSIONS =============================================================
 
+	/// Integer literal
 	struct IntegerLiteralExpression : public ExpressionNode
 	{
 		uint32_t raw_value;
@@ -121,6 +123,30 @@ namespace ast
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<IntegerLiteralExpression>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return this->type; };
+	};
+
+	/// Boolean literal
+	struct BooleanLiteralExpression : public ExpressionNode
+	{
+		bool value;
+
+		void check_semantics(SemanticAnalysisState state) const override;
+		void debug_print(unsigned int depth = 0) const override;
+		ir::VRegId emitIr(IrWriter &writer) const override;
+		static std::optional<std::unique_ptr<BooleanLiteralExpression>> try_parse(Lexer &lexer);
+		inline FrontendType get_type() const override { return FrontendType::boolean(); };
+	};
+
+	/// Primary expression (aka "atom"), largely transparent
+	struct PrimaryExpression : public ExpressionNode
+	{
+		std::unique_ptr<ExpressionNode> expr;
+
+		void check_semantics(SemanticAnalysisState state) const override;
+		void debug_print(unsigned int depth = 0) const override;
+		ir::VRegId emitIr(IrWriter &writer) const override;
+		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
+		inline FrontendType get_type() const override { return this->expr->get_type(); };
 	};
 
 	struct LogicalOrExpression : public ExpressionNode

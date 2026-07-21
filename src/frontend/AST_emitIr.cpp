@@ -19,6 +19,19 @@ namespace ast
 		return result_reg;
 	}
 
+	VRegId BooleanLiteralExpression::emitIr(IrWriter &writer) const
+	{
+
+		VRegId result_reg = writer.new_vreg(ir::IrType::boolean());
+		writer.emit(new instr::LoadImmInstruction(result_reg, this->value ? 1 : 0));
+		return result_reg;
+	}
+
+	VRegId PrimaryExpression::emitIr(IrWriter &writer) const
+	{
+		return this->expr->emitIr(writer);
+	}
+
 	VRegId LogicalOrExpression::emitIr(IrWriter &writer) const
 	{
 		throw CompilerError::unimplemented("TODO: emit ir");

@@ -1,5 +1,7 @@
 # Cider
 
+## Overview
+
 Cider is a compiler for a systems programming language: C-like simplicity
 (small language, easy to implement, no hidden runtime magic) with syntax and
 some features borrowed from Rust. Long-term goals, in order:
@@ -41,15 +43,21 @@ applies to Cider-the-language and anything written in it.
   requirements. Check it for current priorities before assuming a feature
   doesn't exist yet or planning new work.
 
-## Build
+## Building
+
+To configure build files:
 
 ```
 cmake -S . -B build
+```
+
+To build
+
+```
 cmake --build build
 ```
 
-Produces `build/ciderc`. There's no install step or package manager
-integration — it's a single executable built from a recursive glob of `src/*.cpp`.
+Produces `build/ciderc`.
 
 ## Running the compiler
 
@@ -95,9 +103,12 @@ manual testing.
 - `grammar.ebnf` is the source of truth for syntax — if a parser change
   alters accepted syntax, update the grammar file in the same change.
 
-## Working conventions
+## Development guidelines
+
+### Code style
 
 - Tabs for indentation (match surrounding files).
+
 - New `CompilerError`s should use the existing typed factory functions
   (`syntax_error`, `type_error`, `semantic_error`, etc.) rather than a
   generic message, so exit codes stay meaningful — see

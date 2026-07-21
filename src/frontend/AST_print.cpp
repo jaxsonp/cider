@@ -15,13 +15,27 @@ namespace ast
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
 	}
 
+	void BooleanLiteralExpression::debug_print(unsigned int depth) const
+	{
+		std::cout << std::string(depth * 2, ' ');
+		std::cout << "Boolean literal expression (value: " << (this->value ? "true" : "false") << ")";
+		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
+	}
+
+	void PrimaryExpression::debug_print(unsigned int depth) const
+	{
+		std::cout << std::string(depth * 2, ' ');
+		std::cout << "Primary expression [" << this->src_loc.to_string() << "]" << std::endl;
+		this->expr->debug_print(depth + 1);
+	}
+
 	void LogicalOrExpression::debug_print(unsigned int depth) const
 	{
 		std::cout << std::string(depth * 2, ' ');
 		std::cout << "Logical or expression";
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		l_expr->debug_print(depth + 1);
-		r_expr->debug_print(depth + 1);
+		this->l_expr->debug_print(depth + 1);
+		this->r_expr->debug_print(depth + 1);
 	}
 
 	void LogicalAndExpression::debug_print(unsigned int depth) const
@@ -29,8 +43,8 @@ namespace ast
 		std::cout << std::string(depth * 2, ' ');
 		std::cout << "Logical and expression";
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		l_expr->debug_print(depth + 1);
-		r_expr->debug_print(depth + 1);
+		this->l_expr->debug_print(depth + 1);
+		this->r_expr->debug_print(depth + 1);
 	}
 
 	void EqualityExpression::debug_print(unsigned int depth) const
@@ -41,8 +55,8 @@ namespace ast
 			std::cout << "not ";
 		std::cout << "equals)";
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		l_expr->debug_print(depth + 1);
-		r_expr->debug_print(depth + 1);
+		this->l_expr->debug_print(depth + 1);
+		this->r_expr->debug_print(depth + 1);
 	}
 
 	void ComparisonExpression::debug_print(unsigned int depth) const
@@ -65,8 +79,8 @@ namespace ast
 			break;
 		}
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		l_expr->debug_print(depth + 1);
-		r_expr->debug_print(depth + 1);
+		this->l_expr->debug_print(depth + 1);
+		this->r_expr->debug_print(depth + 1);
 	}
 
 	void BitwiseOrExpression::debug_print(unsigned int depth) const
@@ -74,8 +88,8 @@ namespace ast
 		std::cout << std::string(depth * 2, ' ');
 		std::cout << "Bitwise OR expression";
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		l_expr->debug_print(depth + 1);
-		r_expr->debug_print(depth + 1);
+		this->l_expr->debug_print(depth + 1);
+		this->r_expr->debug_print(depth + 1);
 	}
 
 	void BitwiseXorExpression::debug_print(unsigned int depth) const
@@ -83,8 +97,8 @@ namespace ast
 		std::cout << std::string(depth * 2, ' ');
 		std::cout << "Bitwise XOR expression";
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		l_expr->debug_print(depth + 1);
-		r_expr->debug_print(depth + 1);
+		this->l_expr->debug_print(depth + 1);
+		this->r_expr->debug_print(depth + 1);
 	}
 
 	void BitwiseAndExpression::debug_print(unsigned int depth) const
@@ -92,8 +106,8 @@ namespace ast
 		std::cout << std::string(depth * 2, ' ');
 		std::cout << "Bitwise AND expression";
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		l_expr->debug_print(depth + 1);
-		r_expr->debug_print(depth + 1);
+		this->l_expr->debug_print(depth + 1);
+		this->r_expr->debug_print(depth + 1);
 	}
 
 	void BitshiftExpression::debug_print(unsigned int depth) const
@@ -105,8 +119,8 @@ namespace ast
 		else
 			std::cout << "right)";
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		l_expr->debug_print(depth + 1);
-		r_expr->debug_print(depth + 1);
+		this->l_expr->debug_print(depth + 1);
+		this->r_expr->debug_print(depth + 1);
 	}
 
 	void AdditiveExpression::debug_print(unsigned int depth) const
@@ -118,8 +132,8 @@ namespace ast
 		else
 			std::cout << "subtract)";
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		l_expr->debug_print(depth + 1);
-		r_expr->debug_print(depth + 1);
+		this->l_expr->debug_print(depth + 1);
+		this->r_expr->debug_print(depth + 1);
 	}
 
 	void MultiplicativeExpression::debug_print(unsigned int depth) const
@@ -139,8 +153,8 @@ namespace ast
 			break;
 		}
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		l_expr->debug_print(depth + 1);
-		r_expr->debug_print(depth + 1);
+		this->l_expr->debug_print(depth + 1);
+		this->r_expr->debug_print(depth + 1);
 	}
 
 	void ReturnStatement::debug_print(unsigned int depth) const

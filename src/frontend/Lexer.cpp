@@ -221,6 +221,14 @@ Token Lexer::take()
 				tok.type = TokenType::INT_LITERAL;
 				tok.str = token_str;
 			}
+			else if (token_str == "true")
+			{
+				tok.type = TokenType::KEYWORD_TRUE;
+			}
+			else if (token_str == "false")
+			{
+				tok.type = TokenType::KEYWORD_FALSE;
+			}
 			else if (token_str == "fn")
 			{
 				tok.type = TokenType::KEYWORD_FN;

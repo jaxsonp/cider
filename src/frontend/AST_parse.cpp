@@ -90,6 +90,65 @@ namespace ast
 		return ret;
 	}
 
+	std::optional<std::unique_ptr<BooleanLiteralExpression>> BooleanLiteralExpression::try_parse(Lexer &lexer)
+	{
+		if (lexer.peek().type != TokenType::KEYWORD_FALSE && lexer.peek().type != TokenType::KEYWORD_TRUE)
+			return std::nullopt;
+
+		Token tok = lexer.take();
+		auto ret = std::make_unique<BooleanLiteralExpression>();
+		ret->value = tok.type == TokenType::KEYWORD_TRUE;
+		ret->src_loc = tok.loc;
+		return ret;
+	}
+
+	std::optional<std::unique_ptr<ExpressionNode>> PrimaryExpression::try_parse(Lexer &lexer)
+	{
+		// TODO check for ident
+
+		{ // check if this is bool
+			auto maybe_expr = BooleanLiteralExpression::try_parse(lexer);
+			if (maybe_expr.has_value())
+			{
+				auto ret = std::make_unique<PrimaryExpression>();
+				ret->expr = std::move(maybe_expr.value());
+				ret->src_loc = ret->expr->src_loc;
+				return ret;
+			}
+		}
+
+		{ // check if this is int
+			auto maybe_expr = IntegerLiteralExpression::try_parse(lexer);
+			if (maybe_expr.has_value())
+			{
+				auto ret = std::make_unique<PrimaryExpression>();
+				ret->expr = std::move(maybe_expr.value());
+				ret->src_loc = ret->expr->src_loc;
+				return ret;
+			}
+		}
+
+		// TODO check for ifs, blocks, etc
+
+		// check for parenthesized expressions
+		if (lexer.peek().type == TokenType::L_PAREN)
+		{
+			Token l_paren_tok = lexer.take();
+			auto maybe_expr = ExpressionNode::try_parse(lexer);
+			if (!maybe_expr.has_value())
+				throw CompilerError::syntax_error("Expected expression following " + to_string(TokenType::L_PAREN), l_paren_tok.loc.end);
+			Token r_paren_tok = lexer.expect(TokenType::R_PAREN);
+
+			auto ret = std::make_unique<PrimaryExpression>();
+			ret->expr = std::move(maybe_expr.value());
+			ret->src_loc.start = l_paren_tok.loc.start;
+			ret->src_loc.end = r_paren_tok.loc.end;
+			return ret;
+		}
+
+		return std::nullopt;
+	}
+
 	std::optional<std::unique_ptr<ExpressionNode>> LogicalOrExpression::try_parse(Lexer &lexer)
 	{
 		// parse left hand expression
@@ -353,7 +412,7 @@ namespace ast
 		// TODO change these integer literals to primary
 
 		// parse left hand expression
-		auto maybe_l_expr = IntegerLiteralExpression::try_parse(lexer);
+		auto maybe_l_expr = PrimaryExpression::try_parse(lexer);
 		if (!maybe_l_expr.has_value())
 			return std::nullopt;
 
@@ -383,7 +442,7 @@ namespace ast
 			mult->operation = op;
 
 			// parse right hand expression
-			auto maybe_r_expr = IntegerLiteralExpression::try_parse(lexer);
+			auto maybe_r_expr = PrimaryExpression::try_parse(lexer);
 			if (!maybe_r_expr.has_value())
 				throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
 			mult->r_expr = std::move(maybe_r_expr.value());
