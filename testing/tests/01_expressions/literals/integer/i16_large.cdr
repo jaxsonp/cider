@@ -1,0 +1,5 @@
+//! EXIT_CODE=208
+
+fn main() -> i16 {
+	return 2000i16;
+}
