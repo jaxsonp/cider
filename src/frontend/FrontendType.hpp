@@ -22,6 +22,7 @@ struct FrontendType
 		I32,
 		UNRESOLVED,
 		UNRESOLVED_INT,
+		UNRESOLVED_FLOAT,
 		UNKNOWN,
 	};
 
@@ -46,6 +47,7 @@ struct FrontendType
 	static FrontendType unknown() { return FrontendType(Variant::UNKNOWN); }
 
 	bool is_integer() const;
+	bool is_float() const;
 
 	std::string to_string() const;
 	static FrontendType from_string(std::string_view s);

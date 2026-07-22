@@ -13,6 +13,7 @@
 #include "frontend/FrontendType.hpp"
 #include "ir/IrWriter.hpp"
 #include "utils/common.hpp"
+#include "utils/error.hpp"
 
 namespace ast
 {
@@ -268,6 +269,11 @@ namespace ast
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return l_expr->get_type(); };
+
+		inline std::string_view operator_string() const
+		{
+			return this->plus ? "+" : "-";
+		}
 	};
 
 	struct MultiplicativeExpression : public ExpressionNode
@@ -287,6 +293,36 @@ namespace ast
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return l_expr->get_type(); };
+
+		inline std::string_view operation_string() const
+		{
+			switch (this->operation)
+			{
+			case MultOperation::Multiplication:
+				return "Multiplication";
+			case MultOperation::Division:
+				return "Division";
+			case MultOperation::Modulus:
+				return "Modulus";
+			default:
+				throw CompilerError::internal("Uncaught MultOperation variant");
+			}
+		}
+
+		inline std::string_view operator_string() const
+		{
+			switch (this->operation)
+			{
+			case MultOperation::Multiplication:
+				return "*";
+			case MultOperation::Division:
+				return "/";
+			case MultOperation::Modulus:
+				return "%";
+			default:
+				throw CompilerError::internal("Uncaught MultOperation variant");
+			}
+		}
 	};
 
 	// STATEMENTS ==============================================================

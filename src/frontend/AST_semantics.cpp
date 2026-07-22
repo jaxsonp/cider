@@ -56,10 +56,11 @@ namespace ast
 		FrontendType r_type = this->r_expr->get_type();
 		if (l_type != r_type)
 			throw CompilerError::type_error(
-				std::format(
-					"Binary operation contains mix-matched types, {} and {}",
-					l_type.to_string(),
-					r_type.to_string()),
+				std::format("Cannot use operator '||' with mix-matched types, {} and {}", l_type.to_string(), r_type.to_string()),
+				this->src_loc);
+		else if (!l_type.is_integer())
+			throw CompilerError::type_error(
+				std::format("Cannot perform bitwise operation on non-integer type {}", l_type.to_string()),
 				this->src_loc);
 
 		// make sure type is integral TODO
@@ -75,10 +76,11 @@ namespace ast
 		FrontendType r_type = this->r_expr->get_type();
 		if (l_type != r_type)
 			throw CompilerError::type_error(
-				std::format(
-					"Binary operation contains mix-matched types, {} and {}",
-					l_type.to_string(),
-					r_type.to_string()),
+				std::format("Cannot use operator '^' with mix-matched types, {} and {}", l_type.to_string(), r_type.to_string()),
+				this->src_loc);
+		else if (!l_type.is_integer())
+			throw CompilerError::type_error(
+				std::format("Cannot perform bitwise operation on non-integer type {}", l_type.to_string()),
 				this->src_loc);
 
 		// make sure type is integral TODO
@@ -94,13 +96,12 @@ namespace ast
 		FrontendType r_type = this->r_expr->get_type();
 		if (l_type != r_type)
 			throw CompilerError::type_error(
-				std::format(
-					"Binary operation contains mix-matched types, {} and {}",
-					l_type.to_string(),
-					r_type.to_string()),
+				std::format("Cannot use operator '&&' with mix-matched types, {} and {}", l_type.to_string(), r_type.to_string()),
 				this->src_loc);
-
-		// make sure type is integral TODO
+		else if (!l_type.is_integer())
+			throw CompilerError::type_error(
+				std::format("Cannot perform bitwise operation on non-integer type {}", l_type.to_string()),
+				this->src_loc);
 	}
 
 	void BitshiftExpression::check_semantics(SemanticAnalysisState state) const
@@ -118,16 +119,17 @@ namespace ast
 		FrontendType r_type = this->r_expr->get_type();
 		if (l_type != r_type)
 			throw CompilerError::type_error(
-				std::format(
-					"Binary operation contains mix-matched types, {} and {}",
-					l_type.to_string(),
-					r_type.to_string()),
+				std::format("Cannot use operator '{}' with mix-matched types, {} and {}", this->operator_string(), l_type.to_string(), r_type.to_string()),
+				this->src_loc);
+		else if (!l_type.is_integer() && !l_type.is_float())
+			throw CompilerError::type_error(
+				std::format("Cannot use operator '{}' with type: {}", this->operator_string(), l_type.to_string()),
 				this->src_loc);
 	}
 
 	void MultiplicativeExpression::check_semantics(SemanticAnalysisState state) const
 	{
-		if (this->l_expr == nullptr || this->r_expr == nullptr || (this->operation != MultOperation::Multiplication && this->operation != MultOperation::Division && this->operation != MultOperation::Modulus))
+		if (this->l_expr == nullptr || this->r_expr == nullptr)
 			throw CompilerError::internal("Invalid AST node (Multiplicative expresssion)");
 
 		// make sure subexpression types match
@@ -136,9 +138,14 @@ namespace ast
 		if (l_type != r_type)
 			throw CompilerError::type_error(
 				std::format(
-					"Binary operation contains mix-matched types, {} and {}",
+					"Cannot use operator '{}' with mix-matched types, {} and {}",
+					this->operator_string(),
 					l_type.to_string(),
 					r_type.to_string()),
+				this->src_loc);
+		else if (!l_type.is_integer() && !l_type.is_float())
+			throw CompilerError::type_error(
+				std::format("Cannot use operator '{}' with type: {}", this->operator_string(), l_type.to_string()),
 				this->src_loc);
 	}
 
@@ -146,9 +153,7 @@ namespace ast
 	{
 		// check semantics of expression
 		if (this->expr != nullptr)
-		{
 			this->expr->check_semantics(state);
-		}
 
 		// make sure type matches current function
 		if (state.fn_return_type.has_value() && this->return_type() != state.fn_return_type.value())

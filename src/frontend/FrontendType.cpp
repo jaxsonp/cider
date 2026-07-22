@@ -7,12 +7,30 @@
 
 bool FrontendType::is_integer() const
 {
-	return this->variant == Variant::I8 ||
-		   this->variant == Variant::I16 ||
-		   this->variant == Variant::I32 ||
-		   this->variant == Variant::U8 ||
-		   this->variant == Variant::U16 ||
-		   this->variant == Variant::U32;
+	switch (this->variant)
+	{
+	case Variant::I8:
+	case Variant::I16:
+	case Variant::I32:
+	case Variant::U8:
+	case Variant::U16:
+	case Variant::U32:
+	case Variant::UNRESOLVED_INT:
+		return true;
+	default:
+		return false;
+	}
+}
+
+bool FrontendType::is_float() const
+{
+	switch (this->variant)
+	{
+	case Variant::UNRESOLVED_FLOAT:
+		return true;
+	default:
+		return false;
+	}
 }
 
 std::string FrontendType::to_string() const
