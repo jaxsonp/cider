@@ -236,20 +236,20 @@ namespace ast
 			return std::nullopt;
 
 		// check for operator
-		ComparisonKind kind;
+		ComparisonOperation kind;
 		switch (lexer.peek().type)
 		{
 		case TokenType::LESS:
-			kind = ComparisonKind::LESS_THAN;
+			kind = ComparisonOperation::LESS_THAN;
 			break;
 		case TokenType::LESS_EQUAL:
-			kind = ComparisonKind::LESS_THAN_OR_EQUAL;
+			kind = ComparisonOperation::LESS_THAN_OR_EQUAL;
 			break;
 		case TokenType::GREATER:
-			kind = ComparisonKind::GREATER_THAN;
+			kind = ComparisonOperation::GREATER_THAN;
 			break;
 		case TokenType::GREATER_EQUAL:
-			kind = ComparisonKind::GREATER_THAN_OR_EQUAL;
+			kind = ComparisonOperation::GREATER_THAN_OR_EQUAL;
 			break;
 		default:
 			return std::move(maybe_l_expr.value());
@@ -258,7 +258,7 @@ namespace ast
 
 		std::unique_ptr<ComparisonExpression> ret = std::make_unique<ComparisonExpression>();
 		ret->l_expr = std::move(maybe_l_expr.value());
-		ret->kind = kind;
+		ret->operation = kind;
 
 		// parse right hand expression
 		auto maybe_r_expr = BitwiseOrExpression::try_parse(lexer);

@@ -81,6 +81,7 @@ _For Jaxson's eyes only_
   - stdlib
   - executable or library
 - Maybe:
+  - Better error messages (include code snippet)
   - 64 bit
   - try doing UTF8
   - labelled code blocks (for early breaks)

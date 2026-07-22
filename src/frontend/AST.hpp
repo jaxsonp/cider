@@ -185,12 +185,17 @@ namespace ast
 		void debug_print(unsigned int depth = 0) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return l_expr->get_type(); };
+		inline FrontendType get_type() const override { return FrontendType::boolean(); };
+
+		inline std::string_view operator_string() const
+		{
+			return this->notted ? "!=" : "==";
+		}
 	};
 
 	struct ComparisonExpression : public ExpressionNode
 	{
-		enum class ComparisonKind
+		enum class ComparisonOperation
 		{
 			GREATER_THAN,
 			GREATER_THAN_OR_EQUAL,
@@ -200,13 +205,30 @@ namespace ast
 
 		std::unique_ptr<ExpressionNode> l_expr;
 		std::unique_ptr<ExpressionNode> r_expr;
-		ComparisonKind kind;
+		ComparisonOperation operation;
 
 		void check_semantics(SemanticAnalysisState state) const override;
 		void debug_print(unsigned int depth = 0) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return l_expr->get_type(); };
+		inline FrontendType get_type() const override { return FrontendType::boolean(); };
+
+		inline std::string_view operator_string() const
+		{
+			switch (this->operation)
+			{
+			case ComparisonOperation::GREATER_THAN:
+				return ">";
+			case ComparisonOperation::GREATER_THAN_OR_EQUAL:
+				return ">=";
+			case ComparisonOperation::LESS_THAN:
+				return "<";
+			case ComparisonOperation::LESS_THAN_OR_EQUAL:
+				return "<=";
+			default:
+				throw CompilerError::internal("Uncaught ComparisonOperation variant");
+			}
+		}
 	};
 
 	struct BitwiseOrExpression : public ExpressionNode
@@ -293,21 +315,6 @@ namespace ast
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return l_expr->get_type(); };
-
-		inline std::string_view operation_string() const
-		{
-			switch (this->operation)
-			{
-			case MultOperation::Multiplication:
-				return "Multiplication";
-			case MultOperation::Division:
-				return "Division";
-			case MultOperation::Modulus:
-				return "Modulus";
-			default:
-				throw CompilerError::internal("Uncaught MultOperation variant");
-			}
-		}
 
 		inline std::string_view operator_string() const
 		{

@@ -28,22 +28,38 @@ namespace ast
 
 	void LogicalOrExpression::check_semantics(SemanticAnalysisState state) const
 	{
-		throw CompilerError::unimplemented("TODO check semantics");
+		throw CompilerError::unimplemented("TODO check semantics (LogicalOrExpression)");
 	}
 
 	void LogicalAndExpression::check_semantics(SemanticAnalysisState state) const
 	{
-		throw CompilerError::unimplemented("TODO check semantics");
+		throw CompilerError::unimplemented("TODO check semantics (LogicalAndExpression)");
 	}
 
 	void EqualityExpression::check_semantics(SemanticAnalysisState state) const
 	{
-		throw CompilerError::unimplemented("TODO check semantics");
+		if (this->l_expr == nullptr || this->r_expr == nullptr)
+			throw CompilerError::internal("Invalid AST node (EqualityExpression)");
+
+		FrontendType l_type = this->l_expr->get_type();
+		FrontendType r_type = this->r_expr->get_type();
+		if (l_type != r_type)
+			throw CompilerError::type_error(
+				std::format("Cannot use operator '{}' with mix-matched types, {} and {}", this->operator_string(), l_type.to_string(), r_type.to_string()),
+				this->src_loc);
 	}
 
 	void ComparisonExpression::check_semantics(SemanticAnalysisState state) const
 	{
-		throw CompilerError::unimplemented("TODO check semantics");
+		if (this->l_expr == nullptr || this->r_expr == nullptr)
+			throw CompilerError::internal("Invalid AST node (ComparisonExpression)");
+
+		FrontendType l_type = this->l_expr->get_type();
+		FrontendType r_type = this->r_expr->get_type();
+		if (l_type != r_type)
+			throw CompilerError::type_error(
+				std::format("Cannot use operator '{}' with mix-matched types, {} and {}", this->operator_string(), l_type.to_string(), r_type.to_string()),
+				this->src_loc);
 	}
 
 	void BitwiseOrExpression::check_semantics(SemanticAnalysisState state) const
@@ -106,7 +122,7 @@ namespace ast
 
 	void BitshiftExpression::check_semantics(SemanticAnalysisState state) const
 	{
-		throw CompilerError::unimplemented("TODO check semantics");
+		throw CompilerError::unimplemented("TODO check semantics (BitshiftExpression)");
 	}
 
 	void AdditiveExpression::check_semantics(SemanticAnalysisState state) const

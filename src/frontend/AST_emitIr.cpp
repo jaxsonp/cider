@@ -34,22 +34,22 @@ namespace ast
 
 	VRegId LogicalOrExpression::emitIr(IrWriter &writer) const
 	{
-		throw CompilerError::unimplemented("TODO: emit ir");
+		throw CompilerError::unimplemented("TODO: emit ir (LogicalOrExpression)");
 	}
 
 	VRegId LogicalAndExpression::emitIr(IrWriter &writer) const
 	{
-		throw CompilerError::unimplemented("TODO: emit ir");
+		throw CompilerError::unimplemented("TODO: emit ir (LogicalAndExpression)");
 	}
 
 	VRegId EqualityExpression::emitIr(IrWriter &writer) const
 	{
-		throw CompilerError::unimplemented("TODO: emit ir");
+		throw CompilerError::unimplemented("TODO: emit ir (EqualityExpression)");
 	}
 
 	VRegId ComparisonExpression::emitIr(IrWriter &writer) const
 	{
-		throw CompilerError::unimplemented("TODO: emit ir");
+		throw CompilerError::unimplemented("TODO: emit ir (ComparisonExpression)");
 	}
 
 	VRegId BitwiseOrExpression::emitIr(IrWriter &writer) const
@@ -87,7 +87,7 @@ namespace ast
 
 	VRegId BitshiftExpression::emitIr(IrWriter &writer) const
 	{
-		throw CompilerError::unimplemented("TODO: emit ir");
+		throw CompilerError::unimplemented("TODO: emit ir (BitshiftExpression)");
 	}
 
 	VRegId AdditiveExpression::emitIr(IrWriter &writer) const

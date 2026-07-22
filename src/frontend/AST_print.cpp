@@ -50,10 +50,7 @@ namespace ast
 	void EqualityExpression::debug_print(unsigned int depth) const
 	{
 		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Equality expression (";
-		if (this->notted)
-			std::cout << "not ";
-		std::cout << "equals)";
+		std::cout << "Equality expression (operation: '" << this->operator_string() << "')";
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
 		this->l_expr->debug_print(depth + 1);
 		this->r_expr->debug_print(depth + 1);
@@ -62,22 +59,7 @@ namespace ast
 	void ComparisonExpression::debug_print(unsigned int depth) const
 	{
 		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Comparison expression (";
-		switch (this->kind)
-		{
-		case ComparisonKind::GREATER_THAN:
-			std::cout << ">)";
-			break;
-		case ComparisonKind::GREATER_THAN_OR_EQUAL:
-			std::cout << ">=)";
-			break;
-		case ComparisonKind::LESS_THAN:
-			std::cout << "<)";
-			break;
-		case ComparisonKind::LESS_THAN_OR_EQUAL:
-			std::cout << "<=)";
-			break;
-		}
+		std::cout << "Comparison expression (operation: '" << this->operator_string() << "')";
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
 		this->l_expr->debug_print(depth + 1);
 		this->r_expr->debug_print(depth + 1);
@@ -126,11 +108,7 @@ namespace ast
 	void AdditiveExpression::debug_print(unsigned int depth) const
 	{
 		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Additive expression (";
-		if (this->plus)
-			std::cout << "add)";
-		else
-			std::cout << "subtract)";
+		std::cout << "Additive expression (operation: '" << this->operator_string() << "')";
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
 		this->l_expr->debug_print(depth + 1);
 		this->r_expr->debug_print(depth + 1);
@@ -139,19 +117,7 @@ namespace ast
 	void MultiplicativeExpression::debug_print(unsigned int depth) const
 	{
 		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Multiplicative expression (";
-		switch (this->operation)
-		{
-		case MultOperation::Multiplication:
-			std::cout << "multiply)";
-			break;
-		case MultOperation::Division:
-			std::cout << "divide)";
-			break;
-		case MultOperation::Modulus:
-			std::cout << "modulo)";
-			break;
-		}
+		std::cout << "Multiplicative expression (operation: '" << this->operator_string() << "')";
 		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
 		this->l_expr->debug_print(depth + 1);
 		this->r_expr->debug_print(depth + 1);
