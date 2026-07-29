@@ -20,7 +20,7 @@ protected:
 	std::ostream &asm_out();
 
 public:
-	virtual Object lower_ir(const IrObject &ir) = 0;
+	virtual Object lower_ir(const ir::Object &ir) = 0;
 
 	/// @brief Creates the small chunk of entry code for an executable
 	/// @param main_offset Offset of the main function BEFORE prepending this runtime code

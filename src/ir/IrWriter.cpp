@@ -59,27 +59,34 @@ ir::VRegId IrWriter::new_vreg(ir::IrType ty)
 	return id;
 }
 
-void IrWriter::emit(ir::Instruction *new_instr)
+void IrWriter::add_instr(ir::Op opcode, ir::VRegId dst, ir::VRegId op1, ir::VRegId op2, uint64_t data)
 {
 	if (this->cur_bblock == nullptr)
-		throw CompilerError::internal("Attempted to emit IR instruction before a basic block was \"chosen\"");
+		throw CompilerError::internal("Attempted to add instruction before a function was created");
 
-	this->cur_function->instr_count += 1;
-	if (this->cur_instr == nullptr)
-	{
-		// bblock is empty
-		this->cur_bblock->start = new_instr;
-		this->cur_bblock->end = new_instr;
-		this->cur_instr = new_instr;
-	}
-	else
-	{
-		// insert in bblock
-		this->cur_instr->next = new_instr;
-		new_instr->prev = this->cur_instr;
+	ir::Instruction instr{opcode, dst, op1, op2, data};
+	this->cur_bblock->instructions.push_back(instr);
+}
 
-		if (this->cur_bblock->end == this->cur_instr)
-			this->cur_bblock->end = new_instr;
-		this->cur_instr = new_instr;
-	}
+void IrWriter::add_return(ir::VRegId ret_value)
+{
+	if (this->cur_bblock == nullptr)
+		throw CompilerError::internal("Attempted to add return before a function was created");
+
+	this->cur_bblock->terminator = ir::BasicBlockTerminator{
+		.kind = ir::BasicBlockTerminator::RETURN,
+		.ret_reg = ret_value};
+
+	this->cur_bblock = this->cur_function->new_bb();
+}
+
+void IrWriter::add_return()
+{
+	if (this->cur_bblock == nullptr)
+		throw CompilerError::internal("Attempted to add return before a function was created");
+
+	this->cur_bblock->terminator = ir::BasicBlockTerminator{
+		.kind = ir::BasicBlockTerminator::RETURN};
+
+	this->cur_bblock = this->cur_function->new_bb();
 }

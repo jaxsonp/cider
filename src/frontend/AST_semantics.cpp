@@ -45,7 +45,7 @@ namespace ast
 		FrontendType r_type = this->r_expr->get_type();
 		if (l_type != r_type)
 			throw CompilerError::type_error(
-				std::format("Cannot use operator '{}' with mix-matched types, {} and {}", this->operator_string(), l_type.to_string(), r_type.to_string()),
+				std::format("Cannot use operator '{}' with mix-matched types, '{}' and '{}'", this->operator_string(), l_type.to_string(), r_type.to_string()),
 				this->src_loc);
 	}
 
@@ -58,7 +58,7 @@ namespace ast
 		FrontendType r_type = this->r_expr->get_type();
 		if (l_type != r_type)
 			throw CompilerError::type_error(
-				std::format("Cannot use operator '{}' with mix-matched types, {} and {}", this->operator_string(), l_type.to_string(), r_type.to_string()),
+				std::format("Cannot use operator '{}' with mix-matched types, '{}' and '{}'", this->operator_string(), l_type.to_string(), r_type.to_string()),
 				this->src_loc);
 	}
 
@@ -69,17 +69,19 @@ namespace ast
 
 		// make sure subexpression types match
 		FrontendType l_type = this->l_expr->get_type();
+		if (!l_type.is_integer())
+			throw CompilerError::type_error(
+				std::format("Cannot perform bitwise operation on non-integer type '{}'", l_type.to_string()),
+				this->l_expr->src_loc);
 		FrontendType r_type = this->r_expr->get_type();
+		if (!r_type.is_integer())
+			throw CompilerError::type_error(
+				std::format("Cannot perform bitwise operation on non-integer type '{}'", r_type.to_string()),
+				this->r_expr->src_loc);
 		if (l_type != r_type)
 			throw CompilerError::type_error(
-				std::format("Cannot use operator '||' with mix-matched types, {} and {}", l_type.to_string(), r_type.to_string()),
+				std::format("Cannot use operator '||' with mix-matched types, '{}' and '{}'", l_type.to_string(), r_type.to_string()),
 				this->src_loc);
-		else if (!l_type.is_integer())
-			throw CompilerError::type_error(
-				std::format("Cannot perform bitwise operation on non-integer type {}", l_type.to_string()),
-				this->src_loc);
-
-		// make sure type is integral TODO
 	}
 
 	void BitwiseXorExpression::check_semantics(SemanticAnalysisState state) const
@@ -89,17 +91,19 @@ namespace ast
 
 		// make sure subexpression types match
 		FrontendType l_type = this->l_expr->get_type();
+		if (!l_type.is_integer())
+			throw CompilerError::type_error(
+				std::format("Cannot perform bitwise operation on non-integer type '{}'", l_type.to_string()),
+				this->l_expr->src_loc);
 		FrontendType r_type = this->r_expr->get_type();
+		if (!r_type.is_integer())
+			throw CompilerError::type_error(
+				std::format("Cannot perform bitwise operation on non-integer type '{}'", r_type.to_string()),
+				this->r_expr->src_loc);
 		if (l_type != r_type)
 			throw CompilerError::type_error(
-				std::format("Cannot use operator '^' with mix-matched types, {} and {}", l_type.to_string(), r_type.to_string()),
+				std::format("Cannot use operator '^' with mix-matched types, '{}' and '{}'", l_type.to_string(), r_type.to_string()),
 				this->src_loc);
-		else if (!l_type.is_integer())
-			throw CompilerError::type_error(
-				std::format("Cannot perform bitwise operation on non-integer type {}", l_type.to_string()),
-				this->src_loc);
-
-		// make sure type is integral TODO
 	}
 
 	void BitwiseAndExpression::check_semantics(SemanticAnalysisState state) const
@@ -109,20 +113,37 @@ namespace ast
 
 		// make sure subexpression types match
 		FrontendType l_type = this->l_expr->get_type();
+		if (!l_type.is_integer())
+			throw CompilerError::type_error(
+				std::format("Cannot perform bitwise operation on non-integer type '{}'", l_type.to_string()),
+				this->l_expr->src_loc);
 		FrontendType r_type = this->r_expr->get_type();
+		if (!r_type.is_integer())
+			throw CompilerError::type_error(
+				std::format("Cannot perform bitwise operation on non-integer type '{}'", r_type.to_string()),
+				this->r_expr->src_loc);
 		if (l_type != r_type)
 			throw CompilerError::type_error(
-				std::format("Cannot use operator '&&' with mix-matched types, {} and {}", l_type.to_string(), r_type.to_string()),
-				this->src_loc);
-		else if (!l_type.is_integer())
-			throw CompilerError::type_error(
-				std::format("Cannot perform bitwise operation on non-integer type {}", l_type.to_string()),
+				std::format("Cannot use operator '&&' with mix-matched types, '{}' and '{}'", l_type.to_string(), r_type.to_string()),
 				this->src_loc);
 	}
 
 	void BitshiftExpression::check_semantics(SemanticAnalysisState state) const
 	{
-		throw CompilerError::unimplemented("TODO check semantics (BitshiftExpression)");
+		if (this->l_expr == nullptr || this->r_expr == nullptr)
+			throw CompilerError::internal("Invalid AST node (BitshiftExpression)");
+
+		// make sure subexpression types are both ints
+		FrontendType l_type = this->r_expr->get_type();
+		if (!l_type.is_integer())
+			throw CompilerError::type_error(
+				std::format("Cannot perform bitshift operation on non-integer type '{}'", l_type.to_string()),
+				this->src_loc);
+		FrontendType r_type = this->l_expr->get_type();
+		if (!r_type.is_integer())
+			throw CompilerError::type_error(
+				std::format("Cannot perform bitshift operation with non-integer type '{}'", r_type.to_string()),
+				this->src_loc);
 	}
 
 	void AdditiveExpression::check_semantics(SemanticAnalysisState state) const
@@ -130,16 +151,20 @@ namespace ast
 		if (this->l_expr == nullptr || this->r_expr == nullptr)
 			throw CompilerError::internal("Invalid AST node (AdditiveExpression)");
 
-		// make sure subexpression types match
+		// check subexpression types
 		FrontendType l_type = this->l_expr->get_type();
+		if (!l_type.is_integer() && !l_type.is_float())
+			throw CompilerError::type_error(
+				std::format("Cannot use operator '{}' with type: '{}'", this->operator_string(), l_type.to_string()),
+				this->l_expr->src_loc);
 		FrontendType r_type = this->r_expr->get_type();
+		if (!r_type.is_integer() && !r_type.is_float())
+			throw CompilerError::type_error(
+				std::format("Cannot use operator '{}' with type: '{}'", this->operator_string(), r_type.to_string()),
+				this->r_expr->src_loc);
 		if (l_type != r_type)
 			throw CompilerError::type_error(
-				std::format("Cannot use operator '{}' with mix-matched types, {} and {}", this->operator_string(), l_type.to_string(), r_type.to_string()),
-				this->src_loc);
-		else if (!l_type.is_integer() && !l_type.is_float())
-			throw CompilerError::type_error(
-				std::format("Cannot use operator '{}' with type: {}", this->operator_string(), l_type.to_string()),
+				std::format("Cannot use operator '{}' with mix-matched types, '{}' and '{}'", this->operator_string(), l_type.to_string(), r_type.to_string()),
 				this->src_loc);
 	}
 
@@ -148,20 +173,24 @@ namespace ast
 		if (this->l_expr == nullptr || this->r_expr == nullptr)
 			throw CompilerError::internal("Invalid AST node (Multiplicative expresssion)");
 
-		// make sure subexpression types match
+		// check subexpression types
 		FrontendType l_type = this->l_expr->get_type();
+		if (!l_type.is_integer() && !l_type.is_float())
+			throw CompilerError::type_error(
+				std::format("Cannot use operator '{}' with type: '{}'", this->operator_string(), l_type.to_string()),
+				this->l_expr->src_loc);
 		FrontendType r_type = this->r_expr->get_type();
+		if (!r_type.is_integer() && !r_type.is_float())
+			throw CompilerError::type_error(
+				std::format("Cannot use operator '{}' with type: '{}'", this->operator_string(), r_type.to_string()),
+				this->r_expr->src_loc);
 		if (l_type != r_type)
 			throw CompilerError::type_error(
 				std::format(
-					"Cannot use operator '{}' with mix-matched types, {} and {}",
+					"Cannot use operator '{}' with mix-matched types, '{}' and '{}'",
 					this->operator_string(),
 					l_type.to_string(),
 					r_type.to_string()),
-				this->src_loc);
-		else if (!l_type.is_integer() && !l_type.is_float())
-			throw CompilerError::type_error(
-				std::format("Cannot use operator '{}' with type: {}", this->operator_string(), l_type.to_string()),
 				this->src_loc);
 	}
 
@@ -176,7 +205,7 @@ namespace ast
 		{
 			throw CompilerError::type_error(
 				std::format(
-					"Invalid return type, function requires {}, found: {}",
+					"Invalid return type, function expects '{}', found '{}'",
 					state.fn_return_type.value().to_string(),
 					this->return_type().to_string()),
 				this->src_loc);
@@ -204,8 +233,6 @@ namespace ast
 		{
 			arg.check_semantics(state);
 		}
-		// check return type
-		// TODO
 
 		// check body
 		for (const std::unique_ptr<StatementNode> &stmt : this->body_statements)
@@ -220,10 +247,10 @@ namespace ast
 			if (state.fn_return_type.has_value() && expr_type != state.fn_return_type.value())
 				throw CompilerError::type_error(
 					std::format(
-						"Invalid return type, function requires {}, found: {}",
+						"Invalid implicit return type, function expects '{}', found '{}'",
 						state.fn_return_type.value().to_string(),
 						expr_type.to_string()),
-					this->src_loc);
+					this->body_return_expr->src_loc);
 		}
 	}
 

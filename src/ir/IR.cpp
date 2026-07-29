@@ -7,14 +7,17 @@
 
 namespace ir
 {
-	// autoassign id to new bbs
-	static unsigned int bb_count = 0;
-	BasicBlock::BasicBlock(std::string _note)
-		: id(bb_count++), note(_note) {}
+	BasicBlock::BasicBlock(unsigned int id, std::string note)
+		: id(id), note(note) {}
 
 	Function::Function(const std::string &_name)
 		: name(_name)
 	{
-		this->entry = new BasicBlock(this->name + " start");
+		this->entry = new BasicBlock((this->bb_count)++, this->name + " start");
+	}
+
+	BasicBlock *Function::new_bb()
+	{
+		return new BasicBlock((this->bb_count)++);
 	}
 }

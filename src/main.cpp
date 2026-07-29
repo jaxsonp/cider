@@ -11,7 +11,7 @@
 
 int main(int argc, char **argv)
 {
-	CliParser cli("cdrc");
+	CliParser cli("ciderc");
 
 	auto &input_filename_arg = cli.add_positional("file", "Input file").required();
 	auto &output_filename_arg = cli.add_flag_arg("out", "Output file").short_name('o').default_value("a.out"); // TODO change

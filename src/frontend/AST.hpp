@@ -401,7 +401,7 @@ public:
 	AST(std::istream &input);
 
 	void debug_print() const;
-	IrObject emitIr() const;
+	ir::Object emitIr() const;
 
 	// no need to delete symbol tables here, they are owned and will be deleted by AST nodes
 	~AST() = default;

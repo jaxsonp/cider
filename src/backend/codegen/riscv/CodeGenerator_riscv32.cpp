@@ -6,7 +6,6 @@
 
 #include "utils/logging.hpp"
 #include "utils/error.hpp"
-#include "ir/IR_instructions.hpp"
 
 // helpers
 
@@ -139,11 +138,137 @@ namespace codegen
 			return this->buf.size() - 1;
 		}
 
+		/// push new sll (shift left logical) instruction, return its position
+		size_t write_sll(Register dest, Register op1, Register op2)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0x1u, op1, op2, 0x0u),
+				.fmt = InstructionFormat::RType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new srl (shift right logical) instruction, return its position
+		size_t write_srl(Register dest, Register op1, Register op2)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0x5u, op1, op2, 0x0u),
+				.fmt = InstructionFormat::RType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new sra (shift right arithmetic) instruction, return its position
+		size_t write_sra(Register dest, Register op1, Register op2)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0x5u, op1, op2, 0x20u),
+				.fmt = InstructionFormat::RType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new slt (set if less than) instruction, return its position
+		size_t write_slt(Register dest, Register op1, Register op2)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0x2u, op1, op2, 0x00u),
+				.fmt = InstructionFormat::RType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new slt (set if less than unsigned) instruction, return its position
+		size_t write_sltu(Register dest, Register op1, Register op2)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_r_type(0b0110011u, dest, 0x3u, op1, op2, 0x00u),
+				.fmt = InstructionFormat::RType,
+			});
+			return this->buf.size() - 1;
+		}
+
 		/// push new addi (add immediate) instruction, return its position
 		size_t write_addi(Register dest, Register src, uint32_t imm)
 		{
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_i_type(0b0010011u, dest, 0u, src, imm),
+				.fmt = InstructionFormat::IType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new xori (bitwise xor immediate) instruction, return its position
+		size_t write_xori(Register dest, Register src, uint32_t imm)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b0010011u, dest, 0x4u, src, imm),
+				.fmt = InstructionFormat::IType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new ori (bitwise or immediate) instruction, return its position
+		size_t write_ori(Register dest, Register src, uint32_t imm)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b0010011u, dest, 0x6u, src, imm),
+				.fmt = InstructionFormat::IType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new andi (bitwise and immediate) instruction, return its position
+		size_t write_andi(Register dest, Register src, uint32_t imm)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b0010011u, dest, 0x7u, src, imm),
+				.fmt = InstructionFormat::IType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new slli (shift left logical immediate) instruction, return its position
+		size_t write_slli(Register dest, Register src, uint32_t imm)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b0010011u, dest, 0x1u, src, imm),
+				.fmt = InstructionFormat::IType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new srli (shift right logical immediate) instruction, return its position
+		size_t write_srli(Register dest, Register src, uint32_t imm)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b0010011u, dest, 0x5u, src, imm),
+				.fmt = InstructionFormat::IType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new srai (shift right arithmetic immediate) instruction, return its position
+		size_t write_srai(Register dest, Register src, uint32_t imm)
+		{
+			throw CompilerError::unimplemented("srai instruction");
+		}
+
+		/// push new slti (set if less than immediate) instruction, return its position
+		size_t write_slti(Register dest, Register src, uint32_t imm)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b0010011u, dest, 0x2u, src, imm),
+				.fmt = InstructionFormat::IType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new sltiu (set if less than immediate unsigned) instruction, return its position
+		size_t write_sltiu(Register dest, Register src, uint32_t imm)
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b0010011u, dest, 0x3u, src, imm),
 				.fmt = InstructionFormat::IType,
 			});
 			return this->buf.size() - 1;
@@ -249,6 +374,12 @@ namespace codegen
 			return this->buf.size() - 1;
 		}
 
+		/// push new lui (load upper immediate) instruction, return its position
+		size_t write_lui(Register dest, uint32_t imm)
+		{
+			throw CompilerError::unimplemented("lui instruction");
+		}
+
 		/// push new auipc (add upper immediate to pc) instruction, return its position
 		size_t write_auipc(Register dest, uint32_t imm)
 		{
@@ -264,6 +395,16 @@ namespace codegen
 		{
 			this->buf.emplace_back<MachineInstruction>({
 				.data = encode_i_type(0b1110011u, Register::zero, 0u, Register::zero, 0u),
+				.fmt = InstructionFormat::IType,
+			});
+			return this->buf.size() - 1;
+		}
+
+		/// push new ebreak (environment break) instruction, return its position
+		size_t write_ebreak()
+		{
+			this->buf.emplace_back<MachineInstruction>({
+				.data = encode_i_type(0b1110011u, Register::zero, 0u, Register::zero, 0x1u),
 				.fmt = InstructionFormat::IType,
 			});
 			return this->buf.size() - 1;
@@ -430,203 +571,196 @@ namespace codegen
 				slot.dirty = false;
 			}
 
-			ir::Instruction *cur_instr = bb->start;
-			while (cur_instr != nullptr)
+			// emit all instructions in basic block
+			for (ir::Instruction &instr : bb->instructions)
 			{
-				if (ir::instr::LoadImmInstruction *instr = dynamic_cast<ir::instr::LoadImmInstruction *>(cur_instr))
+				switch (instr.opcode)
+				{
+				case ir::Op::LoadImm:
 				{
 					// load immmediate
-					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
-					body.write_addi(dest->physical, Register::zero, instr->value);
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					body.write_addi(dest->physical, Register::zero, instr.data);
+					break;
 				}
-				else if (ir::instr::AddInstruction *instr = dynamic_cast<ir::instr::AddInstruction *>(cur_instr))
+				case ir::Op::Add:
 				{
-					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
-					if (instr->op2.is_vreg())
-					{
-						// add register to register
-						RegSlot *op2 = this->load_src_vreg(body, instr->op2.vreg_id);
-						body.write_add(dest->physical, op1->physical, op2->physical);
-					}
-					else
-					{
-						// add immediate to register
-						// TODO check type here
-						uint32_t op2 = uint32_t(instr->op2.imm.value);
-						body.write_addi(dest->physical, op1->physical, op2); // UNTESTED
-					}
+					// add register to register
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					body.write_add(dest->physical, op1->physical, op2->physical);
+					break;
 				}
-				else if (ir::instr::SubtractInstruction *instr = dynamic_cast<ir::instr::SubtractInstruction *>(cur_instr))
+				case ir::Op::Sub:
 				{
-					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
-					if (instr->op2.is_vreg())
-					{
-						// subtact register from register
-						RegSlot *op2 = this->load_src_vreg(body, instr->op2.vreg_id);
-						body.write_sub(dest->physical, op1->physical, op2->physical);
-					}
-					else
-					{
-						// subtract immediate from register
-						// TODO check type here
-						uint32_t op2 = uint32_t(instr->op2.imm.value);
-						// converting to negative to subtract
-						op2 = static_cast<uint32_t>(-static_cast<int32_t>(op2));
-						body.write_addi(dest->physical, op1->physical, op2); // UNTESTED
-					}
+					// subtact register from register
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					body.write_sub(dest->physical, op1->physical, op2->physical);
 				}
-				else if (ir::instr::MultiplyInstruction *instr = dynamic_cast<ir::instr::MultiplyInstruction *>(cur_instr))
+				case ir::Op::Mul:
 				{
+					// multiply register to register
 					// TODO check for m extension
-					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
-					RegSlot *op2;
-					if (instr->op2.is_vreg())
-					{
-						// register to register
-						op2 = this->load_src_vreg(body, instr->op2.vreg_id);
-					}
-					else
-					{
-						// immediate to register
-						// TODO check type here
-						op2 = this->get_empty_slot(body);
-						body.write_addi(op2->physical, Register::zero, instr->op2.imm.value);
-					}
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
 					body.write_mul(dest->physical, op1->physical, op2->physical);
+					break;
 				}
-				else if (ir::instr::DivideInstruction *instr = dynamic_cast<ir::instr::DivideInstruction *>(cur_instr))
+				case ir::Op::Div:
 				{
+					// divide register to register
 					// TODO check for m extension
-					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
-					RegSlot *op2;
-					if (instr->op2.is_vreg())
-					{
-						// register to register
-						op2 = this->load_src_vreg(body, instr->op2.vreg_id);
-					}
-					else
-					{
-						// immediate to register
-						// TODO check type here
-						op2 = this->get_empty_slot(body);
-						body.write_addi(op2->physical, Register::zero, instr->op2.imm.value); // UNCHECKED
-					}
-					if (this->cur_fn->vregs.at(instr->dest).is_signed())
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					if (this->cur_fn->vregs.at(instr.dest).is_signed())
 						body.write_div(dest->physical, op1->physical, op2->physical);
 					else
 						body.write_divu(dest->physical, op1->physical, op2->physical);
+					break;
 				}
-				else if (ir::instr::ModuloInstruction *instr = dynamic_cast<ir::instr::ModuloInstruction *>(cur_instr))
+				case ir::Op::Rem:
 				{
+					// mod register to register
 					// TODO check for m extension
-					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
-					RegSlot *op2;
-					if (instr->op2.is_vreg())
-					{
-						// register to register
-						op2 = this->load_src_vreg(body, instr->op2.vreg_id);
-					}
-					else
-					{
-						// immediate to register
-						// TODO check type here
-						op2 = this->get_empty_slot(body);
-						body.write_addi(op2->physical, Register::zero, instr->op2.imm.value); // UNCHECKED
-					}
-					if (this->cur_fn->vregs.at(instr->dest).is_signed())
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					if (this->cur_fn->vregs.at(instr.dest).is_signed())
 						body.write_rem(dest->physical, op1->physical, op2->physical);
 					else
 						body.write_remu(dest->physical, op1->physical, op2->physical);
+					break;
 				}
-				else if (ir::instr::BitwiseOrInstruction *instr = dynamic_cast<ir::instr::BitwiseOrInstruction *>(cur_instr))
+				case ir::Op::BitOr:
 				{
-					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
-					RegSlot *op2;
-					if (instr->op2.is_vreg())
-					{
-						// register to register
-						op2 = this->load_src_vreg(body, instr->op2.vreg_id);
-					}
-					else
-					{
-						// immediate to register
-						// TODO check type here
-						op2 = this->get_empty_slot(body);
-						body.write_addi(op2->physical, Register::zero, instr->op2.imm.value); // UNCHECKED
-					}
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
 					body.write_or(dest->physical, op1->physical, op2->physical);
+					break;
 				}
-				else if (ir::instr::BitwiseXorInstruction *instr = dynamic_cast<ir::instr::BitwiseXorInstruction *>(cur_instr))
+				case ir::Op::BitXor:
 				{
-					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
-					RegSlot *op2;
-					if (instr->op2.is_vreg())
-					{
-						// register to register
-						op2 = this->load_src_vreg(body, instr->op2.vreg_id);
-					}
-					else
-					{
-						// immediate to register
-						// TODO check type here
-						op2 = this->get_empty_slot(body);
-						body.write_addi(op2->physical, Register::zero, instr->op2.imm.value); // UNCHECKED
-					}
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
 					body.write_xor(dest->physical, op1->physical, op2->physical);
+					break;
 				}
-				else if (ir::instr::BitwiseAndInstruction *instr = dynamic_cast<ir::instr::BitwiseAndInstruction *>(cur_instr))
+				case ir::Op::BitAnd:
 				{
-					RegSlot *dest = this->load_dest_vreg(body, instr->dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr->op1);
-					RegSlot *op2;
-					if (instr->op2.is_vreg())
-					{
-						// register to register
-						op2 = this->load_src_vreg(body, instr->op2.vreg_id);
-					}
-					else
-					{
-						// immediate to register
-						// TODO check type here
-						op2 = this->get_empty_slot(body);
-						body.write_addi(op2->physical, Register::zero, instr->op2.imm.value); // UNCHECKED
-					}
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
 					body.write_and(dest->physical, op1->physical, op2->physical);
+					break;
 				}
-				else if (ir::instr::ReturnInstruction *instr = dynamic_cast<ir::instr::ReturnInstruction *>(cur_instr))
+				case ir::Op::CmpEq:
 				{
-					// return
-					if (instr->ret_value.has_value())
-					{
-						RegSlot *ret_value;
-						if (instr->ret_value->type == ir::IrValue::VREG)
-						{
-							ret_value = this->load_src_vreg(body, instr->ret_value->vreg_id);
-						}
-						else
-						{
-							ret_value = this->get_empty_slot(body);
-							body.write_addi(ret_value->physical, Register::zero, uint32_t(instr->ret_value->imm.value));
-						}
-						body.write_addi(Register::a0, ret_value->physical, uint32_t(0));
-					}
-					size_t pos = body.write_jal(Register::zero, 0u);
-					epilogue_backpatch_list.push_back(pos);
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					// compare the registers
+					body.write_xor(dest->physical, op1->physical, op2->physical);
+					// check the result
+					if (this->cur_fn->vregs.at(instr.dest).is_signed())
+						body.write_slti(dest->physical, dest->physical, 1);
+					else
+						body.write_sltiu(dest->physical, dest->physical, 1);
+					break;
 				}
-				else
+				case ir::Op::CmpNe:
 				{
-					throw CompilerError::unimplemented("Uncaught instruction variant");
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					// compare the registers
+					body.write_xor(dest->physical, op1->physical, op2->physical);
+					// check the result
+					if (this->cur_fn->vregs.at(instr.dest).is_signed())
+						body.write_slt(dest->physical, Register::zero, dest->physical);
+					else
+						body.write_sltu(dest->physical, Register::zero, dest->physical);
+					break;
+				}
+				case ir::Op::CmpGt:
+				{
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					if (this->cur_fn->vregs.at(instr.dest).is_signed())
+						body.write_slt(dest->physical, op2->physical, op1->physical);
+					else
+						body.write_slt(dest->physical, op2->physical, op1->physical);
+					break;
+				}
+				case ir::Op::CmpGte:
+				{
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					// check if less than
+					if (this->cur_fn->vregs.at(instr.dest).is_signed())
+						body.write_slt(dest->physical, op1->physical, op2->physical);
+					else
+						body.write_slt(dest->physical, op1->physical, op2->physical);
+					// negate
+					body.write_xori(dest->physical, dest->physical, 1u);
+					break;
+				}
+				case ir::Op::CmpLt:
+				{
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					if (this->cur_fn->vregs.at(instr.dest).is_signed())
+						body.write_slt(dest->physical, op1->physical, op2->physical);
+					else
+						body.write_slt(dest->physical, op1->physical, op2->physical);
+					break;
+				}
+				case ir::Op::CmpLte:
+				{
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					// check if greater than
+					if (this->cur_fn->vregs.at(instr.dest).is_signed())
+						body.write_slt(dest->physical, op2->physical, op1->physical);
+					else
+						body.write_slt(dest->physical, op2->physical, op1->physical);
+					// negate
+					body.write_xori(dest->physical, dest->physical, 1u);
+					break;
+				}
+				default:
+					throw CompilerError::unimplemented("Unhandled instruction variant");
+				}
+			}
+
+			// emit basic block terminator
+			switch (bb->terminator.kind)
+			{
+			case ir::BasicBlockTerminator::RETURN:
+			{
+				if (bb->terminator.ret_reg.has_value())
+				{
+					RegSlot *ret_value = this->load_src_vreg(body, bb->terminator.ret_reg.value());
+					body.write_addi(Register::a0, ret_value->physical, 0u);
 				}
 
-				cur_instr = cur_instr->next;
+				size_t pos = body.write_jal(Register::zero, 0u);
+				epilogue_backpatch_list.push_back(pos);
+				break;
 			}
+			default:
+				throw CompilerError::unimplemented("Unhandled bb terminator kind variant");
+			};
 
 			// spilling dirty registers
 			for (RegSlot &slot : this->registers)
@@ -646,8 +780,6 @@ namespace codegen
 
 		// now go back and fill in basic block offsets for instructions that need it
 		log_vvvv("Backpatching offsets in body");
-
-		// TODO basic block replacements
 
 		size_t epilogue_offset = body.cur_offset();
 		for (size_t instr_pos : epilogue_backpatch_list)
@@ -758,7 +890,7 @@ namespace codegen
 		log_vvv("Function \"{}\" done, object is now {} bytes", fn.name, obj.code.size());
 	}
 
-	Object CodeGenerator_riscv32::lower_ir(const IrObject &ir)
+	Object CodeGenerator_riscv32::lower_ir(const ir::Object &ir)
 	{
 		log_vv("Starting lowering to RV32");
 		Object obj;

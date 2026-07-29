@@ -51,6 +51,7 @@ Tests are defined in the `tests/` subdirectory. Each test consists of a `.cdr` s
 _For Jaxson's eyes only_
 
 - Soon:
+  - investigate if spilling is broken
   - riscv type truncation for small types (before comparison, right shift, division, or explicit casts)
   - Check code for stuff that doesn't need to be in headers
   - Testing improvements:
@@ -80,12 +81,13 @@ _For Jaxson's eyes only_
   - traits
   - stdlib
   - executable or library
-- Maybe:
+- At some point:
+  - Make distinction for non-G riscv ISAs
+  - soft floats/multiplication for embedded ISAs
   - Better error messages (include code snippet)
   - 64 bit
   - try doing UTF8
   - labelled code blocks (for early breaks)
-  - soft floats/multiplication for embedded ISAs
 - Future optimizations:
   - Better register allocator (use callee saved first on busy functions?)
   - Optimize out LUI?
@@ -111,6 +113,7 @@ _For Jaxson's eyes only_
 ### tests to remember to write
 
 - overflowing int literal
-- overflowing integers with operations
+- over/under flowing integers with operations
+- bit extensions on things
 - arithmetic bitshift right
 - left/right associativity

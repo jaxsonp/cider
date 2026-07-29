@@ -159,7 +159,7 @@ namespace codegen
 	public:
 		CodeGenerator_riscv32() = default;
 
-		Object lower_ir(const IrObject &ir) override;
+		Object lower_ir(const ir::Object &ir) override;
 
 		virtual std::vector<uint8_t> build_runtime_code(uint64_t main_offset, Target t) override;
 	};

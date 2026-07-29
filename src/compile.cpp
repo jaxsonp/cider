@@ -29,7 +29,7 @@ void compile(const std::string &filename, const CompileSettings &settings)
 	}
 
 	log_v("Emitting IR");
-	IrObject ir = ast.emitIr();
+	ir::Object ir = ast.emitIr();
 
 	log_v("Lowering IR to machine code");
 	auto code_generator = settings.target.get_code_generator();
