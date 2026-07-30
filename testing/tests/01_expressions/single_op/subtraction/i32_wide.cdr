@@ -1,0 +1,5 @@
+//! EXIT_CODE=1
+
+fn main() -> bool {
+	return 30000i32 - 10000i32 == 20000i32;
+}

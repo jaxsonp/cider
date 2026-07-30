@@ -1,0 +1,5 @@
+//! EXIT_CODE=1
+
+fn main() -> bool {
+	return 2147483647i32 > 2147483646i32;
+}

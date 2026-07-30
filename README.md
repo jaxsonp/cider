@@ -51,6 +51,7 @@ Tests are defined in the `tests/` subdirectory. Each test consists of a `.cdr` s
 _For Jaxson's eyes only_
 
 - Soon:
+  - **BUG: with mult ops** The new wide-value comparison tests (`single_op/{multiplication,division,modulo}/*_wide.cdr`) are failing.
   - investigate if spilling is broken
   - riscv type truncation for small types (before comparison, right shift, division, or explicit casts)
   - Check code for stuff that doesn't need to be in headers

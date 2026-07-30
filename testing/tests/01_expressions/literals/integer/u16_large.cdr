@@ -1,5 +1,0 @@
-//! EXIT_CODE=208
-
-fn main() -> u16 {
-	return 2000u16;
-}

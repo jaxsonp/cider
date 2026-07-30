@@ -1,0 +1,5 @@
+//! EXIT_CODE=1
+
+fn main() -> bool {
+	return 20000i16 % 7000i16 == 6000i16;
+}

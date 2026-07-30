@@ -1,0 +1,5 @@
+//! EXIT_CODE=1
+
+fn main() -> bool {
+	return 30000u32 / 2u32 == 15000u32;
+}

@@ -1,0 +1,5 @@
+//! EXIT_CODE=1
+
+fn main() -> bool {
+	return 32512i32 & 4080i32 == 3840i32;
+}
