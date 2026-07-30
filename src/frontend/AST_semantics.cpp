@@ -41,6 +41,9 @@ namespace ast
 		if (this->l_expr == nullptr || this->r_expr == nullptr)
 			throw CompilerError::internal("Invalid AST node (EqualityExpression)");
 
+		this->l_expr->check_semantics(state);
+		this->r_expr->check_semantics(state);
+
 		FrontendType l_type = this->l_expr->get_type();
 		FrontendType r_type = this->r_expr->get_type();
 		if (l_type != r_type)
@@ -54,6 +57,9 @@ namespace ast
 		if (this->l_expr == nullptr || this->r_expr == nullptr)
 			throw CompilerError::internal("Invalid AST node (ComparisonExpression)");
 
+		this->l_expr->check_semantics(state);
+		this->r_expr->check_semantics(state);
+
 		FrontendType l_type = this->l_expr->get_type();
 		FrontendType r_type = this->r_expr->get_type();
 		if (l_type != r_type)
@@ -66,6 +72,9 @@ namespace ast
 	{
 		if (this->l_expr == nullptr || this->r_expr == nullptr)
 			throw CompilerError::internal("Invalid AST node (BitwiseOrExpression)");
+
+		this->l_expr->check_semantics(state);
+		this->r_expr->check_semantics(state);
 
 		// make sure subexpression types match
 		FrontendType l_type = this->l_expr->get_type();
@@ -89,6 +98,9 @@ namespace ast
 		if (this->l_expr == nullptr || this->r_expr == nullptr)
 			throw CompilerError::internal("Invalid AST node (BitwiseXorExpression)");
 
+		this->l_expr->check_semantics(state);
+		this->r_expr->check_semantics(state);
+
 		// make sure subexpression types match
 		FrontendType l_type = this->l_expr->get_type();
 		if (!l_type.is_integer())
@@ -111,16 +123,19 @@ namespace ast
 		if (this->l_expr == nullptr || this->r_expr == nullptr)
 			throw CompilerError::internal("Invalid AST node (BitwiseAndExpression)");
 
+		this->l_expr->check_semantics(state);
+		this->r_expr->check_semantics(state);
+
 		// make sure subexpression types match
 		FrontendType l_type = this->l_expr->get_type();
 		if (!l_type.is_integer())
 			throw CompilerError::type_error(
-				std::format("Cannot perform bitwise operation on non-integer type '{}'", l_type.to_string()),
+				std::format("Cannot perform bitwise operation on non-integer type, '{}'", l_type.to_string()),
 				this->l_expr->src_loc);
 		FrontendType r_type = this->r_expr->get_type();
 		if (!r_type.is_integer())
 			throw CompilerError::type_error(
-				std::format("Cannot perform bitwise operation on non-integer type '{}'", r_type.to_string()),
+				std::format("Cannot perform bitwise operation on non-integer type, '{}'", r_type.to_string()),
 				this->r_expr->src_loc);
 		if (l_type != r_type)
 			throw CompilerError::type_error(
@@ -133,16 +148,19 @@ namespace ast
 		if (this->l_expr == nullptr || this->r_expr == nullptr)
 			throw CompilerError::internal("Invalid AST node (BitshiftExpression)");
 
+		this->l_expr->check_semantics(state);
+		this->r_expr->check_semantics(state);
+
 		// make sure subexpression types are both ints
 		FrontendType l_type = this->r_expr->get_type();
 		if (!l_type.is_integer())
 			throw CompilerError::type_error(
-				std::format("Cannot perform bitshift operation on non-integer type '{}'", l_type.to_string()),
+				std::format("Cannot perform bitshift operation on non-integer type, '{}'", l_type.to_string()),
 				this->src_loc);
 		FrontendType r_type = this->l_expr->get_type();
 		if (!r_type.is_integer())
 			throw CompilerError::type_error(
-				std::format("Cannot perform bitshift operation with non-integer type '{}'", r_type.to_string()),
+				std::format("Cannot perform bitshift operation with non-integer type, '{}'", r_type.to_string()),
 				this->src_loc);
 	}
 
@@ -151,16 +169,19 @@ namespace ast
 		if (this->l_expr == nullptr || this->r_expr == nullptr)
 			throw CompilerError::internal("Invalid AST node (AdditiveExpression)");
 
+		this->l_expr->check_semantics(state);
+		this->r_expr->check_semantics(state);
+
 		// check subexpression types
 		FrontendType l_type = this->l_expr->get_type();
-		if (!l_type.is_integer() && !l_type.is_float())
+		if (!l_type.is_numeric())
 			throw CompilerError::type_error(
-				std::format("Cannot use operator '{}' with type: '{}'", this->operator_string(), l_type.to_string()),
+				std::format("Cannot use operator '{}' with non-numeric type, '{}'", this->operator_string(), l_type.to_string()),
 				this->l_expr->src_loc);
 		FrontendType r_type = this->r_expr->get_type();
-		if (!r_type.is_integer() && !r_type.is_float())
+		if (!r_type.is_numeric())
 			throw CompilerError::type_error(
-				std::format("Cannot use operator '{}' with type: '{}'", this->operator_string(), r_type.to_string()),
+				std::format("Cannot use operator '{}' with non-numeric type, '{}'", this->operator_string(), r_type.to_string()),
 				this->r_expr->src_loc);
 		if (l_type != r_type)
 			throw CompilerError::type_error(
@@ -173,16 +194,19 @@ namespace ast
 		if (this->l_expr == nullptr || this->r_expr == nullptr)
 			throw CompilerError::internal("Invalid AST node (Multiplicative expresssion)");
 
+		this->l_expr->check_semantics(state);
+		this->r_expr->check_semantics(state);
+
 		// check subexpression types
 		FrontendType l_type = this->l_expr->get_type();
-		if (!l_type.is_integer() && !l_type.is_float())
+		if (!l_type.is_numeric())
 			throw CompilerError::type_error(
-				std::format("Cannot use operator '{}' with type: '{}'", this->operator_string(), l_type.to_string()),
+				std::format("Cannot use operator '{}' with non-numeric type, '{}'", this->operator_string(), l_type.to_string()),
 				this->l_expr->src_loc);
 		FrontendType r_type = this->r_expr->get_type();
-		if (!r_type.is_integer() && !r_type.is_float())
+		if (!r_type.is_numeric())
 			throw CompilerError::type_error(
-				std::format("Cannot use operator '{}' with type: '{}'", this->operator_string(), r_type.to_string()),
+				std::format("Cannot use operator '{}' with non-numeric type, '{}'", this->operator_string(), r_type.to_string()),
 				this->r_expr->src_loc);
 		if (l_type != r_type)
 			throw CompilerError::type_error(
@@ -192,6 +216,27 @@ namespace ast
 					l_type.to_string(),
 					r_type.to_string()),
 				this->src_loc);
+	}
+
+	void UnaryExpression::check_semantics(SemanticAnalysisState state) const
+	{
+		if (this->expr == nullptr)
+			throw CompilerError::internal("Invalid AST node (Unary expresssion)");
+
+		this->expr->check_semantics(state);
+
+		// check subexpression type
+		FrontendType type = this->expr->get_type();
+
+		if (this->operation == UnaryOperation::LogicalNot && !type.is_bool())
+			throw CompilerError::type_error(
+				std::format("Cannot use not operator '{}' with non-boolean type, '{}'", this->operator_string(), type.to_string()),
+				this->expr->src_loc);
+
+		if (this->operation == UnaryOperation::Negation && !type.is_numeric())
+			throw CompilerError::type_error(
+				std::format("Cannot use not operator '{}' with non-numeric type, '{}'", this->operator_string(), type.to_string()),
+				this->expr->src_loc);
 	}
 
 	void ReturnStatement::check_semantics(SemanticAnalysisState state) const

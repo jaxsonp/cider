@@ -27,6 +27,7 @@ namespace ir
 		BitXor,
 		BitShl,
 		BitShr,
+		Neg,
 		CmpEq,
 		CmpNe,
 		CmpGt,

@@ -149,6 +149,29 @@ namespace ast
 		return dst_reg;
 	}
 
+	ir::VRegId UnaryExpression::emitIr(IrWriter &writer) const
+	{
+		ir::IrType irType = this->get_type().resolveType();
+
+		ir::VRegId src_reg = this->expr->emitIr(writer);
+		ir::VRegId dst_reg = writer.new_vreg(irType);
+		switch (this->operation)
+		{
+		case UnaryOperation::Negation:
+			writer.add_instr(ir::Op::Neg, dst_reg, src_reg, -1);
+			break;
+		case UnaryOperation::LogicalNot:
+		{
+			ir::VRegId one_reg = writer.get_const_vreg(irType, 1u);
+			writer.add_instr(ir::Op::BitXor, dst_reg, src_reg, one_reg);
+			break;
+		}
+		default:
+			throw CompilerError::internal("Uncaught UnaryOperation variant");
+		};
+		return dst_reg;
+	}
+
 	void ReturnStatement::emitIr(IrWriter &writer) const
 	{
 		if (this->expr != nullptr)

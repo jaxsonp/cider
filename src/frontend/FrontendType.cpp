@@ -33,6 +33,29 @@ bool FrontendType::is_float() const
 	}
 }
 
+bool FrontendType::is_numeric() const
+{
+	switch (this->variant)
+	{
+	case Variant::I8:
+	case Variant::I16:
+	case Variant::I32:
+	case Variant::U8:
+	case Variant::U16:
+	case Variant::U32:
+	case Variant::UNRESOLVED_INT:
+	case Variant::UNRESOLVED_FLOAT:
+		return true;
+	default:
+		return false;
+	}
+}
+
+bool FrontendType::is_bool() const
+{
+	return this->variant == Variant::BOOL;
+}
+
 std::string FrontendType::to_string() const
 {
 	switch (this->variant)

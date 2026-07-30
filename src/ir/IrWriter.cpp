@@ -17,6 +17,8 @@ void IrWriter::new_function(const std::string &name)
 	// reset vreg maps
 	this->vreg_map_scopes.clear();
 	this->vreg_map_scopes.emplace_back();
+
+	this->const_cache.clear();
 }
 
 /*ir::VRegId IrWriter::new_local(const std::string &name)
@@ -57,6 +59,28 @@ ir::VRegId IrWriter::new_vreg(ir::IrType ty)
 	ir::VRegId id(this->cur_function->vregs.size());
 	this->cur_function->vregs.insert({id, ty});
 	return id;
+}
+
+ir::VRegId IrWriter::get_const_vreg(ir::IrType type, uint64_t value)
+{
+	IrWriter::ConstCacheKey key{
+		.type_variant = type.variant,
+		.value = value,
+	};
+	if (auto search = this->const_cache.find(key); search != this->const_cache.end())
+		// const already exists
+		return search->second;
+	else
+	{
+		// create new vreg for this const and cache it
+		ir::VRegId dest = this->new_vreg(type);
+		this->const_cache.insert({key, dest});
+
+		// load the value
+		this->add_instr(ir::Op::LoadImm, dest, -1, -1, value);
+
+		return dest;
+	}
 }
 
 void IrWriter::add_instr(ir::Op opcode, ir::VRegId dst, ir::VRegId op1, ir::VRegId op2, uint64_t data)

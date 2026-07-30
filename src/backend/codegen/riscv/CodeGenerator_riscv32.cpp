@@ -660,6 +660,13 @@ namespace codegen
 					body.write_and(dest->physical, op1->physical, op2->physical);
 					break;
 				}
+				case ir::Op::Neg:
+				{
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *src = this->load_src_vreg(body, instr.op1);
+					body.write_sub(dest->physical, Register::zero, src->physical);
+					break;
+				}
 				case ir::Op::CmpEq:
 				{
 					RegSlot *dest = this->load_dest_vreg(body, instr.dest);

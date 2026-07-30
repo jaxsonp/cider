@@ -64,9 +64,7 @@ _For Jaxson's eyes only_
       above the low byte: sign vs. zero extension, 16/32-bit truncation,
       etc. See note under "notes for documentation" below.
   - turn off colored output (automatically if not tty perhaps?)
-  - Improve int literals
-    - Basic type inference
-    - negative ints (broken rn perhaps?)
+  - Basic type inference for int literals
 - Before self-hosting:
   - locals vars
   - if statements

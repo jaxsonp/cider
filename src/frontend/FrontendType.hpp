@@ -48,6 +48,8 @@ struct FrontendType
 
 	bool is_integer() const;
 	bool is_float() const;
+	bool is_numeric() const;
+	bool is_bool() const;
 
 	std::string to_string() const;
 	static FrontendType from_string(std::string_view s);

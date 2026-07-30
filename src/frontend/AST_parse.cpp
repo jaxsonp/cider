@@ -409,10 +409,8 @@ namespace ast
 
 	std::optional<std::unique_ptr<ExpressionNode>> MultiplicativeExpression::try_parse(Lexer &lexer)
 	{
-		// TODO change these integer literals to primary
-
 		// parse left hand expression
-		auto maybe_l_expr = PrimaryExpression::try_parse(lexer);
+		auto maybe_l_expr = UnaryExpression::try_parse(lexer);
 		if (!maybe_l_expr.has_value())
 			return std::nullopt;
 
@@ -442,7 +440,7 @@ namespace ast
 			mult->operation = op;
 
 			// parse right hand expression
-			auto maybe_r_expr = PrimaryExpression::try_parse(lexer);
+			auto maybe_r_expr = UnaryExpression::try_parse(lexer);
 			if (!maybe_r_expr.has_value())
 				throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
 			mult->r_expr = std::move(maybe_r_expr.value());
@@ -451,6 +449,25 @@ namespace ast
 			mult->src_loc.end = mult->r_expr->src_loc.end;
 			ret = std::move(mult);
 		}
+	}
+
+	std::optional<std::unique_ptr<ExpressionNode>> UnaryExpression::try_parse(Lexer &lexer)
+	{
+		if (lexer.peek().type != TokenType::EXCLAMATION && lexer.peek().type != TokenType::MINUS)
+			return PrimaryExpression::try_parse(lexer);
+
+		Token op_tok = lexer.take();
+
+		auto ret = std::make_unique<UnaryExpression>();
+		ret->operation = (op_tok.type == TokenType::MINUS ? UnaryOperation::Negation : UnaryOperation::LogicalNot);
+		ret->src_loc.start = op_tok.loc.start;
+
+		auto maybe_expr = UnaryExpression::try_parse(lexer);
+		if (!maybe_expr.has_value())
+			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+		ret->expr = std::move(maybe_expr.value());
+		ret->src_loc.end = ret->expr->src_loc.end;
+		return ret;
 	}
 
 	std::optional<std::unique_ptr<ReturnStatement>> ReturnStatement::try_parse(Lexer &lexer)

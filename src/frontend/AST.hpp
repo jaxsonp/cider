@@ -332,6 +332,36 @@ namespace ast
 		}
 	};
 
+	struct UnaryExpression : public ExpressionNode
+	{
+		enum class UnaryOperation
+		{
+			LogicalNot,
+			Negation,
+		};
+		std::unique_ptr<ExpressionNode> expr;
+		UnaryOperation operation;
+
+		void check_semantics(SemanticAnalysisState state) const override;
+		void debug_print(unsigned int depth = 0) const override;
+		ir::VRegId emitIr(IrWriter &writer) const override;
+		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
+		inline FrontendType get_type() const override { return expr->get_type(); };
+
+		inline std::string_view operator_string() const
+		{
+			switch (this->operation)
+			{
+			case UnaryOperation::LogicalNot:
+				return "!";
+			case UnaryOperation::Negation:
+				return "-";
+			default:
+				throw CompilerError::internal("Uncaught UnaryOperation variant");
+			}
+		}
+	};
+
 	// STATEMENTS ==============================================================
 
 	struct ReturnStatement : StatementNode

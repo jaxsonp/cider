@@ -123,6 +123,14 @@ namespace ast
 		this->r_expr->debug_print(depth + 1);
 	}
 
+	void UnaryExpression::debug_print(unsigned int depth) const
+	{
+		std::cout << std::string(depth * 2, ' ');
+		std::cout << "Unary expression (operation: '" << this->operator_string() << "')";
+		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
+		this->expr->debug_print(depth + 1);
+	}
+
 	void ReturnStatement::debug_print(unsigned int depth) const
 	{
 		std::cout << std::string(depth * 2, ' ');

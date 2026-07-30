@@ -14,6 +14,23 @@ class IrWriter
 	/// @brief A stack of vreg maps, mapping names to assigned virtual registers
 	std::vector<VRegMap> vreg_map_scopes;
 
+	struct ConstCacheKey
+	{
+		ir::IrType::Variant type_variant;
+		uint64_t value;
+		bool operator==(const ConstCacheKey &) const = default;
+	};
+	struct ConstCacheKeyHash
+	{
+		size_t operator()(const ConstCacheKey &k) const
+		{
+			return std::hash<uint64_t>()(k.value) ^ (std::hash<int>()((int)k.type_variant) << 1);
+		}
+	};
+	/// @brief Map of VRegs loaded with constant immediates, keyed by their type and value
+	/// Note to self, clear for every function
+	std::unordered_map<ConstCacheKey, ir::VRegId, ConstCacheKeyHash> const_cache;
+
 	ir::Object obj;
 
 public:
@@ -36,6 +53,9 @@ public:
 
 	/// @brief Reserve a new virtual reg
 	ir::VRegId new_vreg(ir::IrType);
+
+	/// @brief Get a vreg with a constant value (loading it if doesn't exist)
+	ir::VRegId get_const_vreg(ir::IrType type, uint64_t value);
 
 	ir::Object get_obj() { return std::move(this->obj); }
 

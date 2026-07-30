@@ -8,6 +8,7 @@
 
 #include "utils/error.hpp"
 #include "utils/logging.hpp"
+#include "AST.hpp"
 
 AST::AST(std::istream &input)
 {
