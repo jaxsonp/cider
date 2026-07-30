@@ -47,6 +47,8 @@ struct FrontendType
 	static FrontendType unknown() { return FrontendType(Variant::UNKNOWN); }
 
 	bool is_integer() const;
+	bool is_signed_integer() const;
+	bool is_unsigned_integer() const;
 	bool is_float() const;
 	bool is_numeric() const;
 	bool is_bool() const;

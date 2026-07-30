@@ -233,10 +233,17 @@ namespace ast
 				std::format("Cannot use not operator '{}' with non-boolean type, '{}'", this->operator_string(), type.to_string()),
 				this->expr->src_loc);
 
-		if (this->operation == UnaryOperation::Negation && !type.is_numeric())
-			throw CompilerError::type_error(
-				std::format("Cannot use not operator '{}' with non-numeric type, '{}'", this->operator_string(), type.to_string()),
-				this->expr->src_loc);
+		if (this->operation == UnaryOperation::Negation)
+		{
+			if (!type.is_numeric())
+				throw CompilerError::type_error(
+					std::format("Cannot use not operator '{}' with non-numeric type, '{}'", this->operator_string(), type.to_string()),
+					this->expr->src_loc);
+			if (type.is_unsigned_integer())
+				throw CompilerError::type_error(
+					std::format("Cannot use not operator '{}' with unsigned integer type, '{}'", this->operator_string(), type.to_string()),
+					this->expr->src_loc);
+		}
 	}
 
 	void ReturnStatement::check_semantics(SemanticAnalysisState state) const

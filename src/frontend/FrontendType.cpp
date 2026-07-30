@@ -22,6 +22,34 @@ bool FrontendType::is_integer() const
 	}
 }
 
+bool FrontendType::is_signed_integer() const
+{
+	switch (this->variant)
+	{
+	case Variant::I8:
+	case Variant::I16:
+	case Variant::I32:
+	case Variant::UNRESOLVED_INT:
+		return true;
+	default:
+		return false;
+	}
+}
+
+bool FrontendType::is_unsigned_integer() const
+{
+	switch (this->variant)
+	{
+	case Variant::U8:
+	case Variant::U16:
+	case Variant::U32:
+	case Variant::UNRESOLVED_INT:
+		return true;
+	default:
+		return false;
+	}
+}
+
 bool FrontendType::is_float() const
 {
 	switch (this->variant)
