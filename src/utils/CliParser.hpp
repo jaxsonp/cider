@@ -11,36 +11,107 @@
 class CliParser
 {
 public:
-	class FlagSpec;
-	class FlagArgSpec;
-	class PositionalSpec;
+	/// A registered argument: a boolean flag, a flag that takes a value, or a positional.
+	/// Created through CliParser::add_*, which return a reference valid for the parser's lifetime.
+	class Arg
+	{
+	public:
+		// configuration (chainable)
 
-	explicit CliParser(std::string program_name,
-					   std::string description = {});
-	~CliParser();
+		/// Assign a single-character short name (e.g. 'v' → -v). Flags/options only
+		Arg &short_name(char c);
+
+		/// Name shown for this argument's value in the help text (defaults to the long name)
+		Arg &metavar(std::string name);
+
+		/// Mark as mandatory (parse() throws if absent)
+		Arg &required();
+
+		/// Provide a fallback used when the argument is absent
+		Arg &default_value(std::string val);
+
+		/// Allow this argument to be passed more than once
+		Arg &allow_multi();
+
+		/// Split each value on `sep`, so `--emit=a,b` yields two values. Options only
+		Arg &split_on(char sep);
+
+		// results. A default value, if configured, is filled in by parse() when the
+		// argument is absent, so the accessors below never need to special-case it
+
+		/// True if the argument was actually passed (false when only a default applied)
+		[[nodiscard]] bool present() const { return this->seen; }
+
+		/// Number of times the argument appeared (always 0 or 1 unless allow_multi() set)
+		[[nodiscard]] int count() const { return static_cast<int>(this->parsed_values.size()); }
+
+		/// Last value, else ""
+		[[nodiscard]] std::string value() const;
+
+		/// Last value, else nullopt
+		[[nodiscard]] std::optional<std::string> maybe_value() const;
+
+		/// Every value, in order
+		[[nodiscard]] const std::vector<std::string> &values() const { return this->parsed_values; }
+
+		[[nodiscard]] explicit operator bool() const { return this->present(); }
+
+	private:
+		friend class CliParser;
+
+		enum class Kind
+		{
+			Flag,		// --verbose
+			Option,		// --out FILE
+			Positional, // FILE
+		};
+
+		Arg(Kind kind, std::string name, std::string desc)
+			: kind(kind), name(std::move(name)), desc(std::move(desc)) {}
+
+		/// Human-readable spelling for error messages, e.g. "--out" or "<file>"
+		[[nodiscard]] std::string display_name() const;
+
+		/// Record a value, applying split_on if configured
+		void add_value(std::string_view val);
+
+		Kind kind;
+		std::string name;
+		std::string desc;
+		std::optional<char> short_char;
+		std::optional<std::string> meta;
+		std::optional<std::string> default_val;
+		std::optional<char> split_sep;
+		bool is_required = false;
+		bool multi_allowed = false;
+
+		/// Whether the argument was actually passed, as opposed to filled in from a default
+		bool seen = false;
+		std::vector<std::string> parsed_values;
+	};
+
+	explicit CliParser(std::string program_name, std::string description = {});
 
 	CliParser(const CliParser &) = delete;
 	CliParser &operator=(const CliParser &) = delete;
-	CliParser(CliParser &&) = default;
-	CliParser &operator=(CliParser &&) = default;
 
-	// argument/flag registration
+	// argument registration. Each throws CliError if the name or short name is already taken
 
-	/// Register a flag
-	[[nodiscard]] FlagSpec &add_flag(std::string long_name, std::string description = {});
+	/// Register a boolean flag: --name
+	Arg &add_flag(std::string long_name, std::string description = {});
 
 	/// Register a flag that takes a value: --name VALUE  or  --name=VALUE
-	[[nodiscard]] FlagArgSpec &add_flag_arg(std::string long_name, std::string description = {});
+	Arg &add_flag_arg(std::string long_name, std::string description = {});
 
 	/// Register the next positional argument (order of calls = capture order)
-	[[nodiscard]] PositionalSpec &add_positional(std::string meta_name, std::string description = {});
+	Arg &add_positional(std::string meta_name, std::string description = {});
 
-	/// Register an '-h' flag to print help text. Exits the program with the given exit code if one is provided
-	void add_help_flag(std::optional<int> exit_code = std::nullopt);
+	/// Register a '--help'/'-h' flag. parse() throws CliHelpRequested when it is passed
+	void add_help_flag();
 
-	/// Parse an (argc, argv) pair from main()
-	/// argv[0] (program name) is automatically skipped
-	/// Throws CliError with a human-readable message on any error
+	/// Parse an (argc, argv) pair from main(). argv[0] (program name) is automatically skipped.
+	/// Throws CliHelpRequested if the help flag was passed, or CliError with a
+	/// human-readable message on any error
 	void parse(int argc, const char *const *argv);
 
 	/// Parse an explicit list of tokens (argv[0] NOT included)
@@ -52,101 +123,30 @@ public:
 	/// Prints help to stdout
 	void print_help() const;
 
-	class FlagSpec
-	{
-	public:
-		~FlagSpec();
-		FlagSpec(const FlagSpec &) = delete;
-		FlagSpec &operator=(const FlagSpec &) = delete;
-
-		/// Assign a single-character short name (e.g. 'v' → -v)
-		FlagSpec &short_name(char c);
-
-		/// Allow this flag to be passed more than once
-		FlagSpec &allow_multi();
-
-		/// True if the flag appeared at least once
-		[[nodiscard]] bool present() const;
-
-		/// Number of times the flag appeared (always 0 or 1 unless allow_multi() set)
-		[[nodiscard]] int count() const;
-		[[nodiscard]] explicit operator bool() const { return present(); }
-
-	private:
-		friend class CliParser;
-		struct Impl;
-		explicit FlagSpec(std::unique_ptr<Impl>);
-		std::unique_ptr<Impl> impl_;
-	};
-
-	class FlagArgSpec
-	{
-	public:
-		~FlagArgSpec();
-		FlagArgSpec(const FlagArgSpec &) = delete;
-		FlagArgSpec &operator=(const FlagArgSpec &) = delete;
-
-		/// Assign a single-character short name (e.g. 'o' → -o)
-		FlagArgSpec &short_name(char c);
-
-		/// Mark this argument as mandatory (parse() throws if absent)
-		FlagArgSpec &required();
-
-		/// Provide a fallback used when the flag is absent and not required
-		FlagArgSpec &default_value(std::string val);
-
-		/// Returns the value, or the default, or "" if absent and no default
-		[[nodiscard]] std::string value() const;
-
-		/// Returns nullopt when the flag was absent (and no default was set)
-		[[nodiscard]] std::optional<std::string> maybe_value() const;
-
-		[[nodiscard]] bool present() const;
-		[[nodiscard]] explicit operator bool() const { return present(); }
-
-	private:
-		friend class CliParser;
-		struct Impl;
-		explicit FlagArgSpec(std::unique_ptr<Impl>);
-		std::unique_ptr<Impl> impl_;
-	};
-
-	class PositionalSpec
-	{
-	public:
-		~PositionalSpec();
-		PositionalSpec(const PositionalSpec &) = delete;
-		PositionalSpec &operator=(const PositionalSpec &) = delete;
-
-		/// Throw during parse() if no token fills this positional slot
-		PositionalSpec &required();
-
-		/// Fallback used when the slot is absent and not required
-		PositionalSpec &default_value(std::string val);
-
-		/// Returns the captured string, the default, or "" if absent
-		[[nodiscard]] std::string value() const;
-
-		[[nodiscard]] std::optional<std::string> maybe_value() const;
-
-		[[nodiscard]] bool present() const;
-		[[nodiscard]] explicit operator bool() const { return present(); }
-
-	private:
-		friend class CliParser;
-		struct Impl;
-		explicit PositionalSpec(std::unique_ptr<Impl>);
-		std::unique_ptr<Impl> impl_;
-	};
-
 private:
-	struct Impl;
-	std::unique_ptr<Impl> impl_;
+	/// Register an argument, checking for name collisions
+	Arg &add(Arg::Kind kind, std::string name, std::string desc);
+
+	/// Find a registered argument by long name / short name, or nullptr
+	[[nodiscard]] Arg *find_long(std::string_view name, Arg::Kind kind);
+	[[nodiscard]] Arg *find_short(char c, Arg::Kind kind);
+
+	std::string program_name;
+	std::string desc;
+
+	/// Owned via unique_ptr so the references handed out by add_* stay valid as the vector grows
+	std::vector<std::unique_ptr<Arg>> args;
+	Arg *help_arg = nullptr;
 };
 
 /// Wrapper around runtime error for CLI-specific errors
 class CliError : public std::runtime_error
 {
 public:
-	CliError(std::string s);
+	explicit CliError(const std::string &s) : std::runtime_error(s) {}
+};
+
+/// Thrown by CliParser::parse() when the help flag is passed
+class CliHelpRequested
+{
 };

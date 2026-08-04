@@ -45,6 +45,28 @@ namespace ir
 		return 4;
 	}
 
+	std::string IrType::to_string() const
+	{
+		switch (this->variant)
+		{
+		case Variant::BOOL:
+			return "bool";
+		case Variant::U8:
+			return "u8";
+		case Variant::U16:
+			return "u16";
+		case Variant::U32:
+			return "u32";
+		case Variant::I8:
+			return "i8";
+		case Variant::I16:
+			return "i16";
+		case Variant::I32:
+			return "i32";
+		};
+		throw CompilerError::internal("Uncaught IR type variant");
+	}
+
 	bool IrType::is_signed() const
 	{
 		switch (this->variant)

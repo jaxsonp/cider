@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <istream>
+#include <ostream>
 #include <vector>
 #include <optional>
 #include <unordered_map>
@@ -77,9 +78,18 @@ namespace ast
 		SourceLocRange src_loc;
 
 		virtual void check_semantics(SemanticAnalysisState state) const = 0;
-		virtual void debug_print(unsigned int depth) const = 0;
+
+		/// @brief Write this node and its subtree to `out`, indented `depth` levels
+		void print(std::ostream &out, unsigned int depth = 0) const;
 
 		virtual ~Node() = default;
+
+	protected:
+		/// @brief One-line description of this node, e.g. `Additive expression (operation: '+')`
+		virtual std::string label() const = 0;
+
+		/// @brief Write this node's children at `depth`. Leaf nodes write nothing
+		virtual void print_children(std::ostream &out, unsigned int depth) const { (void)out, (void)depth; }
 	};
 
 	// TLD interface
@@ -120,7 +130,7 @@ namespace ast
 		FrontendType type;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<IntegerLiteralExpression>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return this->type; };
@@ -132,7 +142,7 @@ namespace ast
 		bool value;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<BooleanLiteralExpression>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return FrontendType::boolean(); };
@@ -144,7 +154,8 @@ namespace ast
 		std::unique_ptr<ExpressionNode> expr;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
+		void print_children(std::ostream &out, unsigned int depth) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return this->expr->get_type(); };
@@ -156,7 +167,8 @@ namespace ast
 		std::unique_ptr<ExpressionNode> r_expr;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
+		void print_children(std::ostream &out, unsigned int depth) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return l_expr->get_type(); };
@@ -168,7 +180,8 @@ namespace ast
 		std::unique_ptr<ExpressionNode> r_expr;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
+		void print_children(std::ostream &out, unsigned int depth) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return l_expr->get_type(); };
@@ -182,7 +195,8 @@ namespace ast
 		bool notted;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
+		void print_children(std::ostream &out, unsigned int depth) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return FrontendType::boolean(); };
@@ -208,7 +222,8 @@ namespace ast
 		ComparisonOperation operation;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
+		void print_children(std::ostream &out, unsigned int depth) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return FrontendType::boolean(); };
@@ -237,7 +252,8 @@ namespace ast
 		std::unique_ptr<ExpressionNode> r_expr;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
+		void print_children(std::ostream &out, unsigned int depth) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return l_expr->get_type(); };
@@ -249,7 +265,8 @@ namespace ast
 		std::unique_ptr<ExpressionNode> r_expr;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
+		void print_children(std::ostream &out, unsigned int depth) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return l_expr->get_type(); };
@@ -261,7 +278,8 @@ namespace ast
 		std::unique_ptr<ExpressionNode> r_expr;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
+		void print_children(std::ostream &out, unsigned int depth) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return l_expr->get_type(); };
@@ -274,7 +292,8 @@ namespace ast
 		bool left_shift;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
+		void print_children(std::ostream &out, unsigned int depth) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return l_expr->get_type(); };
@@ -287,7 +306,8 @@ namespace ast
 		bool plus;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
+		void print_children(std::ostream &out, unsigned int depth) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return l_expr->get_type(); };
@@ -311,7 +331,8 @@ namespace ast
 		MultOperation operation;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
+		void print_children(std::ostream &out, unsigned int depth) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return l_expr->get_type(); };
@@ -343,7 +364,8 @@ namespace ast
 		UnaryOperation operation;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
+		void print_children(std::ostream &out, unsigned int depth) const override;
 		ir::VRegId emitIr(IrWriter &writer) const override;
 		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
 		inline FrontendType get_type() const override { return expr->get_type(); };
@@ -370,7 +392,8 @@ namespace ast
 		std::unique_ptr<ExpressionNode> expr;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
+		void print_children(std::ostream &out, unsigned int depth) const override;
 		void emitIr(IrWriter &writer) const override;
 
 		static std::optional<std::unique_ptr<ReturnStatement>> try_parse(Lexer &lexer);
@@ -386,7 +409,7 @@ namespace ast
 		std::string name;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
 
 		static std::optional<ArgDefinition> try_parse(Lexer &lexer);
 
@@ -405,7 +428,8 @@ namespace ast
 		SymbolScope *scope;
 
 		void check_semantics(SemanticAnalysisState state) const override;
-		void debug_print(unsigned int depth = 0) const override;
+		std::string label() const override;
+		void print_children(std::ostream &out, unsigned int depth) const override;
 		void emitIr(IrWriter &writer) const override;
 
 		static std::optional<FunctionDefinition> try_parse(Lexer &lexer);
@@ -430,7 +454,8 @@ public:
 	/// attempt to create an AST from input stream
 	AST(std::istream &input);
 
-	void debug_print() const;
+	/// @brief Write a textual representation of the tree to a stream
+	void print(std::ostream &out) const;
 	ir::Object emitIr() const;
 
 	// no need to delete symbol tables here, they are owned and will be deleted by AST nodes

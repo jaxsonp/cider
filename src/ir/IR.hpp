@@ -14,6 +14,9 @@ namespace ir
 	using BBlockId = unsigned int;
 	using VRegId = unsigned int;
 
+	/// @brief Placeholder for an instruction operand that isn't used by that opcode
+	constexpr VRegId NO_VREG = static_cast<VRegId>(-1);
+
 	enum class Op
 	{
 		// arithmetic ---

@@ -77,7 +77,7 @@ ir::VRegId IrWriter::get_const_vreg(ir::IrType type, uint64_t value)
 		this->const_cache.insert({key, dest});
 
 		// load the value
-		this->add_instr(ir::Op::LoadImm, dest, -1, -1, value);
+		this->add_instr(ir::Op::LoadImm, dest, ir::NO_VREG, ir::NO_VREG, value);
 
 		return dest;
 	}

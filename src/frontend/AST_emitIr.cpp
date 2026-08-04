@@ -11,7 +11,7 @@ namespace ast
 
 		ir::VRegId dst_reg = writer.new_vreg(irType);
 		// load imm instruction ignores op1 and op2 regs
-		writer.add_instr(ir::Op::LoadImm, dst_reg, -1, -1, std::bit_cast<uint32_t>(this->raw_value));
+		writer.add_instr(ir::Op::LoadImm, dst_reg, ir::NO_VREG, ir::NO_VREG, std::bit_cast<uint32_t>(this->raw_value));
 		return dst_reg;
 	}
 
@@ -20,7 +20,7 @@ namespace ast
 
 		ir::VRegId dst_reg = writer.new_vreg(ir::IrType::boolean());
 		// load imm instruction ignores op1 and op2 regs
-		writer.add_instr(ir::Op::LoadImm, dst_reg, -1, -1, this->value ? 1u : 0u);
+		writer.add_instr(ir::Op::LoadImm, dst_reg, ir::NO_VREG, ir::NO_VREG, this->value ? 1u : 0u);
 		return dst_reg;
 	}
 
@@ -158,7 +158,7 @@ namespace ast
 		switch (this->operation)
 		{
 		case UnaryOperation::Negation:
-			writer.add_instr(ir::Op::Neg, dst_reg, src_reg, -1);
+			writer.add_instr(ir::Op::Neg, dst_reg, src_reg, ir::NO_VREG);
 			break;
 		case UnaryOperation::LogicalNot:
 		{

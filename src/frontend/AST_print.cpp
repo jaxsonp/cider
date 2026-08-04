@@ -1,163 +1,162 @@
 #include "frontend/AST.hpp"
 
 #include <format>
-#include <iostream>
 
-#include "utils/error.hpp"
 #include "utils/logging.hpp"
 
 namespace ast
 {
-	void IntegerLiteralExpression::debug_print(unsigned int depth) const
+	void Node::print(std::ostream &out, unsigned int depth) const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Integer literal expression (value: " << this->raw_value << ", type annotation: " << this->type.to_string() << ")";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
+		out << std::format("{:{}}{} [{}]\n", "", depth * 2, this->label(), this->src_loc.to_string());
+		this->print_children(out, depth + 1);
 	}
 
-	void BooleanLiteralExpression::debug_print(unsigned int depth) const
+	// EXPRESSIONS =============================================================
+
+	std::string IntegerLiteralExpression::label() const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Boolean literal expression (value: " << (this->value ? "true" : "false") << ")";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
+		return std::format("Integer literal expression (value: {}, type annotation: {})",
+						   this->raw_value, this->type.to_string());
 	}
 
-	void PrimaryExpression::debug_print(unsigned int depth) const
+	std::string BooleanLiteralExpression::label() const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Primary expression [" << this->src_loc.to_string() << "]" << std::endl;
-		this->expr->debug_print(depth + 1);
+		return std::format("Boolean literal expression (value: {})", this->value ? "true" : "false");
 	}
 
-	void LogicalOrExpression::debug_print(unsigned int depth) const
+	std::string PrimaryExpression::label() const { return "Primary expression"; }
+	void PrimaryExpression::print_children(std::ostream &out, unsigned int depth) const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Logical or expression";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		this->l_expr->debug_print(depth + 1);
-		this->r_expr->debug_print(depth + 1);
+		this->expr->print(out, depth);
 	}
 
-	void LogicalAndExpression::debug_print(unsigned int depth) const
+	std::string LogicalOrExpression::label() const { return "Logical or expression"; }
+	void LogicalOrExpression::print_children(std::ostream &out, unsigned int depth) const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Logical and expression";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		this->l_expr->debug_print(depth + 1);
-		this->r_expr->debug_print(depth + 1);
+		this->l_expr->print(out, depth);
+		this->r_expr->print(out, depth);
 	}
 
-	void EqualityExpression::debug_print(unsigned int depth) const
+	std::string LogicalAndExpression::label() const { return "Logical and expression"; }
+	void LogicalAndExpression::print_children(std::ostream &out, unsigned int depth) const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Equality expression (operation: '" << this->operator_string() << "')";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		this->l_expr->debug_print(depth + 1);
-		this->r_expr->debug_print(depth + 1);
+		this->l_expr->print(out, depth);
+		this->r_expr->print(out, depth);
 	}
 
-	void ComparisonExpression::debug_print(unsigned int depth) const
+	std::string EqualityExpression::label() const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Comparison expression (operation: '" << this->operator_string() << "')";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		this->l_expr->debug_print(depth + 1);
-		this->r_expr->debug_print(depth + 1);
+		return std::format("Equality expression (operation: '{}')", this->operator_string());
+	}
+	void EqualityExpression::print_children(std::ostream &out, unsigned int depth) const
+	{
+		this->l_expr->print(out, depth);
+		this->r_expr->print(out, depth);
 	}
 
-	void BitwiseOrExpression::debug_print(unsigned int depth) const
+	std::string ComparisonExpression::label() const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Bitwise OR expression";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		this->l_expr->debug_print(depth + 1);
-		this->r_expr->debug_print(depth + 1);
+		return std::format("Comparison expression (operation: '{}')", this->operator_string());
+	}
+	void ComparisonExpression::print_children(std::ostream &out, unsigned int depth) const
+	{
+		this->l_expr->print(out, depth);
+		this->r_expr->print(out, depth);
 	}
 
-	void BitwiseXorExpression::debug_print(unsigned int depth) const
+	std::string BitwiseOrExpression::label() const { return "Bitwise OR expression"; }
+	void BitwiseOrExpression::print_children(std::ostream &out, unsigned int depth) const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Bitwise XOR expression";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		this->l_expr->debug_print(depth + 1);
-		this->r_expr->debug_print(depth + 1);
+		this->l_expr->print(out, depth);
+		this->r_expr->print(out, depth);
 	}
 
-	void BitwiseAndExpression::debug_print(unsigned int depth) const
+	std::string BitwiseXorExpression::label() const { return "Bitwise XOR expression"; }
+	void BitwiseXorExpression::print_children(std::ostream &out, unsigned int depth) const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Bitwise AND expression";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		this->l_expr->debug_print(depth + 1);
-		this->r_expr->debug_print(depth + 1);
+		this->l_expr->print(out, depth);
+		this->r_expr->print(out, depth);
 	}
 
-	void BitshiftExpression::debug_print(unsigned int depth) const
+	std::string BitwiseAndExpression::label() const { return "Bitwise AND expression"; }
+	void BitwiseAndExpression::print_children(std::ostream &out, unsigned int depth) const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Bitshift expression (";
-		if (this->left_shift)
-			std::cout << "left)";
-		else
-			std::cout << "right)";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		this->l_expr->debug_print(depth + 1);
-		this->r_expr->debug_print(depth + 1);
+		this->l_expr->print(out, depth);
+		this->r_expr->print(out, depth);
 	}
 
-	void AdditiveExpression::debug_print(unsigned int depth) const
+	std::string BitshiftExpression::label() const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Additive expression (operation: '" << this->operator_string() << "')";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		this->l_expr->debug_print(depth + 1);
-		this->r_expr->debug_print(depth + 1);
+		return std::format("Bitshift expression ({})", this->left_shift ? "left" : "right");
+	}
+	void BitshiftExpression::print_children(std::ostream &out, unsigned int depth) const
+	{
+		this->l_expr->print(out, depth);
+		this->r_expr->print(out, depth);
 	}
 
-	void MultiplicativeExpression::debug_print(unsigned int depth) const
+	std::string AdditiveExpression::label() const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Multiplicative expression (operation: '" << this->operator_string() << "')";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		this->l_expr->debug_print(depth + 1);
-		this->r_expr->debug_print(depth + 1);
+		return std::format("Additive expression (operation: '{}')", this->operator_string());
+	}
+	void AdditiveExpression::print_children(std::ostream &out, unsigned int depth) const
+	{
+		this->l_expr->print(out, depth);
+		this->r_expr->print(out, depth);
 	}
 
-	void UnaryExpression::debug_print(unsigned int depth) const
+	std::string MultiplicativeExpression::label() const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Unary expression (operation: '" << this->operator_string() << "')";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
-		this->expr->debug_print(depth + 1);
+		return std::format("Multiplicative expression (operation: '{}')", this->operator_string());
+	}
+	void MultiplicativeExpression::print_children(std::ostream &out, unsigned int depth) const
+	{
+		this->l_expr->print(out, depth);
+		this->r_expr->print(out, depth);
 	}
 
-	void ReturnStatement::debug_print(unsigned int depth) const
+	std::string UnaryExpression::label() const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Return statement (expression present: " << bool_str(this->expr != nullptr) << ")";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
+		return std::format("Unary expression (operation: '{}')", this->operator_string());
+	}
+	void UnaryExpression::print_children(std::ostream &out, unsigned int depth) const
+	{
+		this->expr->print(out, depth);
+	}
+
+	// STATEMENTS ==============================================================
+
+	std::string ReturnStatement::label() const
+	{
+		return std::format("Return statement (expression present: {})", bool_str(this->expr != nullptr));
+	}
+	void ReturnStatement::print_children(std::ostream &out, unsigned int depth) const
+	{
 		if (this->expr != nullptr)
-			this->expr->debug_print(depth + 1);
+			this->expr->print(out, depth);
 	}
 
-	void ArgDefinition::debug_print(unsigned int depth) const
+	// FUNCTION STUFF ==========================================================
+
+	std::string ArgDefinition::label() const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Argument definition (type: " << this->type.to_string() << ", name: \"" << this->name << "\")";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
+		return std::format("Argument definition (type: {}, name: \"{}\")",
+						   this->type.to_string(), this->name);
 	}
 
-	void FunctionDefinition::debug_print(unsigned int depth) const
+	std::string FunctionDefinition::label() const
 	{
-		std::cout << std::string(depth * 2, ' ');
-		std::cout << "Function definition (name: \"" << this->name << "\", args: " << this->args.size() << ", return type: " << this->return_type.to_string() << ")";
-		std::cout << " [" << this->src_loc.to_string() << "]" << std::endl;
+		return std::format("Function definition (name: \"{}\", args: {}, return type: {})",
+						   this->name, this->args.size(), this->return_type.to_string());
+	}
+	void FunctionDefinition::print_children(std::ostream &out, unsigned int depth) const
+	{
 		for (const ArgDefinition &arg : this->args)
-			arg.debug_print(depth + 1);
+			arg.print(out, depth);
 		for (const std::unique_ptr<StatementNode> &stmt : this->body_statements)
-			stmt->debug_print(depth + 1);
+			stmt->print(out, depth);
 		if (this->body_return_expr != nullptr)
-			this->body_return_expr->debug_print(depth + 1);
+			this->body_return_expr->print(out, depth);
 	}
-
 }

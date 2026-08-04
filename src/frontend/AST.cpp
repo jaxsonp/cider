@@ -47,11 +47,11 @@ AST::AST(std::istream &input)
 	log_vv("AST complete");
 }
 
-void AST::debug_print() const
+void AST::print(std::ostream &out) const
 {
 	for (const std::unique_ptr<ast::TopLevelDeclaration> &tld : this->tlds)
 	{
-		tld->debug_print(0);
+		tld->print(out);
 	}
 }
 

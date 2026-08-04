@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace ir
 {
 	struct IrType
@@ -36,5 +38,8 @@ namespace ir
 
 		/// @brief Whether this is a signed integer type
 		bool is_signed() const;
+
+		/// @brief Name of this type as it appears in textual IR
+		std::string to_string() const;
 	};
 }
