@@ -51,7 +51,6 @@ Tests are defined in the `tests/` subdirectory. Each test consists of a `.cdr` s
 _For Jaxson's eyes only_
 
 - Soon:
-  - **BUG: with mult ops** The new wide-value comparison tests (`single_op/{multiplication,division,modulo}/*_wide.cdr`) are failing.
   - investigate if spilling is broken
   - riscv type truncation for small types (before comparison, right shift, division, or explicit casts)
   - Check code for stuff that doesn't need to be in headers
@@ -59,11 +58,6 @@ _For Jaxson's eyes only_
     - Test timeouts
     - Improve test runner tui
     - finish stdout/stderr checking
-    - widen test observability past the 8-bit process exit code (e.g. have
-      the runtime trailer `write()` the raw return value to stdout before
-      exiting) — until then, tests can't distinguish bugs that only show up
-      above the low byte: sign vs. zero extension, 16/32-bit truncation,
-      etc. See note under "notes for documentation" below.
   - turn off colored output (automatically if not tty perhaps?)
   - Basic type inference for int literals
 - Before self-hosting:

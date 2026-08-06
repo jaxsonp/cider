@@ -10,42 +10,6 @@
 
 namespace codegen
 {
-	enum class Register : uint8_t
-	{
-		zero = 0,
-		ra = 1,
-		sp = 2,
-		gp = 3,
-		tp = 4,
-		t0 = 5,
-		t1 = 6,
-		t2 = 7,
-		fp = 8, // aka s0
-		s1 = 9,
-		a0 = 10,
-		a1 = 11,
-		a2 = 12,
-		a3 = 13,
-		a4 = 14,
-		a5 = 15,
-		a6 = 16,
-		a7 = 17,
-		s2 = 18,
-		s3 = 19,
-		s4 = 20,
-		s5 = 21,
-		s6 = 22,
-		s7 = 23,
-		s8 = 24,
-		s9 = 25,
-		s10 = 26,
-		s11 = 27,
-		t3 = 28,
-		t4 = 29,
-		t5 = 30,
-		t6 = 31,
-	};
-
 	/// @brief RISC-V 32bit backend
 	///
 	/// Stack layout:
@@ -62,6 +26,46 @@ namespace codegen
 	/// Currently only uses caller saved registers
 	class CodeGenerator_riscv32 : public CodeGenerator
 	{
+		/// @brief Maximum size that an immediate can fit into an I-type instruction
+		/// (I-type fits first 12 bits of immediate, otherwise need LUI instruction)
+		static constexpr uint32_t I_TYPE_IMMEDIATE_MAX_SIZE = 4095;
+
+		enum class Register : uint8_t
+		{
+			zero = 0,
+			ra = 1,
+			sp = 2,
+			gp = 3,
+			tp = 4,
+			t0 = 5,
+			t1 = 6,
+			t2 = 7,
+			fp = 8, // aka s0
+			s1 = 9,
+			a0 = 10,
+			a1 = 11,
+			a2 = 12,
+			a3 = 13,
+			a4 = 14,
+			a5 = 15,
+			a6 = 16,
+			a7 = 17,
+			s2 = 18,
+			s3 = 19,
+			s4 = 20,
+			s5 = 21,
+			s6 = 22,
+			s7 = 23,
+			s8 = 24,
+			s9 = 25,
+			s10 = 26,
+			s11 = 27,
+			t3 = 28,
+			t4 = 29,
+			t5 = 30,
+			t6 = 31,
+		};
+
 		/// @brief Register slot, for use for register allocation
 		struct RegSlot
 		{
@@ -95,9 +99,63 @@ namespace codegen
 			JType,
 		};
 
+		/// @brief Builds R-type instruction
+		/// ```
+		/// 0-6   | opcode
+		/// 7-11  | rd
+		/// 12-14 | funct3
+		/// 15-19 | rs1
+		/// 20-24 | rs2
+		/// 25-31 | funct7
+		/// ```
+		static uint32_t encode_r_type(uint32_t opcode, Register rd, uint32_t funct3, Register rs1, Register rs2, uint32_t funct7);
+
+		/// @brief Builds I-type instruction
+		/// ```
+		/// 0-6   | opcode
+		/// 7-11  | rd
+		/// 12-14 | funct3
+		/// 15-19 | rs1
+		/// 20-31 | imm bits 0-11
+		/// ```
+		static uint32_t encode_i_type(uint32_t opcode, Register rd, uint32_t funct3, Register rs1, uint32_t imm);
+
+		/// @brief Builds S-type instruction
+		/// ```
+		/// 0-6   | opcode
+		/// 7-11  | imm bits 0-4
+		/// 12-14 | funct3
+		/// 15-19 | rs1
+		/// 20-24 | rs2
+		/// 25-31 | imm bits 5-11
+		/// ```
+		static uint32_t encode_s_type(uint32_t opcode, uint32_t funct3, Register rs1, Register rs2, uint32_t imm);
+
+		/// @brief Builds J-type instruction
+		/// ```
+		/// 0-6   | opcode
+		/// 7-11  | rd
+		/// 12-19 | imm bits 12-19
+		/// 20    | imm bit 11
+		/// 21-30 | imm bits 1-10
+		/// 31    | imm bit 20
+		/// ```
+		static uint32_t encode_j_type(uint32_t opcode, Register rd, uint32_t imm);
+
+		// TODO
+		// static uint32_t encode_b_type(uint32_t opcode, uint32_t funct3, uint32_t rs1, uint32_t rs2, int32_t imm);
+
+		/// @brief Builds U-type instruction
+		/// ```
+		/// 0-6   | opcode
+		/// 7-11  | rd
+		/// 12-31 | imm bits 12-31
+		/// ```
+		static uint32_t encode_u_type(uint32_t opcode, Register rd, uint32_t imm);
+
 		struct MachineInstruction
 		{
-			uint32_t data;
+			uint32_t encoded;
 			InstructionFormat fmt;
 		};
 
@@ -164,57 +222,4 @@ namespace codegen
 		virtual std::vector<uint8_t> build_runtime_code(uint64_t main_offset, Target t) override;
 	};
 
-	/// @brief Builds R-type instruction
-	/// ```
-	/// 0-6   | opcode
-	/// 7-11  | rd
-	/// 12-14 | funct3
-	/// 15-19 | rs1
-	/// 20-24 | rs2
-	/// 25-31 | funct7
-	/// ```
-	uint32_t encode_r_type(uint32_t opcode, Register rd, uint32_t funct3, Register rs1, Register rs2, uint32_t funct7);
-
-	/// @brief Builds I-type instruction
-	/// ```
-	/// 0-6   | opcode
-	/// 7-11  | rd
-	/// 12-14 | funct3
-	/// 15-19 | rs1
-	/// 20-31 | imm bits 0-11
-	/// ```
-	uint32_t encode_i_type(uint32_t opcode, Register rd, uint32_t funct3, Register rs1, uint32_t imm);
-
-	/// @brief Builds S-type instruction
-	/// ```
-	/// 0-6   | opcode
-	/// 7-11  | imm bits 0-4
-	/// 12-14 | funct3
-	/// 15-19 | rs1
-	/// 20-24 | rs2
-	/// 25-31 | imm bits 5-11
-	/// ```
-	uint32_t encode_s_type(uint32_t opcode, uint32_t funct3, Register rs1, Register rs2, uint32_t imm);
-
-	/// @brief Builds J-type instruction
-	/// ```
-	/// 0-6   | opcode
-	/// 7-11  | rd
-	/// 12-19 | imm bits 12-19
-	/// 20    | imm bit 11
-	/// 21-30 | imm bits 1-10
-	/// 31    | imm bit 20
-	/// ```
-	uint32_t encode_j_type(uint32_t opcode, Register rd, uint32_t imm);
-
-	// TODO
-	// uint32_t encode_b_type(uint32_t opcode, uint32_t funct3, uint32_t rs1, uint32_t rs2, int32_t imm);
-
-	/// @brief Builds U-type instruction
-	/// ```
-	/// 0-6   | opcode
-	/// 7-11  | rd
-	/// 12-31 | imm bits 12-31
-	/// ```
-	uint32_t encode_u_type(uint32_t opcode, Register rd, uint32_t imm);
 }
