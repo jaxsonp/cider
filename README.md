@@ -56,9 +56,8 @@ _For Jaxson's eyes only_
   - Check code for stuff that doesn't need to be in headers
   - Testing improvements:
     - Test timeouts
-    - Improve test runner tui
     - finish stdout/stderr checking
-  - turn off colored output (automatically if not tty perhaps?)
+  - turn off colored output for compiler (automatically if not tty perhaps?)
   - Basic type inference for int literals
 - Before self-hosting:
   - locals vars
@@ -110,3 +109,4 @@ _For Jaxson's eyes only_
 - bit extensions on things
 - arithmetic bitshift right
 - left/right associativity
+- long chain tests even longer
