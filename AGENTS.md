@@ -24,7 +24,8 @@ applies to Cider-the-language and anything written in it.
   (`FrontendType.*`), IR emission (`AST_emitIr.cpp`), debug printing
   (`AST_print.cpp`).
 - `src/ir/` — the intermediate representation (`IR.*`, `IR_instructions.*`,
-  `IrType.*`) and a textual IR writer (`IrWriter.*`) for debugging.
+  `IrType.*`), the builder the frontend emits through (`IrWriter.*`), and a
+  textual IR printer (`IrPrinter.*`) for debugging.
 - `src/backend/` — codegen and object file emission. `codegen/riscv/` is the
   only backend right now (targets `linux-riscv32g`, RV32G/ILP32D, ELF32).
   `objwriter/elf/` writes ELF output.
@@ -65,10 +66,18 @@ Produces `build/ciderc`.
 build/ciderc <file.cdr> -t linux-riscv32g -o out
 ```
 
-Useful flags: `-v` (repeatable, increases verbosity), `-q` (quiet),
-`--debug-print-ast`. Run `build/ciderc -h` for the full list — flags are
-defined in `src/main.cpp` via `CliParser`, keep this doc and `--help` in
-sync manually if you add any.
+`--emit=<kind>[,...]` selects which artifacts to produce: `ast`, `ir`,
+`asm`, or `exe` (the default). The compiler runs only as far as the furthest
+kind requested, so `--emit=ir` dumps IR without running codegen — useful when
+the backend is broken. Each kind defaults to a path derived from the input
+(`foo.cdr` → `foo.ast`/`foo.ir`/`foo.s`); append `=FILE` to redirect one, or
+`=stdout` to write it to standard output. `-o` names the executable only.
+`--emit=asm` is reserved but not implemented (the RV32 backend can't emit
+text yet).
+
+Other useful flags: `-v` (repeatable, increases verbosity), `-q` (quiet).
+Run `build/ciderc -h` for the full list — flags are defined in `src/main.cpp`
+via `CliParser`, keep this doc and `--help` in sync manually if you add any.
 
 ## Testing
 

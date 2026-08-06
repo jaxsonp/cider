@@ -89,7 +89,7 @@ int main(int argc, char **argv)
 	CliParser cli("ciderc", "Compiler for the Cider programming language");
 
 	auto &input_filename_arg = cli.add_positional("file", "Input file").required();
-	auto &output_filename_arg = cli.add_flag_arg("out", "Output file for the executable")
+	auto &output_filename_arg = cli.add_flag_arg("out", "Output file path for the executable, if \"--emit exe\"")
 									.short_name('o')
 									.metavar("FILE")
 									.default_value("a.out");
