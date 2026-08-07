@@ -1,6 +1,27 @@
-# Cider Compiler
+# Cider
 
-Cider is a systems programming language focused on marrying the ergonomics of modern languages with the advantages of less-abstracted, low-level languages.
+Cider is a systems programming language focused on marrying the ergonomics of modern languages with the advantages of less-abstracted, low-level languages. This repository currently houses the canonical cider compiler.
+
+## Using the compiler
+
+```
+Usage: ciderc [options] <file>
+
+Compiler for the Cider programming language
+
+Positional arguments:
+  <file>                 Input file (required)
+
+Flags:
+  -v, --verbose          Increase compiler verbosity (repeatable)
+  -q, --quiet            Silence compiler output
+  -h, --help             Show this help text
+
+Options:
+  -o, --out <FILE>       Output file path for the executable, if "--emit exe" [default: a.out]
+  -t, --target <TARGET>  Target platform (required)
+      --emit <KIND>      Artifacts to produce: ast, ir, asm, exe. Append "=PATH" to write to file, or "=stdout" for standard output (repeatable) [default: exe]
+```
 
 ### Supported Targets
 
@@ -23,16 +44,24 @@ Cider is a systems programming language focused on marrying the ergonomics of mo
 Run `testing/run_tests.py`, providing the path to the compiler binary to test.
 
 ```
-usage: run_tests.py [-h] [-n N] compiler_path
+usage: run_tests.py [-h] [-n N] [--progress {auto,always,never}] [--color {auto,always,never}] [--show-passed {auto,always,never}] [--show-failed {auto,always,never}] compiler_path
 
 Test runner
 
 positional arguments:
-  compiler_path    Path of compiler binary to test
+  compiler_path         Path of compiler binary to test
 
 options:
-  -h, --help       show this help message and exit
-  -n, --workers N  Number of concurrent workers to use
+  -h, --help            show this help message and exit
+  -n N, --workers N     Number of concurrent workers to use
+  --progress {auto,always,never}
+                        Show progress bar/info (default: auto)
+  --color {auto,always,never}
+                        Use color in output (default: auto)
+  --show-passed {auto,always,never}
+                        Print test cases that succeed (default: auto)
+  --show-failed {auto,always,never}
+                        Print test cases that fail (default: auto)
 ```
 
 ### Defining tests
@@ -45,68 +74,3 @@ Tests are defined in the `tests/` subdirectory. Each test consists of a `.cdr` s
 | `EXIT_CODE` | int | `0` | Expected return value of the program |
 | `STDOUT` | string | `""` | Expected output to stdout |
 | `STDERR` | string | `""` | Expected output to stderr |
-
-## TODOs
-
-_For Jaxson's eyes only_
-
-- Soon:
-  - investigate if spilling is broken
-  - riscv type truncation for small types (before comparison, right shift, division, or explicit casts)
-  - Check code for stuff that doesn't need to be in headers
-  - Testing improvements:
-    - Test timeouts
-    - finish stdout/stderr checking
-  - turn off colored output for compiler (automatically if not tty perhaps?)
-  - Basic type inference for int literals
-- Before self-hosting:
-  - locals vars
-  - if statements
-  - loops
-  - functions
-    - function definitions/declaration
-    - arguments
-  - floats
-  - global vars
-    - global init dependency checking
-  - structs
-  - traits
-  - stdlib
-  - executable or library
-- At some point:
-  - Make distinction for non-G riscv ISAs
-  - soft floats/multiplication for embedded ISAs
-  - Better error messages (include code snippet)
-  - 64 bit
-  - try doing UTF8
-  - labelled code blocks (for early breaks)
-- Future optimizations:
-  - Better register allocator (use callee saved first on busy functions?)
-  - Optimize out LUI?
-  
-### notes for documentation
-
-- **Test harness can only observe the low 8 bits of a result.** `run_tests.py`
-  checks a POSIX process exit code, which the OS always truncates to 8 bits,
-  and STDOUT/STDERR comparison isn't implemented yet. Every currently-
-  implemented binary op (`+ - * / % & | ^`) is "mod-256-homomorphic" — the
-  low byte of the result only depends on the low bytes of the operands, never
-  on how the upper bits were padded — so no `.cdr` test can currently prove
-  sign-extension vs. zero-extension is correct, or that 16/32-bit truncation
-  actually happens, regardless of what values are chosen. This blocks
-  meaningful tests for: right shift, comparisons, casts, and negative/
-  overflowing int literals, once those land. Fix is the observability item
-  above (stdout-based result reporting) — not a language feature, a test
-  harness one.
-- all top level functions are hoisted (global var initialization is calculated with DAG)
-- binary operators are left associative (except for equality/comparison, needs parens)
-- type names must start with letters, numbers signifiy number literal
-
-### tests to remember to write
-
-- overflowing int literal
-- over/under flowing integers with operations
-- bit extensions on things
-- arithmetic bitshift right
-- left/right associativity
-- long chain tests even longer
