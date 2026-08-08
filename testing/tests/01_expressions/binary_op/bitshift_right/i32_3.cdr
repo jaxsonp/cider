@@ -1,0 +1,5 @@
+//! EXIT_CODE=131
+
+fn main() -> i32 {
+	return -1000i32 >> 3u8;
+}

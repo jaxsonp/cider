@@ -182,7 +182,7 @@ namespace codegen
 		size_t write_slli(Register dest, Register src, uint32_t imm)
 		{
 			this->buf.emplace_back<MachineInstruction>({
-				.encoded = encode_i_type(0b0010011u, dest, 0x1u, src, imm),
+				.encoded = encode_i_type(0b0010011u, dest, 0x1u, src, imm & bitmask_lower(5)),
 				.fmt = InstructionFormat::IType,
 			});
 			return this->buf.size() - 1;
@@ -192,7 +192,7 @@ namespace codegen
 		size_t write_srli(Register dest, Register src, uint32_t imm)
 		{
 			this->buf.emplace_back<MachineInstruction>({
-				.encoded = encode_i_type(0b0010011u, dest, 0x5u, src, imm),
+				.encoded = encode_i_type(0b0010011u, dest, 0x5u, src, imm & bitmask_lower(5)),
 				.fmt = InstructionFormat::IType,
 			});
 			return this->buf.size() - 1;
@@ -201,7 +201,12 @@ namespace codegen
 		/// push new srai (shift right arithmetic immediate) instruction, return its position
 		size_t write_srai(Register dest, Register src, uint32_t imm)
 		{
-			throw CompilerError::unimplemented("srai instruction");
+			this->buf.emplace_back<MachineInstruction>({
+				// srai is distinguished from slri by upper bits of immediate
+				.encoded = encode_i_type(0b0010011u, dest, 0x5u, src, (imm & bitmask_lower(5)) | 0x400),
+				.fmt = InstructionFormat::IType,
+			});
+			return this->buf.size() - 1;
 		}
 
 		/// push new slti (set if less than immediate) instruction, return its position
@@ -527,6 +532,7 @@ namespace codegen
 			code.write_sw(Register::fp, slot.physical, uint32_t(fp_offset));
 			break;
 		}
+		slot.dirty = false;
 	}
 
 	CodeGenerator_riscv32::RegSlot *CodeGenerator_riscv32::get_empty_slot(CodeBuffer &code)
@@ -559,6 +565,19 @@ namespace codegen
 
 		victim->occupied = false;
 		return victim;
+	}
+
+	void CodeGenerator_riscv32::truncate_reg(CodeBuffer &code, RegSlot *slot)
+	{
+		ir::IrType ir_type = this->cur_fn->vregs.at(slot->resident);
+		unsigned int shift = (32u - 8u) * ir_type.get_size();
+		if (shift == 0)
+			return;
+		code.write_slli(slot->physical, slot->physical, static_cast<uint32_t>(shift));
+		if (ir_type.is_signed())
+			code.write_srai(slot->physical, slot->physical, static_cast<uint32_t>(shift));
+		else
+			code.write_srli(slot->physical, slot->physical, static_cast<uint32_t>(shift));
 	}
 
 	void CodeGenerator_riscv32::lower_function(const ir::Function &fn, Object &obj)
@@ -652,6 +671,7 @@ namespace codegen
 					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
 					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
 					body.write_sub(dest->physical, op1->physical, op2->physical);
+					break;
 				}
 				case ir::Op::Mul:
 				{
@@ -667,10 +687,14 @@ namespace codegen
 				{
 					// divide register to register
 					// TODO check for m extension
+					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
 					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
 					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
 					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					if (this->cur_fn->vregs.at(instr.dest).is_signed())
+					// division reads the whole register, so both operands must be truncated first
+					this->truncate_reg(body, op1);
+					this->truncate_reg(body, op2);
+					if (op_type.is_signed())
 						body.write_div(dest->physical, op1->physical, op2->physical);
 					else
 						body.write_divu(dest->physical, op1->physical, op2->physical);
@@ -680,13 +704,25 @@ namespace codegen
 				{
 					// mod register to register
 					// TODO check for m extension
+					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
 					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
 					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
 					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					if (this->cur_fn->vregs.at(instr.dest).is_signed())
+					// division reads the whole register, so both operands must be truncated first
+					this->truncate_reg(body, op1);
+					this->truncate_reg(body, op2);
+					if (op_type.is_signed())
 						body.write_rem(dest->physical, op1->physical, op2->physical);
 					else
 						body.write_remu(dest->physical, op1->physical, op2->physical);
+					break;
+				}
+				case ir::Op::BitAnd:
+				{
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					body.write_and(dest->physical, op1->physical, op2->physical);
 					break;
 				}
 				case ir::Op::BitOr:
@@ -705,12 +741,26 @@ namespace codegen
 					body.write_xor(dest->physical, op1->physical, op2->physical);
 					break;
 				}
-				case ir::Op::BitAnd:
+				case ir::Op::BitShl:
 				{
 					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
 					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
 					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					body.write_and(dest->physical, op1->physical, op2->physical);
+					body.write_sll(dest->physical, op1->physical, op2->physical);
+					break;
+				}
+				case ir::Op::BitShr:
+				{
+					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					// the bits shifted in come from the upper bits, so the value must be truncated
+					this->truncate_reg(body, op1);
+					if (op_type.is_signed())
+						body.write_sra(dest->physical, op1->physical, op2->physical);
+					else
+						body.write_srl(dest->physical, op1->physical, op2->physical);
 					break;
 				}
 				case ir::Op::Neg:
@@ -722,78 +772,95 @@ namespace codegen
 				}
 				case ir::Op::CmpEq:
 				{
+					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
 					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
 					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
 					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					// compare the registers
+					// the xor below is only zero for equal values if both are truncated the same way
+					this->truncate_reg(body, op1);
+					this->truncate_reg(body, op2);
+					// compare the registers (always unsigned check, cus -123 is less than 1 but means not equal)
 					body.write_xor(dest->physical, op1->physical, op2->physical);
-					// check the result
-					if (this->cur_fn->vregs.at(instr.dest).is_signed())
-						body.write_slti(dest->physical, dest->physical, 1);
-					else
-						body.write_sltiu(dest->physical, dest->physical, 1);
+					body.write_sltiu(dest->physical, dest->physical, 1);
 					break;
 				}
 				case ir::Op::CmpNe:
 				{
+					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
 					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
 					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
 					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					// the xor below is only zero for equal values if both are truncated the same way
+					this->truncate_reg(body, op1);
+					this->truncate_reg(body, op2);
 					// compare the registers
 					body.write_xor(dest->physical, op1->physical, op2->physical);
-					// check the result
-					if (this->cur_fn->vregs.at(instr.dest).is_signed())
-						body.write_slt(dest->physical, Register::zero, dest->physical);
-					else
-						body.write_sltu(dest->physical, Register::zero, dest->physical);
+					// unequal exactly when the xor is nonzero, always an unsigned test (see CmpEq)
+					body.write_sltu(dest->physical, Register::zero, dest->physical);
 					break;
 				}
 				case ir::Op::CmpGt:
 				{
+					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
 					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
 					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
 					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					if (this->cur_fn->vregs.at(instr.dest).is_signed())
+					// comparisons read the whole register, so both operands must be truncated first
+					this->truncate_reg(body, op1);
+					this->truncate_reg(body, op2);
+					if (op_type.is_signed())
 						body.write_slt(dest->physical, op2->physical, op1->physical);
 					else
-						body.write_slt(dest->physical, op2->physical, op1->physical);
+						body.write_sltu(dest->physical, op2->physical, op1->physical);
 					break;
 				}
 				case ir::Op::CmpGte:
 				{
+					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
 					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
 					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
 					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					// comparisons read the whole register, so both operands must be truncated first
+					this->truncate_reg(body, op1);
+					this->truncate_reg(body, op2);
 					// check if less than
-					if (this->cur_fn->vregs.at(instr.dest).is_signed())
+					if (op_type.is_signed())
 						body.write_slt(dest->physical, op1->physical, op2->physical);
 					else
-						body.write_slt(dest->physical, op1->physical, op2->physical);
+						body.write_sltu(dest->physical, op1->physical, op2->physical);
 					// negate
 					body.write_xori(dest->physical, dest->physical, 1u);
 					break;
 				}
 				case ir::Op::CmpLt:
 				{
+					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
 					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
 					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
 					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					if (this->cur_fn->vregs.at(instr.dest).is_signed())
+					// comparisons read the whole register, so both operands must be truncated first
+					this->truncate_reg(body, op1);
+					this->truncate_reg(body, op2);
+					if (op_type.is_signed())
 						body.write_slt(dest->physical, op1->physical, op2->physical);
 					else
-						body.write_slt(dest->physical, op1->physical, op2->physical);
+						body.write_sltu(dest->physical, op1->physical, op2->physical);
 					break;
 				}
 				case ir::Op::CmpLte:
 				{
+					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
 					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
 					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
 					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
+					// comparisons read the whole register, so both operands must be truncated first
+					this->truncate_reg(body, op1);
+					this->truncate_reg(body, op2);
 					// check if greater than
-					if (this->cur_fn->vregs.at(instr.dest).is_signed())
+					if (op_type.is_signed())
 						body.write_slt(dest->physical, op2->physical, op1->physical);
 					else
-						body.write_slt(dest->physical, op2->physical, op1->physical);
+						body.write_sltu(dest->physical, op2->physical, op1->physical);
 					// negate
 					body.write_xori(dest->physical, dest->physical, 1u);
 					break;
@@ -810,8 +877,11 @@ namespace codegen
 			{
 				if (bb->terminator.ret_reg.has_value())
 				{
-					RegSlot *ret_value = this->load_src_vreg(body, bb->terminator.ret_reg.value());
-					body.write_addi(Register::a0, ret_value->physical, 0u);
+					ir::VRegId ret_vreg = bb->terminator.ret_reg.value();
+					RegSlot *ret_value_slot = this->load_src_vreg(body, ret_vreg);
+					// the value leaves the compiler here, so it has to be in its canonical form
+					this->truncate_reg(body, ret_value_slot);
+					body.write_addi(Register::a0, ret_value_slot->physical, 0u);
 				}
 
 				size_t pos = body.write_jal(Register::zero, 0u);

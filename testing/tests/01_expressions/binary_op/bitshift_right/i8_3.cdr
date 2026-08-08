@@ -1,0 +1,5 @@
+//! EXIT_CODE=241
+
+fn main() -> i8 {
+	return -120i8 >> 3u8;
+}

@@ -151,17 +151,18 @@ namespace ast
 		this->l_expr->check_semantics(state);
 		this->r_expr->check_semantics(state);
 
-		// make sure subexpression types are both ints
-		FrontendType l_type = this->r_expr->get_type();
+		// the shifted value can be any integer
+		FrontendType l_type = this->l_expr->get_type();
 		if (!l_type.is_integer())
 			throw CompilerError::type_error(
 				std::format("Cannot perform bitshift operation on non-integer type, '{}'", l_type.to_string()),
-				this->src_loc);
-		FrontendType r_type = this->l_expr->get_type();
-		if (!r_type.is_integer())
+				this->l_expr->src_loc);
+		// the shift amount must be unsigned, but its width doesn't have to match the left side
+		FrontendType r_type = this->r_expr->get_type();
+		if (!r_type.is_unsigned_integer())
 			throw CompilerError::type_error(
-				std::format("Cannot perform bitshift operation with non-integer type, '{}'", r_type.to_string()),
-				this->src_loc);
+				std::format("Cannot perform bitshift operation by non-unsigned-integer type, '{}'", r_type.to_string()),
+				this->r_expr->src_loc);
 	}
 
 	void AdditiveExpression::check_semantics(SemanticAnalysisState state) const

@@ -212,6 +212,10 @@ namespace codegen
 		/// @return Pointer to the now vacant slot
 		RegSlot *get_empty_slot(CodeBuffer &code);
 
+		/// @brief Truncates the value in a register to its proper size. Must be called before instructions like
+		/// division, where lower bits are affected by upper bits, which may be junk from, say, an add or shift left
+		void truncate_reg(CodeBuffer &code, RegSlot *slot);
+
 		void lower_function(const ir::Function &fn, Object &obj);
 
 	public:

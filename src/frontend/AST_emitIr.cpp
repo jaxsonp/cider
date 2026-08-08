@@ -108,7 +108,13 @@ namespace ast
 
 	ir::VRegId BitshiftExpression::emitIr(IrWriter &writer) const
 	{
-		throw CompilerError::unimplemented("TODO: emit ir (BitshiftExpression)");
+		ir::IrType irType = this->get_type().resolveType();
+
+		ir::VRegId l_reg = this->l_expr->emitIr(writer);
+		ir::VRegId r_reg = this->r_expr->emitIr(writer);
+		ir::VRegId dst_reg = writer.new_vreg(irType);
+		writer.add_instr(this->left_shift ? ir::Op::BitShl : ir::Op::BitShr, dst_reg, l_reg, r_reg);
+		return dst_reg;
 	}
 
 	ir::VRegId AdditiveExpression::emitIr(IrWriter &writer) const

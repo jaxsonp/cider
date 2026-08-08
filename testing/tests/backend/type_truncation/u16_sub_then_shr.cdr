@@ -1,0 +1,5 @@
+//! EXIT_CODE=1
+
+fn main() -> bool {
+	return (10u16 - 20u16) >> 2u8 == 16381u16;
+}

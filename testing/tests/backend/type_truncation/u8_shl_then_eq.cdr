@@ -1,0 +1,5 @@
+//! EXIT_CODE=1
+
+fn main() -> bool {
+	return (200u8 << 1u8) == 144u8;
+}

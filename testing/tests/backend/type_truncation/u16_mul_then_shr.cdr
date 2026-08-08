@@ -1,0 +1,5 @@
+//! EXIT_CODE=1
+
+fn main() -> bool {
+	return (300u16 * 300u16) >> 2u8 == 6116u16;
+}

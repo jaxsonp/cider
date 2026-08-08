@@ -1,5 +1,0 @@
-//! EXIT_CODE=22
-
-fn main() -> i8 {
-	return 243i8 / 11i8;
-}

@@ -1,0 +1,5 @@
+//! EXIT_CODE=176
+
+fn main() -> i32 {
+	return 11i32 << 4u8;
+}

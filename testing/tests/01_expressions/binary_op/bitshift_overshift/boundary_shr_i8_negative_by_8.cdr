@@ -1,0 +1,5 @@
+//! EXIT_CODE=255
+
+fn main() -> i8 {
+	return -8i8 >> 8u8;
+}
