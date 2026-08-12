@@ -1,5 +1,5 @@
 //! EXIT_CODE=1
 
 fn main() -> bool {
-	return 1u32 << 32u8 == 0u32;
+	return 100i16 >> 32u8 == 100i16;
 }

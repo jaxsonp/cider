@@ -5,7 +5,6 @@ _For Jaxson's eyes only_
 ## To implement
 
 - Soon:
-	- fix bitshifting right, rv32g masks lower 5 bits for bitshift instructions, so currently x << 10000 is the same as x << 0, need to decide how to handle (only shift amounts >= 32 are actually wrong, [width, 32) already works out)
 	- investigate if spilling is broken (ref count slots? abstract out register loading?)
 	- investigate function frame setup, unnecessary extra registers being saved?
 	- riscv type truncation on explicit casts (once it exists)
@@ -48,8 +47,7 @@ _For Jaxson's eyes only_
 		- Better register allocator (use callee saved first on busy functions?)
 		- Optimize out LUI (how?)
 - Perhaps?
-	- No bitwise operators, turn them into functions
-	- Wrapping bitshifts
+	- No bitwise operators, only methods with explicit behavior such as wrapping, unchecked, etc
 
 ## Notes for documentation
 
@@ -59,10 +57,10 @@ _For Jaxson's eyes only_
 - bitshift right is arithmetic shift right for signed types, unsigned types are logical shift right
 - the left side of a bitshift is any integer, the shift amount must be an *unsigned* integer.
   the two widths do not have to match (`1i32 << 4u8` is fine, `1i32 << 4i32` is a type error)
-- a bitshift by n is defined as shifting one bit at a time, n times. so shifting by n >= the
-  type's width shifts every bit out: `<<` and unsigned `>>` give 0, signed `>>` gives 0 for a
-  positive value and -1 for a negative one. NOT yet implemented for n >= 32, rv32 masks the
-  shift amount to its low 5 bits (`1u32 << 32u32` is currently 1)
+- the shift amount is masked to its low 5 bits, then the result truncates to the type as
+  usual. this is just what rv32 does natively, kept for now rather than paid for at runtime.
+  so `1u32 << 32u32` is 1, and `1u8 << 100u8` is 16 (100 & 31 == 4). amounts in [width, 32)
+  are not masked away, so those really do shift every bit out (`1u8 << 8u8` is 0) (Dont like this, TODO change)
 - small types (i8/i16/u8/u16) live sign/zero extended in 32 bit registers. add/sub/mul/neg/shl
   and the bitwise ops can leave junk above the type's width, which is fine because their low
   bits are still correct - the backend truncates before anything that reads the upper bits

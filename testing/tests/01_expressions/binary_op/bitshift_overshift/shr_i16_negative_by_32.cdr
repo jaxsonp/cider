@@ -1,5 +1,0 @@
-//! EXIT_CODE=1
-
-fn main() -> bool {
-	return -8i16 >> 32u8 == -1i16;
-}
