@@ -5,9 +5,8 @@ _For Jaxson's eyes only_
 ## To implement
 
 - Soon:
-	- Bitwise not unary operator
 	- fix bitshifting right, rv32g masks lower 5 bits for bitshift instructions, so currently x << 10000 is the same as x << 0, need to decide how to handle (only shift amounts >= 32 are actually wrong, [width, 32) already works out)
-	- investigate if spilling is broken
+	- investigate if spilling is broken (ref count slots? abstract out register loading?)
 	- investigate function frame setup, unnecessary extra registers being saved?
 	- riscv type truncation on explicit casts (once it exists)
 	- integer literals wrapping around their range (2000i8 == -48i8), a few tests falsely lean on it, see binary_op/{addition,subtraction,bitwise_*}/i8_*.cdr
@@ -49,7 +48,7 @@ _For Jaxson's eyes only_
 		- Better register allocator (use callee saved first on busy functions?)
 		- Optimize out LUI (how?)
 - Perhaps?
-	- No bitshift operators, turn them into functions
+	- No bitwise operators, turn them into functions
 	- Wrapping bitshifts
 
 ## Notes for documentation

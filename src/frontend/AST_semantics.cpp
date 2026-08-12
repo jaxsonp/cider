@@ -21,11 +21,6 @@ namespace ast
 		// nothing to do
 	}
 
-	void PrimaryExpression::check_semantics(SemanticAnalysisState state) const
-	{
-		this->expr->check_semantics(state);
-	}
-
 	void LogicalOrExpression::check_semantics(SemanticAnalysisState state) const
 	{
 		throw CompilerError::unimplemented("TODO check semantics (LogicalOrExpression)");
@@ -232,6 +227,11 @@ namespace ast
 		if (this->operation == UnaryOperation::LogicalNot && !type.is_bool())
 			throw CompilerError::type_error(
 				std::format("Cannot use not operator '{}' with non-boolean type, '{}'", this->operator_string(), type.to_string()),
+				this->expr->src_loc);
+
+		if (this->operation == UnaryOperation::BitwiseNot && !type.is_integer())
+			throw CompilerError::type_error(
+				std::format("Cannot use not operator '{}' with non-integer type, '{}'", this->operator_string(), type.to_string()),
 				this->expr->src_loc);
 
 		if (this->operation == UnaryOperation::Negation)

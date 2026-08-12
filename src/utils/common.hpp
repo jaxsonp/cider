@@ -62,3 +62,16 @@ bool is_alpha(char c);
 bool is_delimiter(char c);
 
 std::string_view bool_str(bool b);
+
+// Generates a bitmask with the N least-significant bits set
+template <typename T = uint32_t>
+constexpr T lower_bitmask(size_t n)
+{
+	static_assert(std::is_integral_v<T>, "Template type must be an integral type.");
+	if (n == 0)
+		return 0;
+	else if (n >= 32)
+		return ~T{0}; // all bits set
+	else
+		return (T{1} << n) - 1;
+}

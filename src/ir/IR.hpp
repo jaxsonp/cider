@@ -28,6 +28,7 @@ namespace ir
 		BitAnd,
 		BitOr,
 		BitXor,
+		BitNot,
 		BitShl,
 		BitShr,
 		Neg,

@@ -24,11 +24,6 @@ namespace ast
 		return dst_reg;
 	}
 
-	ir::VRegId PrimaryExpression::emitIr(IrWriter &writer) const
-	{
-		return this->expr->emitIr(writer);
-	}
-
 	ir::VRegId LogicalOrExpression::emitIr(IrWriter &writer) const
 	{
 		throw CompilerError::unimplemented("TODO: emit ir (LogicalOrExpression)");
@@ -170,6 +165,11 @@ namespace ast
 		{
 			ir::VRegId one_reg = writer.get_const_vreg(irType, 1u);
 			writer.add_instr(ir::Op::BitXor, dst_reg, src_reg, one_reg);
+			break;
+		}
+		case UnaryOperation::BitwiseNot:
+		{
+			writer.add_instr(ir::Op::BitNot, dst_reg, src_reg, ir::NO_VREG);
 			break;
 		}
 		default:

@@ -46,6 +46,7 @@ enum class TokenType
 	PERCENT,
 	EXCLAMATION,
 	EQUAL,
+	TILDE,
 	ERROR_UNEXPECTED_CHAR,
 };
 

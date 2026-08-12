@@ -25,12 +25,6 @@ namespace ast
 		return std::format("Boolean literal expression (value: {})", this->value ? "true" : "false");
 	}
 
-	std::string PrimaryExpression::label() const { return "Primary expression"; }
-	void PrimaryExpression::print_children(std::ostream &out, unsigned int depth) const
-	{
-		this->expr->print(out, depth);
-	}
-
 	std::string LogicalOrExpression::label() const { return "Logical or expression"; }
 	void LogicalOrExpression::print_children(std::ostream &out, unsigned int depth) const
 	{

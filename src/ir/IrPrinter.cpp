@@ -29,6 +29,8 @@ namespace ir
 			return "or";
 		case Op::BitXor:
 			return "xor";
+		case Op::BitNot:
+			return "not";
 		case Op::BitShl:
 			return "shl";
 		case Op::BitShr:

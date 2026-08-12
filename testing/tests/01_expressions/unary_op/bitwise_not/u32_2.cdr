@@ -1,0 +1,5 @@
+//! EXIT_CODE=1
+
+fn main() -> bool {
+	return ~305419896u32 == 3989547399u32;
+}

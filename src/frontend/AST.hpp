@@ -148,18 +148,8 @@ namespace ast
 		inline FrontendType get_type() const override { return FrontendType::boolean(); };
 	};
 
-	/// Primary expression (aka "atom"), largely transparent
-	struct PrimaryExpression : public ExpressionNode
-	{
-		std::unique_ptr<ExpressionNode> expr;
-
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		void print_children(std::ostream &out, unsigned int depth) const override;
-		ir::VRegId emitIr(IrWriter &writer) const override;
-		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return this->expr->get_type(); };
-	};
+	/// Primary expression (aka "atom"), transparent so doesn't need associated class/AST node
+	static std::optional<std::unique_ptr<ExpressionNode>> primary_expression_try_parse(Lexer &lexer);
 
 	struct LogicalOrExpression : public ExpressionNode
 	{
@@ -358,6 +348,7 @@ namespace ast
 		enum class UnaryOperation
 		{
 			LogicalNot,
+			BitwiseNot,
 			Negation,
 		};
 		std::unique_ptr<ExpressionNode> expr;
@@ -376,6 +367,8 @@ namespace ast
 			{
 			case UnaryOperation::LogicalNot:
 				return "!";
+			case UnaryOperation::BitwiseNot:
+				return "~";
 			case UnaryOperation::Negation:
 				return "-";
 			default:

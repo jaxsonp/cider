@@ -102,31 +102,17 @@ namespace ast
 		return ret;
 	}
 
-	std::optional<std::unique_ptr<ExpressionNode>> PrimaryExpression::try_parse(Lexer &lexer)
+	std::optional<std::unique_ptr<ExpressionNode>> primary_expression_try_parse(Lexer &lexer)
 	{
 		// TODO check for ident
 
-		{ // check if this is bool
-			auto maybe_expr = BooleanLiteralExpression::try_parse(lexer);
-			if (maybe_expr.has_value())
-			{
-				auto ret = std::make_unique<PrimaryExpression>();
-				ret->expr = std::move(maybe_expr.value());
-				ret->src_loc = ret->expr->src_loc;
-				return ret;
-			}
-		}
+		// check if this is bool
+		if (auto expr = BooleanLiteralExpression::try_parse(lexer))
+			return std::move(expr.value());
 
-		{ // check if this is int
-			auto maybe_expr = IntegerLiteralExpression::try_parse(lexer);
-			if (maybe_expr.has_value())
-			{
-				auto ret = std::make_unique<PrimaryExpression>();
-				ret->expr = std::move(maybe_expr.value());
-				ret->src_loc = ret->expr->src_loc;
-				return ret;
-			}
-		}
+		// check if this is int
+		if (auto expr = IntegerLiteralExpression::try_parse(lexer))
+			return std::move(expr.value());
 
 		// TODO check for ifs, blocks, etc
 
@@ -134,16 +120,14 @@ namespace ast
 		if (lexer.peek().type == TokenType::L_PAREN)
 		{
 			Token l_paren_tok = lexer.take();
-			auto maybe_expr = ExpressionNode::try_parse(lexer);
-			if (!maybe_expr.has_value())
+			auto expr = ExpressionNode::try_parse(lexer);
+			if (!expr.has_value())
 				throw CompilerError::syntax_error("Expected expression following " + to_string(TokenType::L_PAREN), l_paren_tok.loc.end);
 			Token r_paren_tok = lexer.expect(TokenType::R_PAREN);
 
-			auto ret = std::make_unique<PrimaryExpression>();
-			ret->expr = std::move(maybe_expr.value());
-			ret->src_loc.start = l_paren_tok.loc.start;
-			ret->src_loc.end = r_paren_tok.loc.end;
-			return ret;
+			expr.value()->src_loc.start = l_paren_tok.loc.start;
+			expr.value()->src_loc.end = r_paren_tok.loc.end;
+			return expr;
 		}
 
 		return std::nullopt;
@@ -453,13 +437,19 @@ namespace ast
 
 	std::optional<std::unique_ptr<ExpressionNode>> UnaryExpression::try_parse(Lexer &lexer)
 	{
-		if (lexer.peek().type != TokenType::EXCLAMATION && lexer.peek().type != TokenType::MINUS)
-			return PrimaryExpression::try_parse(lexer);
+		UnaryExpression::UnaryOperation operation;
+		if (lexer.peek().type == TokenType::EXCLAMATION)
+			operation = UnaryOperation::LogicalNot;
+		else if (lexer.peek().type == TokenType::TILDE)
+			operation = UnaryOperation::BitwiseNot;
+		else if (lexer.peek().type == TokenType::MINUS)
+			operation = UnaryOperation::Negation;
+		else
+			return primary_expression_try_parse(lexer);
 
 		Token op_tok = lexer.take();
-
 		auto ret = std::make_unique<UnaryExpression>();
-		ret->operation = (op_tok.type == TokenType::MINUS ? UnaryOperation::Negation : UnaryOperation::LogicalNot);
+		ret->operation = operation;
 		ret->src_loc.start = op_tok.loc.start;
 
 		auto maybe_expr = UnaryExpression::try_parse(lexer);

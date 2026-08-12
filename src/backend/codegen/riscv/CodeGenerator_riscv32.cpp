@@ -7,18 +7,6 @@
 #include "utils/logging.hpp"
 #include "utils/error.hpp"
 
-// helpers
-
-constexpr uint32_t bitmask_lower(size_t n)
-{
-	if (n == 0)
-		return 0;
-	else if (n >= 32)
-		return ~uint32_t(0); // all bits set
-	else
-		return (uint32_t(1) << n) - 1;
-}
-
 namespace codegen
 {
 	struct CodeGenerator_riscv32::CodeBuffer
@@ -182,7 +170,7 @@ namespace codegen
 		size_t write_slli(Register dest, Register src, uint32_t imm)
 		{
 			this->buf.emplace_back<MachineInstruction>({
-				.encoded = encode_i_type(0b0010011u, dest, 0x1u, src, imm & bitmask_lower(5)),
+				.encoded = encode_i_type(0b0010011u, dest, 0x1u, src, imm & lower_bitmask<uint32_t>(5)),
 				.fmt = InstructionFormat::IType,
 			});
 			return this->buf.size() - 1;
@@ -192,7 +180,7 @@ namespace codegen
 		size_t write_srli(Register dest, Register src, uint32_t imm)
 		{
 			this->buf.emplace_back<MachineInstruction>({
-				.encoded = encode_i_type(0b0010011u, dest, 0x5u, src, imm & bitmask_lower(5)),
+				.encoded = encode_i_type(0b0010011u, dest, 0x5u, src, imm & lower_bitmask<uint32_t>(5)),
 				.fmt = InstructionFormat::IType,
 			});
 			return this->buf.size() - 1;
@@ -203,7 +191,7 @@ namespace codegen
 		{
 			this->buf.emplace_back<MachineInstruction>({
 				// srai is distinguished from slri by upper bits of immediate
-				.encoded = encode_i_type(0b0010011u, dest, 0x5u, src, (imm & bitmask_lower(5)) | 0x400),
+				.encoded = encode_i_type(0b0010011u, dest, 0x5u, src, (imm & lower_bitmask<uint32_t>(5)) | 0x400),
 				.fmt = InstructionFormat::IType,
 			});
 			return this->buf.size() - 1;
@@ -638,6 +626,7 @@ namespace codegen
 					// load immmediate
 					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
 					uint32_t immediate = static_cast<uint32_t>(instr.data);
+
 					// if 12th bit is 1, the below addi will sign extend the immediate to be negative, we can
 					// cancel it out by adding the difference
 					if ((immediate & (1 << 11)) != 0)
@@ -653,6 +642,7 @@ namespace codegen
 					{
 						body.write_addi(dest->physical, Register::zero, immediate);
 					}
+
 					break;
 				}
 				case ir::Op::Add:
@@ -739,6 +729,35 @@ namespace codegen
 					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
 					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
 					body.write_xor(dest->physical, op1->physical, op2->physical);
+					break;
+				}
+				case ir::Op::BitNot:
+				{
+					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
+
+					// XORing with bitmask to "flip bits"
+					auto size = this->cur_fn->vregs.at(op1->resident).get_size();
+					uint32_t flip_mask = lower_bitmask<uint32_t>(size * 8);
+
+					// if 12th bit is 1, the xori will sign extend the immediate to be negative, we can
+					// cancel it out by adding the difference
+					if ((flip_mask & (1 << 11)) != 0)
+						flip_mask += (1 << 12);
+
+					if (flip_mask > I_TYPE_IMMEDIATE_MAX_SIZE)
+					{
+						// get scratch reg to put immediate in
+						RegSlot *op2 = this->get_empty_slot(body);
+						body.write_lui(op2->physical, flip_mask);
+						body.write_addi(op2->physical, op2->physical, flip_mask);
+						body.write_xor(dest->physical, op2->physical, op1->physical);
+					}
+					else
+					{
+						// flip mask can fit in I-type instruction
+						body.write_xori(dest->physical, op1->physical, flip_mask);
+					}
 					break;
 				}
 				case ir::Op::BitShl:
@@ -924,17 +943,17 @@ namespace codegen
 			case InstructionFormat::IType:
 			{
 				// imm[11:0] is at [31:20]
-				uint32_t imm_11_0 = rel_offset & bitmask_lower(12);
+				uint32_t imm_11_0 = rel_offset & lower_bitmask<uint32_t>(12);
 
-				instr.encoded &= bitmask_lower(20);
+				instr.encoded &= lower_bitmask<uint32_t>(20);
 				instr.encoded |= imm_11_0 << 20;
 				break;
 			}
 			case InstructionFormat::SType:
 			{
 				// imm[11:5] is at [31:25], imm[4:0] is at [11:7]
-				uint32_t imm_11_5 = (rel_offset >> 5) & bitmask_lower(7);
-				uint32_t imm_4_0 = rel_offset & bitmask_lower(5);
+				uint32_t imm_11_5 = (rel_offset >> 5) & lower_bitmask<uint32_t>(7);
+				uint32_t imm_4_0 = rel_offset & lower_bitmask<uint32_t>(5);
 
 				instr.encoded &= 0b00000001111111111111000001111111u;
 				instr.encoded |= imm_11_5 << 25;
@@ -955,11 +974,11 @@ namespace codegen
 			{
 				/// immediate is crazy scrambled, rtfm
 				uint32_t imm_20 = (rel_offset >> 20) & 0b1;
-				uint32_t imm_19_12 = (rel_offset >> 12) & bitmask_lower(8);
+				uint32_t imm_19_12 = (rel_offset >> 12) & lower_bitmask<uint32_t>(8);
 				uint32_t imm_11 = (rel_offset >> 11) & 0b1;
-				uint32_t imm_10_1 = (rel_offset >> 1) & bitmask_lower(10);
+				uint32_t imm_10_1 = (rel_offset >> 1) & lower_bitmask<uint32_t>(10);
 
-				instr.encoded &= bitmask_lower(12);
+				instr.encoded &= lower_bitmask<uint32_t>(12);
 				instr.encoded |= imm_19_12 << 12;
 				instr.encoded |= imm_11 << 20;
 				instr.encoded |= imm_10_1 << 21;
@@ -985,13 +1004,13 @@ namespace codegen
 		log_vvvv("padded stack size: {}", padded_stack_size);
 
 		// allocate stack space
-		prologue.write_addi(Register::sp, Register::sp, uint32_t(-padded_stack_size));
+		prologue.write_addi(Register::sp, Register::sp, uint32_t(-padded_stack_size)); // TODO this will break for >12 bit stack sizes
 		// save return address
 		prologue.write_sw(Register::sp, Register::ra, uint32_t(padded_stack_size - 4));
 		// save caller frame pointer
 		prologue.write_sw(Register::sp, Register::fp, uint32_t(padded_stack_size - 8));
 		// set new frame pointer
-		prologue.write_addi(Register::fp, Register::sp, uint32_t(padded_stack_size));
+		prologue.write_addi(Register::fp, Register::sp, uint32_t(padded_stack_size)); // TODO this will break for >12 bit stack sizes
 
 		// build epilogue -------------
 
@@ -1064,35 +1083,35 @@ namespace codegen
 
 	uint32_t CodeGenerator_riscv32::encode_r_type(uint32_t opcode, Register rd, uint32_t funct3, Register rs1, Register rs2, uint32_t funct7)
 	{
-		uint32_t instr = opcode & bitmask_lower(7);
-		instr |= (uint32_t(rd) & bitmask_lower(5)) << 7;
-		instr |= (funct3 & bitmask_lower(3)) << 12;
-		instr |= (uint32_t(rs1) & bitmask_lower(5)) << 15;
-		instr |= (uint32_t(rs2) & bitmask_lower(5)) << 20;
-		instr |= (funct7 & bitmask_lower(7)) << 25;
+		uint32_t instr = opcode & lower_bitmask<uint32_t>(7);
+		instr |= (uint32_t(rd) & lower_bitmask<uint32_t>(5)) << 7;
+		instr |= (funct3 & lower_bitmask<uint32_t>(3)) << 12;
+		instr |= (uint32_t(rs1) & lower_bitmask<uint32_t>(5)) << 15;
+		instr |= (uint32_t(rs2) & lower_bitmask<uint32_t>(5)) << 20;
+		instr |= (funct7 & lower_bitmask<uint32_t>(7)) << 25;
 		return instr;
 	}
 
 	uint32_t CodeGenerator_riscv32::encode_i_type(uint32_t opcode, Register rd, uint32_t funct3, Register rs1, uint32_t imm)
 	{
-		uint32_t instr = opcode & bitmask_lower(7);
-		instr |= (uint32_t(rd) & bitmask_lower(5)) << 7;
-		instr |= (funct3 & bitmask_lower(3)) << 12;
-		instr |= (uint32_t(rs1) & bitmask_lower(5)) << 15;
-		instr |= (imm & bitmask_lower(12)) << 20;
+		uint32_t instr = opcode & lower_bitmask<uint32_t>(7);
+		instr |= (uint32_t(rd) & lower_bitmask<uint32_t>(5)) << 7;
+		instr |= (funct3 & lower_bitmask<uint32_t>(3)) << 12;
+		instr |= (uint32_t(rs1) & lower_bitmask<uint32_t>(5)) << 15;
+		instr |= (imm & lower_bitmask<uint32_t>(12)) << 20;
 		return instr;
 	}
 
 	uint32_t CodeGenerator_riscv32::encode_s_type(uint32_t opcode, uint32_t funct3, Register rs1, Register rs2, uint32_t imm)
 	{
-		uint32_t imm_4_0 = imm & bitmask_lower(5);
-		uint32_t imm_11_5 = (imm >> 5) & bitmask_lower(7);
+		uint32_t imm_4_0 = imm & lower_bitmask<uint32_t>(5);
+		uint32_t imm_11_5 = (imm >> 5) & lower_bitmask<uint32_t>(7);
 
-		uint32_t instr = opcode & bitmask_lower(7);
+		uint32_t instr = opcode & lower_bitmask<uint32_t>(7);
 		instr |= imm_4_0 << 7;
-		instr |= (funct3 & bitmask_lower(3)) << 12;
-		instr |= (uint32_t(rs1) & bitmask_lower(5)) << 15;
-		instr |= (uint32_t(rs2) & bitmask_lower(5)) << 20;
+		instr |= (funct3 & lower_bitmask<uint32_t>(3)) << 12;
+		instr |= (uint32_t(rs1) & lower_bitmask<uint32_t>(5)) << 15;
+		instr |= (uint32_t(rs2) & lower_bitmask<uint32_t>(5)) << 20;
 		instr |= imm_11_5 << 25;
 		return instr;
 	}
@@ -1100,13 +1119,13 @@ namespace codegen
 	uint32_t CodeGenerator_riscv32::encode_j_type(uint32_t opcode, Register rd, uint32_t imm)
 	{
 		// scrambling immediate
-		uint32_t imm_10_1 = (imm >> 1) & bitmask_lower(10);
+		uint32_t imm_10_1 = (imm >> 1) & lower_bitmask<uint32_t>(10);
 		uint32_t imm_11 = (imm >> 11) & 0b1;
-		uint32_t imm_19_12 = (imm >> 12) & bitmask_lower(8);
+		uint32_t imm_19_12 = (imm >> 12) & lower_bitmask<uint32_t>(8);
 		uint32_t imm_20 = (imm >> 20) & 0b1;
 
-		uint32_t inst = opcode & bitmask_lower(7);
-		inst |= (uint32_t(rd) & bitmask_lower(5)) << 7;
+		uint32_t inst = opcode & lower_bitmask<uint32_t>(7);
+		inst |= (uint32_t(rd) & lower_bitmask<uint32_t>(5)) << 7;
 		inst |= imm_19_12 << 12;
 		inst |= imm_11 << 20;
 		inst |= imm_10_1 << 21;
@@ -1117,9 +1136,9 @@ namespace codegen
 
 	uint32_t CodeGenerator_riscv32::encode_u_type(uint32_t opcode, Register rd, uint32_t imm)
 	{
-		uint32_t instr = opcode & bitmask_lower(7);
-		instr |= (uint32_t(rd) & bitmask_lower(5)) << 7;
-		instr |= imm & ~bitmask_lower(12);
+		uint32_t instr = opcode & lower_bitmask<uint32_t>(7);
+		instr |= (uint32_t(rd) & lower_bitmask<uint32_t>(5)) << 7;
+		instr |= imm & ~lower_bitmask<uint32_t>(12);
 		return instr;
 	}
 

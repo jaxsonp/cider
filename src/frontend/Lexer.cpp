@@ -109,6 +109,9 @@ Token Lexer::take()
 	case '^':
 		tok.type = TokenType::CARET;
 		break;
+	case '~':
+		tok.type = TokenType::TILDE;
+		break;
 	case '<':
 		if (peek_char() == '<')
 		{
@@ -346,6 +349,8 @@ std::string to_string(TokenType type)
 		return "\"!\"";
 	case TokenType::EQUAL:
 		return "\"=\"";
+	case TokenType::TILDE:
+		return "\"~\"";
 	case TokenType::ERROR_UNEXPECTED_CHAR:
 		return "Unexpected char";
 	}
