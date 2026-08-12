@@ -8,6 +8,7 @@ import re
 import shutil
 import os
 import time
+import traceback
 
 TESTS_DIR = Path(__file__).parent / "tests"
 
@@ -55,6 +56,7 @@ class TestRunner:
             sys.exit(1)
         self.compiler_path = compiler_path
         self.n_workers = n_workers
+        self.total_test_count = 0
         self.tests_ran = 0
         self.tests_passed = 0
         self.completed = False
@@ -88,8 +90,17 @@ class TestRunner:
             print(f"Found {len(tests)} tests in {TESTS_DIR}")
             if len(tests) == 0:
                 return True
+            self.total_test_count = len(tests)
 
             async with asyncio.TaskGroup() as task_group:
+                # print testing progress
+                progress_printing_task = None
+                if self.show_progress:
+                    progress_printing_task = task_group.create_task(
+                        self.progress_bar_task(),
+                        name="test_runner_progress",
+                    )
+
                 # create workers
                 worker_tasks = [
                     task_group.create_task(
@@ -98,14 +109,6 @@ class TestRunner:
                     )
                     for i in range(self.n_workers)
                 ]
-
-                # print testing progress
-                progress_printing_task = None
-                if self.show_progress:
-                    progress_printing_task = asyncio.create_task(
-                        self.display_progress_tui(len(tests)),
-                        name="test_runner_progress",
-                    )
 
                 print("Starting testing")
                 start_t = time.perf_counter()
@@ -144,61 +147,64 @@ class TestRunner:
             raise
         except Exception as e:
             print(f"\nException thrown during testing: {e}")
+            traceback.format_exc()
 
-    async def display_progress_tui(self, total_test_count: int):
+
+    async def progress_bar_task(self):
         """
         Periodically prints testing progress info/bar
         """
         if not self.show_progress:
             return
 
-        async def _print():
-            percent_complete = 100.0 * float(self.tests_ran) / float(total_test_count)
-            success_rate = (
-                (100.0 * float(self.tests_passed) / float(self.tests_ran))
-                if self.tests_ran != 0
-                else 100.0
-            )
-            async with self._print_lock:
-
-                # move up, clear line, write progress stats
-                sys.stdout.write(
-                    f"\x1b[2A\x1b[2K | {percent_complete:.1f}% complete, {success_rate:.1f}% passed\n | "
-                )
-
-                # then write progress bar
-                progress = float(self.tests_ran) / float(total_test_count)
-                for column in range(PROGRESS_BAR_WIDTH):
-                    # difference (in columns) of the progress to the left edge of this column
-                    delta = (progress * float(PROGRESS_BAR_WIDTH)) - float(column)
-                    if delta >= 1.0:
-                        sys.stdout.write("█")
-                    elif delta <= 0.0:
-                        sys.stdout.write("─")
-                    else:
-                        for i, block in enumerate(("▏", "▎", "▍", "▌", "▋", "▊", "▉")):
-                            if delta < (float(i + 1) / 8.0):
-                                sys.stdout.write(block)
-                                break
-                        else:
-                            sys.stdout.write("█")
-                sys.stdout.write("\n")
-                sys.stdout.flush()
-
-        SLEEP_SECS = 1.0 / float(PROGRESS_REFRESH_HZ)
         try:
-            # hide cursor and send newline to make room
+            # hide cursor and send newlines to make room
             sys.stdout.write("\x1b[?25l\n\n")
 
             while True:
-                await _print()
-                await asyncio.sleep(SLEEP_SECS)
+                await self.print_progress()
+                await asyncio.sleep(1.0 / float(PROGRESS_REFRESH_HZ))
         finally:
             # print final state if testing completed fully
             if self.completed:
-                await _print()
+                await self.print_progress()
             # show cursor
             sys.stdout.write("\x1b[?25h")
+
+
+
+    async def print_progress(self):
+        progress = float(self.tests_ran) / float(self.total_test_count)
+        progress_percent = 100.0 * progress
+        success_rate = (
+            (100.0 * float(self.tests_passed) / float(self.tests_ran))
+            if self.tests_ran != 0
+            else 100.0
+        )
+
+        async with self._print_lock:
+            # move up, clear line, write progress stats
+            sys.stdout.write(
+                f"\x1b[2A\x1b[2K | {progress_percent:.1f}% complete, {success_rate:.1f}% passed\n | "
+            )
+
+            # then write progress bar
+            for column in range(PROGRESS_BAR_WIDTH):
+                # difference (in columns) of the progress to the left edge of this column
+                delta = (progress * float(PROGRESS_BAR_WIDTH)) - float(column)
+                if delta >= 1.0:
+                    sys.stdout.write("█")
+                elif delta <= 0.0:
+                    sys.stdout.write("─")
+                else:
+                    for i, block in enumerate(("▏", "▎", "▍", "▌", "▋", "▊", "▉")):
+                        if delta < (float(i + 1) / 8.0):
+                            sys.stdout.write(block)
+                            break
+                    else:
+                        sys.stdout.write("█")
+            sys.stdout.write("\n")
+            sys.stdout.flush()
 
     async def record_test_result(
         self,
@@ -234,6 +240,10 @@ class TestRunner:
                 sys.stdout.write("\r\x1b[2B")
             sys.stdout.write("\n")
             sys.stdout.flush()
+
+        # update progress bar
+        if self.show_progress:
+            await self.print_progress()
 
     async def worker(self):
         try:
@@ -386,53 +396,60 @@ if __name__ == "__main__":
         default=4,
         metavar="N",
     )
-    auto_always_never = {
-        "choices": ["auto", "always", "never"],
-        "default": "auto",
-    }
-    arg_parser.add_argument(
+    progress_opts = arg_parser.add_mutually_exclusive_group(required=False)
+    progress_opts.add_argument(
         "--progress",
-        **auto_always_never,
-        help="Show progress bar/info (default: %(default)s)",
+        dest="progress",
+        action="store_true",
+        help="Force enable pretty progress bar/info (use --no-progress to disable)",
     )
-    arg_parser.add_argument(
+    progress_opts.add_argument(
+        "--no-progress",
+        dest="progress",
+        action="store_false",
+    )
+    color_opts = arg_parser.add_mutually_exclusive_group(required=False)
+    color_opts.add_argument(
         "--color",
-        **auto_always_never,
-        help="Use color in output (default: %(default)s)",
+        dest="color",
+        action="store_true",
+        help="Force enable colored output (use --no-color to disable)",
+    )
+    color_opts.add_argument(
+        "--no-color",
+        dest="color",
+        action="store_false",
     )
     arg_parser.add_argument(
-        "--show-passed",
-        **auto_always_never,
-        help="Print test cases that succeed (default: %(default)s)",
+        "--show-results",
+        type=str,
+        choices=["none", "failed", "all"],
+        default="failed",
+        help="Print test results as they are completed (default: %(default)s)",
     )
-    arg_parser.add_argument(
-        "--show-failed",
-        **auto_always_never,
-        help="Print test cases that fail (default: %(default)s)",
-    )
+    arg_parser.set_defaults(color=None, progress=None)
     args = arg_parser.parse_args()
 
     is_tty = sys.stdout.isatty()
 
-    use_color = args.color == "always" or (
-        args.color == "auto"
+    use_color = (
+        args.color is None
         and (
-            (os.environ["FORCE_COLOR"] != "0")
-            if "FORCE_COLOR" in os.environ
-            else ("NO_COLOR" not in os.environ and is_tty)
+            is_tty if "FORCE_COLOR" not in os.environ
+            else (os.environ["FORCE_COLOR"] != "0")
         )
-    )
-    show_progress = args.progress == "always" or (args.progress == "auto" and is_tty)
-    show_passed = args.show_passed == "always"
-    show_failed = args.show_failed == "always" or args.show_failed == "auto"
+    ) or args.color
+    show_progress = (args.progress is None and is_tty) or args.progress
+    show_passed = args.show_results == "all"
+    show_failed = args.show_results != "none"
 
     test_runner = TestRunner(
         n_workers=int(args.workers),
         compiler_path=Path(args.compiler_path),
         show_progress=show_progress,
         use_color=use_color,
-        show_passed=(args.show_passed == "always"),
-        show_failed=(args.show_failed == "always" or args.show_failed == "auto"),
+        show_passed=show_passed,
+        show_failed=show_failed,
     )
 
     async_runner = asyncio.Runner()
@@ -443,6 +460,7 @@ if __name__ == "__main__":
         print("Stopped")
     except Exception as e:
         print(f"Uncaught exception: {e}")
+        traceback.format_exc()
     finally:
         async_runner.close()
 
