@@ -294,7 +294,7 @@ std::string to_string(TokenType type)
 	case TokenType::SEMICOLON:
 		return "\";\"";
 	case TokenType::L_PAREN:
-		return "\"(\")";
+		return "\"(\"";
 	case TokenType::R_PAREN:
 		return "\")\"";
 	case TokenType::L_SQR_BRACKET:

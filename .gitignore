@@ -3,4 +3,4 @@
 
 /build/
 /testing/output/
-a.out
+/a.*

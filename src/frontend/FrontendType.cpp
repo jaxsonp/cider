@@ -84,6 +84,33 @@ bool FrontendType::is_bool() const
 	return this->variant == Variant::BOOL;
 }
 
+bool FrontendType::is_function() const
+{
+	return this->variant == Variant::FUNCTION;
+}
+
+FrontendType FrontendType::function(FrontendType return_type, std::vector<FrontendType> param_types)
+{
+	FrontendType type(Variant::FUNCTION);
+	type.function_return_type = std::make_shared<FrontendType>(std::move(return_type));
+	type.function_param_types = std::move(param_types);
+	return type;
+}
+
+const FrontendType &FrontendType::return_type() const
+{
+	if (this->variant != Variant::FUNCTION)
+		throw CompilerError::internal("Attempted to get return type of a non-function type");
+	return *this->function_return_type;
+}
+
+const std::vector<FrontendType> &FrontendType::param_types() const
+{
+	if (this->variant != Variant::FUNCTION)
+		throw CompilerError::internal("Attempted to get parameter types of a non-function type");
+	return this->function_param_types;
+}
+
 std::string FrontendType::to_string() const
 {
 	switch (this->variant)
@@ -104,6 +131,18 @@ std::string FrontendType::to_string() const
 		return "u16";
 	case Variant::U32:
 		return "u32";
+	case Variant::FUNCTION:
+	{
+		std::string result = "fn(";
+		for (size_t i = 0; i < this->function_param_types.size(); i++)
+		{
+			if (i > 0)
+				result += ", ";
+			result += this->function_param_types[i].to_string();
+		}
+		result += ") -> " + this->function_return_type->to_string();
+		return result;
+	}
 	default:
 		throw CompilerError::internal("Uncaught frontend type variant");
 	}
@@ -155,6 +194,7 @@ ir::IrType FrontendType::resolveType() const
 	case FrontendType::Variant::UNRESOLVED:
 	case FrontendType::Variant::UNRESOLVED_INT:
 	case FrontendType::Variant::UNKNOWN:
+	case FrontendType::Variant::FUNCTION:
 		throw CompilerError::internal("Attempted to resolve invalid type");
 	default:
 		throw CompilerError::internal("Uncaught frontend type variant");
@@ -163,5 +203,12 @@ ir::IrType FrontendType::resolveType() const
 
 bool FrontendType::operator==(const FrontendType &other) const
 {
-	return (this->variant == other.variant && (this->variant != Variant::UNKNOWN || this->name == other.name));
+	if (this->variant != other.variant)
+		return false;
+	if (this->variant == Variant::UNKNOWN)
+		return this->name == other.name;
+	if (this->variant == Variant::FUNCTION)
+		return *this->function_return_type == *other.function_return_type &&
+			   this->function_param_types == other.function_param_types;
+	return true;
 }

@@ -10,7 +10,6 @@
 #include <string>
 #include <variant>
 
-#include "Lexer.hpp"
 #include "frontend/FrontendType.hpp"
 #include "ir/IrWriter.hpp"
 #include "utils/common.hpp"
@@ -26,23 +25,27 @@ namespace ast
 	struct Symbol
 	{
 		std::string name;
-		FrontendType variable_type;
+		FrontendType type;
 
-		Symbol(std::string _name, FrontendType _variable_type) : name(_name), variable_type(_variable_type) {}
+		Symbol(std::string name, FrontendType type) : name(name), type(type) {}
 	};
 
 	class SymbolScope
 	{
 		std::unordered_map<std::string, Symbol> symbols;
 
-	public:
 		/// @brief Parent (if not root)
 		SymbolScope *parent;
 
+	public:
 		virtual SymbolScope *get_parent() { return this->parent; };
 		virtual inline bool is_root() { return false; };
 
-		// std::optional<Type> find_symbol(const std::string &name, bool recursive = true);
+		/// @brief Look up a symbol by name
+		/// @param name Name to look up
+		/// @param recursive If true (default), search enclosing scopes when not found locally
+		/// @return Pointer to the symbol, nullptr if not found
+		Symbol *find(const std::string &name, bool recursive = true);
 
 		/// @brief Insert a symbol into this symbol table scope, throwing on collision
 		/// @param name Symbol name
@@ -50,7 +53,7 @@ namespace ast
 		void add(std::string name, FrontendType type);
 		/// @brief Insert a symbol into this symbol table scope, throwing on collision
 		/// @param symbol Name/type pair
-		inline void add(std::pair<std::string, FrontendType> symbol) { this->add(symbol.first, symbol.second); }
+		void add(std::pair<std::string, FrontendType> symbol) { this->add(symbol.first, symbol.second); }
 
 		SymbolScope(SymbolScope *parent);
 	};
@@ -64,61 +67,72 @@ namespace ast
 
 	struct SemanticAnalysisState
 	{
-		std::optional<FrontendType> fn_return_type;
-		SymbolScope *cur_scope;
-		GlobalSymbolTable *symbols;
-
-		SemanticAnalysisState(GlobalSymbolTable *symbols);
+		std::optional<FrontendType> cur_fn_return_type = std::nullopt;
 	};
 
 	// Node interface
 	class Node
 	{
 	public:
+		/// @brief Location in the source code that this AST node spans
 		SourceLocRange src_loc;
 
-		virtual void check_semantics(SemanticAnalysisState state) const = 0;
+		Node(SourceLocRange src_loc) : src_loc(src_loc) {};
 
-		/// @brief Write this node and its subtree to `out`, indented `depth` levels
-		void print(std::ostream &out, unsigned int depth = 0) const;
+		/// @brief Recursively resolve symbols
+		/// @param scope Current symbol scope
+		virtual void resolve_symbols(SymbolScope *scope) = 0;
+
+		/// @brief Recursively resolve types and check semantics
+		virtual void check_semantics(SemanticAnalysisState &state) const = 0;
+
+		/// @brief Recursively write this node and its children to `out`
+		/// @param out Stream to write output to
+		/// @param depth Indentation level
+		virtual void print(std::ostream &out, unsigned int depth = 0) const = 0;
 
 		virtual ~Node() = default;
-
-	protected:
-		/// @brief One-line description of this node, e.g. `Additive expression (operation: '+')`
-		virtual std::string label() const = 0;
-
-		/// @brief Write this node's children at `depth`. Leaf nodes write nothing
-		virtual void print_children(std::ostream &out, unsigned int depth) const { (void)out, (void)depth; }
 	};
 
 	// TLD interface
 	class TopLevelDeclaration : public Node
 	{
+	protected:
+		TopLevelDeclaration(SourceLocRange src_loc) : Node(src_loc) {};
+
 	public:
 		virtual std::pair<std::string, FrontendType> declares() const = 0;
-		virtual void emitIr(IrWriter &writer) const = 0;
-
-		static std::optional<std::unique_ptr<TopLevelDeclaration>> try_parse(Lexer &lexer);
+		virtual void emit_ir(IrWriter &writer) const = 0;
 	};
 
 	// expression interface
 	class ExpressionNode : public Node
 	{
-	public:
-		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		/// @return ID of output register
-		virtual ir::VRegId emitIr(IrWriter &writer) const = 0;
+	protected:
+		ExpressionNode(SourceLocRange src_loc) : Node(src_loc) {};
+		ExpressionNode(SourceLocRange src_loc, FrontendType type) : Node(src_loc), type(type) {};
 
-		virtual FrontendType get_type() const = 0;
+	public:
+		FrontendType type = FrontendType::unresolved();
+
+		/// @brief Resolve and check the type of this expression. Should only be called after symbols have been
+		/// resolved
+		virtual void resolve_type() = 0;
+
+		/// @brief Write IR for this node to the provided writer
+		/// @return ID of output register
+		virtual ir::VRegId emit_ir(IrWriter &writer) const = 0;
 	};
 
 	// statement interface
 	class StatementNode : public Node
 	{
+	protected:
+		StatementNode(SourceLocRange src_loc) : Node(src_loc) {};
+
 	public:
-		static std::optional<std::unique_ptr<StatementNode>> try_parse(Lexer &lexer);
-		virtual void emitIr(IrWriter &writer) const = 0;
+		/// @brief Write IR for this node to the provided writer
+		virtual void emit_ir(IrWriter &writer) const = 0;
 	};
 
 	// EXPRESSIONS =============================================================
@@ -126,14 +140,22 @@ namespace ast
 	/// Integer literal
 	struct IntegerLiteralExpression : public ExpressionNode
 	{
-		uint32_t raw_value;
-		FrontendType type;
+		uint64_t raw_value;
 
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		ir::VRegId emitIr(IrWriter &writer) const override;
-		static std::optional<std::unique_ptr<IntegerLiteralExpression>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return this->type; };
+		IntegerLiteralExpression(SourceLocRange src_loc, uint64_t value)
+			: ExpressionNode(src_loc, FrontendType::unresolved_int()), raw_value(value) {}
+
+		IntegerLiteralExpression(SourceLocRange src_loc, uint64_t value, FrontendType type_annotation)
+			: ExpressionNode(src_loc, type_annotation), raw_value(value) {}
+
+		void resolve_symbols(SymbolScope *scope) override;
+
+		void resolve_type() override;
+		void check_semantics(SemanticAnalysisState &state) const override;
+
+		ir::VRegId emit_ir(IrWriter &writer) const override;
+
+		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
 
 	/// Boolean literal
@@ -141,206 +163,76 @@ namespace ast
 	{
 		bool value;
 
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		ir::VRegId emitIr(IrWriter &writer) const override;
-		static std::optional<std::unique_ptr<BooleanLiteralExpression>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return FrontendType::boolean(); };
+		BooleanLiteralExpression(SourceLocRange src_loc, bool value)
+			: ExpressionNode(src_loc, FrontendType::boolean()), value(value) {}
+
+		void resolve_symbols(SymbolScope *scope) override;
+
+		void resolve_type() override;
+		void check_semantics(SemanticAnalysisState &state) const override;
+
+		ir::VRegId emit_ir(IrWriter &writer) const override;
+		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
 
-	/// Primary expression (aka "atom"), transparent so doesn't need associated class/AST node
-	static std::optional<std::unique_ptr<ExpressionNode>> primary_expression_try_parse(Lexer &lexer);
-
-	struct LogicalOrExpression : public ExpressionNode
+	struct IdentifierExpression : public ExpressionNode
 	{
-		std::unique_ptr<ExpressionNode> l_expr;
-		std::unique_ptr<ExpressionNode> r_expr;
+		std::string name;
+		/// @brief Symbol that this identifier is referencing. nullptr until `.resolved_symbols(...)` is called
+		Symbol *symbol = nullptr;
 
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		void print_children(std::ostream &out, unsigned int depth) const override;
-		ir::VRegId emitIr(IrWriter &writer) const override;
-		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return l_expr->get_type(); };
+		IdentifierExpression(SourceLocRange src_loc, std::string_view name)
+			: ExpressionNode(src_loc), name(name) {}
+
+		void resolve_symbols(SymbolScope *scope) override;
+
+		void resolve_type() override;
+		void check_semantics(SemanticAnalysisState &state) const override;
+
+		ir::VRegId emit_ir(IrWriter &writer) const override;
+		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
 
-	struct LogicalAndExpression : public ExpressionNode
+	struct BinaryExpression : public ExpressionNode
 	{
-		std::unique_ptr<ExpressionNode> l_expr;
-		std::unique_ptr<ExpressionNode> r_expr;
-
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		void print_children(std::ostream &out, unsigned int depth) const override;
-		ir::VRegId emitIr(IrWriter &writer) const override;
-		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return l_expr->get_type(); };
-	};
-
-	struct EqualityExpression : public ExpressionNode
-	{
-		std::unique_ptr<ExpressionNode> l_expr;
-		std::unique_ptr<ExpressionNode> r_expr;
-		/// True if not equals
-		bool notted;
-
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		void print_children(std::ostream &out, unsigned int depth) const override;
-		ir::VRegId emitIr(IrWriter &writer) const override;
-		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return FrontendType::boolean(); };
-
-		inline std::string_view operator_string() const
+		enum class BinaryOperation
 		{
-			return this->notted ? "!=" : "==";
-		}
-	};
-
-	struct ComparisonExpression : public ExpressionNode
-	{
-		enum class ComparisonOperation
-		{
-			GREATER_THAN,
-			GREATER_THAN_OR_EQUAL,
-			LESS_THAN,
-			LESS_THAN_OR_EQUAL,
+			LogicalOr,
+			LogicalAnd,
+			Equal,
+			NotEqual,
+			LessThan,
+			LessThanOrEqual,
+			GreaterThan,
+			GreaterThanOrEqual,
+			BitwiseOr,
+			BitwiseXor,
+			BitwiseAnd,
+			ShiftLeft,
+			ShiftRight,
+			Add,
+			Subtract,
+			Multiply,
+			Divide,
+			Modulus,
 		};
 
 		std::unique_ptr<ExpressionNode> l_expr;
 		std::unique_ptr<ExpressionNode> r_expr;
-		ComparisonOperation operation;
+		BinaryOperation operation;
 
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		void print_children(std::ostream &out, unsigned int depth) const override;
-		ir::VRegId emitIr(IrWriter &writer) const override;
-		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return FrontendType::boolean(); };
+		BinaryExpression(SourceLocRange src_loc, std::unique_ptr<ExpressionNode> l_expr, std::unique_ptr<ExpressionNode> r_expr, BinaryOperation operation)
+			: ExpressionNode(src_loc), l_expr(std::move(l_expr)), r_expr(std::move(r_expr)), operation(operation) {}
 
-		inline std::string_view operator_string() const
-		{
-			switch (this->operation)
-			{
-			case ComparisonOperation::GREATER_THAN:
-				return ">";
-			case ComparisonOperation::GREATER_THAN_OR_EQUAL:
-				return ">=";
-			case ComparisonOperation::LESS_THAN:
-				return "<";
-			case ComparisonOperation::LESS_THAN_OR_EQUAL:
-				return "<=";
-			default:
-				throw CompilerError::internal("Uncaught ComparisonOperation variant");
-			}
-		}
-	};
+		void resolve_symbols(SymbolScope *scope) override;
 
-	struct BitwiseOrExpression : public ExpressionNode
-	{
-		std::unique_ptr<ExpressionNode> l_expr;
-		std::unique_ptr<ExpressionNode> r_expr;
+		void resolve_type() override;
+		void check_semantics(SemanticAnalysisState &state) const override;
 
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		void print_children(std::ostream &out, unsigned int depth) const override;
-		ir::VRegId emitIr(IrWriter &writer) const override;
-		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return l_expr->get_type(); };
-	};
+		ir::VRegId emit_ir(IrWriter &writer) const override;
 
-	struct BitwiseXorExpression : public ExpressionNode
-	{
-		std::unique_ptr<ExpressionNode> l_expr;
-		std::unique_ptr<ExpressionNode> r_expr;
-
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		void print_children(std::ostream &out, unsigned int depth) const override;
-		ir::VRegId emitIr(IrWriter &writer) const override;
-		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return l_expr->get_type(); };
-	};
-
-	struct BitwiseAndExpression : public ExpressionNode
-	{
-		std::unique_ptr<ExpressionNode> l_expr;
-		std::unique_ptr<ExpressionNode> r_expr;
-
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		void print_children(std::ostream &out, unsigned int depth) const override;
-		ir::VRegId emitIr(IrWriter &writer) const override;
-		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return l_expr->get_type(); };
-	};
-
-	struct BitshiftExpression : public ExpressionNode
-	{
-		std::unique_ptr<ExpressionNode> l_expr;
-		std::unique_ptr<ExpressionNode> r_expr;
-		bool left_shift;
-
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		void print_children(std::ostream &out, unsigned int depth) const override;
-		ir::VRegId emitIr(IrWriter &writer) const override;
-		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return l_expr->get_type(); };
-	};
-
-	struct AdditiveExpression : public ExpressionNode
-	{
-		std::unique_ptr<ExpressionNode> l_expr;
-		std::unique_ptr<ExpressionNode> r_expr;
-		bool plus;
-
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		void print_children(std::ostream &out, unsigned int depth) const override;
-		ir::VRegId emitIr(IrWriter &writer) const override;
-		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return l_expr->get_type(); };
-
-		inline std::string_view operator_string() const
-		{
-			return this->plus ? "+" : "-";
-		}
-	};
-
-	struct MultiplicativeExpression : public ExpressionNode
-	{
-		enum class MultOperation
-		{
-			Multiplication,
-			Division,
-			Modulus
-		};
-		std::unique_ptr<ExpressionNode> l_expr;
-		std::unique_ptr<ExpressionNode> r_expr;
-		MultOperation operation;
-
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		void print_children(std::ostream &out, unsigned int depth) const override;
-		ir::VRegId emitIr(IrWriter &writer) const override;
-		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return l_expr->get_type(); };
-
-		inline std::string_view operator_string() const
-		{
-			switch (this->operation)
-			{
-			case MultOperation::Multiplication:
-				return "*";
-			case MultOperation::Division:
-				return "/";
-			case MultOperation::Modulus:
-				return "%";
-			default:
-				throw CompilerError::internal("Uncaught MultOperation variant");
-			}
-		}
+		void print(std::ostream &out, unsigned int depth = 0) const;
+		std::string_view operator_string() const;
 	};
 
 	struct UnaryExpression : public ExpressionNode
@@ -354,44 +246,55 @@ namespace ast
 		std::unique_ptr<ExpressionNode> expr;
 		UnaryOperation operation;
 
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		void print_children(std::ostream &out, unsigned int depth) const override;
-		ir::VRegId emitIr(IrWriter &writer) const override;
-		static std::optional<std::unique_ptr<ExpressionNode>> try_parse(Lexer &lexer);
-		inline FrontendType get_type() const override { return expr->get_type(); };
+		UnaryExpression(SourceLocRange src_loc, std::unique_ptr<ExpressionNode> expr, UnaryOperation operation)
+			: ExpressionNode(src_loc), expr(std::move(expr)), operation(operation) {}
 
-		inline std::string_view operator_string() const
-		{
-			switch (this->operation)
-			{
-			case UnaryOperation::LogicalNot:
-				return "!";
-			case UnaryOperation::BitwiseNot:
-				return "~";
-			case UnaryOperation::Negation:
-				return "-";
-			default:
-				throw CompilerError::internal("Uncaught UnaryOperation variant");
-			}
-		}
+		void resolve_symbols(SymbolScope *scope) override;
+
+		void resolve_type() override;
+		void check_semantics(SemanticAnalysisState &state) const override;
+
+		ir::VRegId emit_ir(IrWriter &writer) const override;
+
+		void print(std::ostream &out, unsigned int depth = 0) const;
+		std::string_view operator_string() const;
+	};
+
+	struct FunctionCall : public ExpressionNode
+	{
+		std::unique_ptr<ExpressionNode> callee;
+
+		FunctionCall(SourceLocRange src_loc, std::unique_ptr<ExpressionNode> callee)
+			: ExpressionNode(src_loc), callee(std::move(callee)) {}
+
+		void resolve_symbols(SymbolScope *scope) override;
+
+		void resolve_type() override;
+		void check_semantics(SemanticAnalysisState &state) const override;
+
+		ir::VRegId emit_ir(IrWriter &writer) const override;
+		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
 
 	// STATEMENTS ==============================================================
 
 	struct ReturnStatement : StatementNode
 	{
-		/// Null if there is no expression
-		std::unique_ptr<ExpressionNode> expr;
+		/// @brief Optional expression in return statement
+		std::optional<std::unique_ptr<ExpressionNode>> expr;
 
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		void print_children(std::ostream &out, unsigned int depth) const override;
-		void emitIr(IrWriter &writer) const override;
+		ReturnStatement(SourceLocRange src_loc)
+			: StatementNode(src_loc) {};
+		ReturnStatement(SourceLocRange src_loc, std::unique_ptr<ExpressionNode> expr)
+			: StatementNode(src_loc), expr(std::move(expr)) {};
 
-		static std::optional<std::unique_ptr<ReturnStatement>> try_parse(Lexer &lexer);
+		void resolve_symbols(SymbolScope *scope) override;
 
-		FrontendType return_type() const;
+		void check_semantics(SemanticAnalysisState &state) const override;
+
+		void emit_ir(IrWriter &writer) const override;
+
+		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
 
 	// FUNCTION STUFF ==========================================================
@@ -401,13 +304,14 @@ namespace ast
 		FrontendType type;
 		std::string name;
 
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
+		ArgDefinition(SourceLocRange src_loc, std::string name, FrontendType type)
+			: Node(src_loc), name(name), type(type) {};
 
-		static std::optional<ArgDefinition> try_parse(Lexer &lexer);
+		void resolve_symbols(SymbolScope *scope) override;
 
-	private:
-		ArgDefinition() = default;
+		void check_semantics(SemanticAnalysisState &state) const override;
+
+		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
 
 	struct FunctionDefinition : TopLevelDeclaration
@@ -416,25 +320,35 @@ namespace ast
 		std::vector<ArgDefinition> args;
 		FrontendType return_type;
 		std::vector<std::unique_ptr<StatementNode>> body_statements;
-		/// null if there is no return expression
-		std::unique_ptr<ExpressionNode> body_return_expr;
-		SymbolScope *scope;
+		/// nullopt if there is no return expression
+		std::optional<std::unique_ptr<ExpressionNode>> body_return_expr;
 
-		void check_semantics(SemanticAnalysisState state) const override;
-		std::string label() const override;
-		void print_children(std::ostream &out, unsigned int depth) const override;
-		void emitIr(IrWriter &writer) const override;
+		// nullptr until symbol resolution pass
+		std::unique_ptr<SymbolScope> scope = nullptr;
 
-		static std::optional<FunctionDefinition> try_parse(Lexer &lexer);
+		FunctionDefinition(SourceLocRange src_loc, std::string name, std::vector<ArgDefinition> args,
+						   FrontendType return_type, std::vector<std::unique_ptr<StatementNode>> body_statements,
+						   std::optional<std::unique_ptr<ExpressionNode>> body_return_expr = std::nullopt)
+			: TopLevelDeclaration(src_loc), name(std::move(name)), args(std::move(args)),
+			  return_type(std::move(return_type)), body_statements(std::move(body_statements)),
+			  body_return_expr(std::move(body_return_expr)) {}
+
+		void resolve_symbols(SymbolScope *scope) override;
+
+		void check_semantics(SemanticAnalysisState &state) const override;
+
+		void emit_ir(IrWriter &writer) const override;
+
+		void print(std::ostream &out, unsigned int depth = 0) const;
 
 		inline std::pair<std::string, FrontendType> declares() const override
 		{
-			return {this->name, this->return_type};
+			std::vector<FrontendType> param_types;
+			param_types.reserve(this->args.size());
+			for (const ArgDefinition &arg : this->args)
+				param_types.push_back(arg.type);
+			return {this->name, FrontendType::function(this->return_type, std::move(param_types))};
 		};
-
-	private:
-		FunctionDefinition()
-			: scope(new SymbolScope(nullptr)) {}
 	};
 }
 
@@ -443,14 +357,20 @@ class AST
 	std::vector<std::unique_ptr<ast::TopLevelDeclaration>> tlds;
 	ast::GlobalSymbolTable *symbols;
 
+	AST() = delete;
+
 public:
-	/// attempt to create an AST from input stream
+	/// @brief Generate an AST from input stream
+	///
+	/// @details AST generation is done in three stages:
+	/// 	1. Recursive descent parsing on tokenized input to create tree structure
+	/// 	2. Traverse tree, resolving symbols
+	/// 	3. Traverse tree again, performing type checking and semantic analysis
 	AST(std::istream &input);
 
 	/// @brief Write a textual representation of the tree to a stream
 	void print(std::ostream &out) const;
-	ir::Object emitIr() const;
 
-	// no need to delete symbol tables here, they are owned and will be deleted by AST nodes
-	~AST() = default;
+	/// @brief Generate an IR object from this AST
+	ir::Object emit_ir() const;
 };

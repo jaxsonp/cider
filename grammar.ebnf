@@ -41,7 +41,7 @@ bitshift = additive, { ("<<" | ">>"), additive } ;
 additive = multiplicative, { ("+" | "-"), multiplicative } ;
 multiplicative = unary, { ("*" | "/" | "%"), unary } ;
 
-unary = ("-" | "!"), unary
+unary = ("-" | "!" | "~"), unary
       | postfix ;
 
 postfix = primary, { postfix_op } ;

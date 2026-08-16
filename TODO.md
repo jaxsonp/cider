@@ -5,15 +5,19 @@ _For Jaxson's eyes only_
 ## To implement
 
 - Soon:
+	- Arbitrary-precision ints
+	- Memleaks
 	- investigate if spilling is broken (ref count slots? abstract out register loading?)
 	- investigate function frame setup, unnecessary extra registers being saved?
+	- define/enforce function name rules
 	- riscv type truncation on explicit casts (once it exists)
 	- integer literals wrapping around their range (2000i8 == -48i8), a few tests falsely lean on it, see binary_op/{addition,subtraction,bitwise_*}/i8_*.cdr
 	- Check code for stuff that doesn't need to be in headers
 	- Testing improvements:
-		- Overhaul how tests are ran (move away from qemu-user, maybe containers?)
+		- Overhaul how tests are ran (move away from qemu-user, maybe containers? maybe only native?)
 		- Test timeouts
 		- finish stdout/stderr checking
+	- Platform detection
 - Before self-hosting:
 	- locals vars
 	- if statements
@@ -36,6 +40,8 @@ _For Jaxson's eyes only_
 	- 64 bit
 	- try doing UTF8
 	- labelled code blocks (for early breaks)
+	- Warnings:
+		- Double negation
 - Tests to write:
 	- overflowing int literal
 	- left/right associativity, and comparisions needing parens
@@ -48,6 +54,7 @@ _For Jaxson's eyes only_
 		- Optimize out LUI (how?)
 - Perhaps?
 	- No bitwise operators, only methods with explicit behavior such as wrapping, unchecked, etc
+	- If I do macros, macros for cur fn and line
 
 ## Notes for documentation
 

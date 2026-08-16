@@ -1,21 +1,23 @@
 #include "frontend/AST.hpp"
 
+#include <format>
+
 #include "utils/error.hpp"
 #include "utils/logging.hpp"
 
 namespace ast
 {
-	ir::VRegId IntegerLiteralExpression::emitIr(IrWriter &writer) const
+	ir::VRegId IntegerLiteralExpression::emit_ir(IrWriter &writer) const
 	{
 		ir::IrType irType = this->type.resolveType();
 
 		ir::VRegId dst_reg = writer.new_vreg(irType);
 		// load imm instruction ignores op1 and op2 regs
-		writer.add_instr(ir::Op::LoadImm, dst_reg, ir::NO_VREG, ir::NO_VREG, std::bit_cast<uint32_t>(this->raw_value));
+		writer.add_instr(ir::Op::LoadImm, dst_reg, ir::NO_VREG, ir::NO_VREG, raw_value);
 		return dst_reg;
 	}
 
-	ir::VRegId BooleanLiteralExpression::emitIr(IrWriter &writer) const
+	ir::VRegId BooleanLiteralExpression::emit_ir(IrWriter &writer) const
 	{
 
 		ir::VRegId dst_reg = writer.new_vreg(ir::IrType::boolean());
@@ -24,137 +26,84 @@ namespace ast
 		return dst_reg;
 	}
 
-	ir::VRegId LogicalOrExpression::emitIr(IrWriter &writer) const
+	ir::VRegId IdentifierExpression::emit_ir(IrWriter &writer) const
 	{
-		throw CompilerError::unimplemented("TODO: emit ir (LogicalOrExpression)");
+		throw CompilerError::unimplemented("TODO IdentifierExpression::emit_ir");
 	}
 
-	ir::VRegId LogicalAndExpression::emitIr(IrWriter &writer) const
+	ir::VRegId BinaryExpression::emit_ir(IrWriter &writer) const
 	{
-		throw CompilerError::unimplemented("TODO: emit ir (LogicalAndExpression)");
-	}
+		if (this->operation == BinaryOperation::LogicalOr || this->operation == BinaryOperation::LogicalAnd)
+			throw CompilerError::unimplemented(std::format("TODO: emit ir (operator '{}')", this->operator_string()));
 
-	ir::VRegId EqualityExpression::emitIr(IrWriter &writer) const
-	{
-		ir::VRegId l_reg = this->l_expr->emitIr(writer);
-		ir::VRegId r_reg = this->r_expr->emitIr(writer);
-		ir::VRegId dst_reg = writer.new_vreg(ir::IrType::boolean());
-		writer.add_instr(this->notted ? ir::Op::CmpNe : ir::Op::CmpEq, dst_reg, l_reg, r_reg);
-		return dst_reg;
-	}
-
-	ir::VRegId ComparisonExpression::emitIr(IrWriter &writer) const
-	{
-		ir::VRegId l_reg = this->l_expr->emitIr(writer);
-		ir::VRegId r_reg = this->r_expr->emitIr(writer);
-		ir::VRegId dst_reg = writer.new_vreg(ir::IrType::boolean());
 		ir::Op op_code;
 		switch (this->operation)
 		{
-		case ComparisonOperation::GREATER_THAN:
-			op_code = ir::Op::CmpGt;
+		case BinaryOperation::Equal:
+			op_code = ir::Op::CmpEq;
 			break;
-		case ComparisonOperation::GREATER_THAN_OR_EQUAL:
-			op_code = ir::Op::CmpGte;
+		case BinaryOperation::NotEqual:
+			op_code = ir::Op::CmpNe;
 			break;
-		case ComparisonOperation::LESS_THAN:
+		case BinaryOperation::LessThan:
 			op_code = ir::Op::CmpLt;
 			break;
-		case ComparisonOperation::LESS_THAN_OR_EQUAL:
+		case BinaryOperation::LessThanOrEqual:
 			op_code = ir::Op::CmpLte;
 			break;
+		case BinaryOperation::GreaterThan:
+			op_code = ir::Op::CmpGt;
+			break;
+		case BinaryOperation::GreaterThanOrEqual:
+			op_code = ir::Op::CmpGte;
+			break;
+		case BinaryOperation::BitwiseOr:
+			op_code = ir::Op::BitOr;
+			break;
+		case BinaryOperation::BitwiseXor:
+			op_code = ir::Op::BitXor;
+			break;
+		case BinaryOperation::BitwiseAnd:
+			op_code = ir::Op::BitAnd;
+			break;
+		case BinaryOperation::ShiftLeft:
+			op_code = ir::Op::BitShl;
+			break;
+		case BinaryOperation::ShiftRight:
+			op_code = ir::Op::BitShr;
+			break;
+		case BinaryOperation::Add:
+			op_code = ir::Op::Add;
+			break;
+		case BinaryOperation::Subtract:
+			op_code = ir::Op::Sub;
+			break;
+		case BinaryOperation::Multiply:
+			op_code = ir::Op::Mul;
+			break;
+		case BinaryOperation::Divide:
+			op_code = ir::Op::Div;
+			break;
+		case BinaryOperation::Modulus:
+			op_code = ir::Op::Rem;
+			break;
+		default:
+			throw CompilerError::internal("Uncaught BinaryExpression::Operator variant");
 		}
+
+		ir::IrType irType = this->type.resolveType();
+		ir::VRegId l_reg = this->l_expr->emit_ir(writer);
+		ir::VRegId r_reg = this->r_expr->emit_ir(writer);
+		ir::VRegId dst_reg = writer.new_vreg(irType);
 		writer.add_instr(op_code, dst_reg, l_reg, r_reg);
 		return dst_reg;
 	}
 
-	ir::VRegId BitwiseOrExpression::emitIr(IrWriter &writer) const
+	ir::VRegId UnaryExpression::emit_ir(IrWriter &writer) const
 	{
-		ir::IrType irType = this->get_type().resolveType();
+		ir::IrType irType = this->type.resolveType();
 
-		ir::VRegId l_reg = this->l_expr->emitIr(writer);
-		ir::VRegId r_reg = this->r_expr->emitIr(writer);
-		ir::VRegId dst_reg = writer.new_vreg(irType);
-		writer.add_instr(ir::Op::BitOr, dst_reg, l_reg, r_reg);
-		return dst_reg;
-	}
-
-	ir::VRegId BitwiseXorExpression::emitIr(IrWriter &writer) const
-	{
-		ir::IrType irType = this->get_type().resolveType();
-
-		ir::VRegId l_reg = this->l_expr->emitIr(writer);
-		ir::VRegId r_reg = this->r_expr->emitIr(writer);
-		ir::VRegId dst_reg = writer.new_vreg(irType);
-		writer.add_instr(ir::Op::BitXor, dst_reg, l_reg, r_reg);
-		return dst_reg;
-	}
-
-	ir::VRegId BitwiseAndExpression::emitIr(IrWriter &writer) const
-	{
-		ir::IrType irType = this->get_type().resolveType();
-
-		ir::VRegId l_reg = this->l_expr->emitIr(writer);
-		ir::VRegId r_reg = this->r_expr->emitIr(writer);
-		ir::VRegId dst_reg = writer.new_vreg(irType);
-		writer.add_instr(ir::Op::BitAnd, dst_reg, l_reg, r_reg);
-		return dst_reg;
-	}
-
-	ir::VRegId BitshiftExpression::emitIr(IrWriter &writer) const
-	{
-		ir::IrType irType = this->get_type().resolveType();
-
-		ir::VRegId l_reg = this->l_expr->emitIr(writer);
-		ir::VRegId r_reg = this->r_expr->emitIr(writer);
-		ir::VRegId dst_reg = writer.new_vreg(irType);
-		writer.add_instr(this->left_shift ? ir::Op::BitShl : ir::Op::BitShr, dst_reg, l_reg, r_reg);
-		return dst_reg;
-	}
-
-	ir::VRegId AdditiveExpression::emitIr(IrWriter &writer) const
-	{
-		ir::IrType irType = this->get_type().resolveType();
-
-		ir::VRegId l_reg = this->l_expr->emitIr(writer);
-		ir::VRegId r_reg = this->r_expr->emitIr(writer);
-		ir::VRegId dst_reg = writer.new_vreg(irType);
-		if (this->plus)
-			writer.add_instr(ir::Op::Add, dst_reg, l_reg, r_reg);
-		else
-			writer.add_instr(ir::Op::Sub, dst_reg, l_reg, r_reg);
-		return dst_reg;
-	}
-
-	ir::VRegId MultiplicativeExpression::emitIr(IrWriter &writer) const
-	{
-		ir::IrType irType = this->get_type().resolveType();
-
-		ir::VRegId l_reg = this->l_expr->emitIr(writer);
-		ir::VRegId r_reg = this->r_expr->emitIr(writer);
-		ir::VRegId dst_reg = writer.new_vreg(irType);
-		switch (this->operation)
-		{
-		case MultOperation::Multiplication:
-			writer.add_instr(ir::Op::Mul, dst_reg, l_reg, r_reg);
-			break;
-		case MultOperation::Division:
-			writer.add_instr(ir::Op::Div, dst_reg, l_reg, r_reg);
-			break;
-		case MultOperation::Modulus:
-			writer.add_instr(ir::Op::Rem, dst_reg, l_reg, r_reg);
-			break;
-		default:
-			throw CompilerError::internal("Uncaught multiplication operation variant");
-		};
-		return dst_reg;
-	}
-
-	ir::VRegId UnaryExpression::emitIr(IrWriter &writer) const
-	{
-		ir::IrType irType = this->get_type().resolveType();
-
-		ir::VRegId src_reg = this->expr->emitIr(writer);
+		ir::VRegId src_reg = this->expr->emit_ir(writer);
 		ir::VRegId dst_reg = writer.new_vreg(irType);
 		switch (this->operation)
 		{
@@ -178,11 +127,16 @@ namespace ast
 		return dst_reg;
 	}
 
-	void ReturnStatement::emitIr(IrWriter &writer) const
+	ir::VRegId FunctionCall::emit_ir(IrWriter &writer) const
 	{
-		if (this->expr != nullptr)
+		throw CompilerError::unimplemented("TODO FunctionCall::emit_ir");
+	}
+
+	void ReturnStatement::emit_ir(IrWriter &writer) const
+	{
+		if (this->expr.has_value())
 		{
-			ir::VRegId return_reg = this->expr->emitIr(writer);
+			ir::VRegId return_reg = this->expr.value()->emit_ir(writer);
 			writer.add_return(return_reg);
 		}
 		else
@@ -191,7 +145,7 @@ namespace ast
 		}
 	}
 
-	void FunctionDefinition::emitIr(IrWriter &writer) const
+	void FunctionDefinition::emit_ir(IrWriter &writer) const
 	{
 		writer.new_function(this->name);
 
@@ -206,11 +160,11 @@ namespace ast
 
 		// body
 		for (const std::unique_ptr<StatementNode> &stmt : this->body_statements)
-			stmt->emitIr(writer);
-		if (this->body_return_expr != nullptr)
+			stmt->emit_ir(writer);
+		if (this->body_return_expr.has_value())
 		{
 			// create implicit return
-			ir::VRegId return_reg = this->body_return_expr->emitIr(writer);
+			ir::VRegId return_reg = this->body_return_expr.value()->emit_ir(writer);
 			writer.add_return(return_reg);
 		}
 	}

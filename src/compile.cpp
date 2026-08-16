@@ -79,7 +79,7 @@ void compile(const std::string &filename, const CompileSettings &settings)
 		return;
 
 	log_v("Emitting IR");
-	ir::Object ir = ast.emitIr();
+	ir::Object ir = ast.emit_ir();
 
 	if (settings.wants(EmitKind::Ir))
 	{

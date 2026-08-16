@@ -64,23 +64,30 @@ std::string to_string(Token tok);
 /// @brief Lexer, converts characters to tokens on demand. Infinitely returns EOF token when completed.
 class Lexer
 {
-public:
-	SourceLoc pos;
-
-	Lexer(std::istream &in);
-	/// Consumes and returns the next token
-	Token take();
-	/// Returns the next token without consuming it
-	Token peek();
-	/// Consumes and returns the next token if it matches the expected type, throwing a `CompileError` if not
-	Token expect(TokenType expected_type);
-	inline bool is_done() const noexcept { return done; }
-
-private:
 	std::istream &in;
 	bool done;
 	std::optional<Token> peeked_token;
 
+	/// @brief Consume the next character from the stream and return it
 	char take_char();
+	/// @brief Return the next character in the stream WITHOUT consuming it
 	char peek_char();
+
+public:
+	SourceLoc pos;
+
+	Lexer(std::istream &in);
+
+	/// @brief Consumes and returns the next token
+	Token take();
+
+	/// @brief Returns the next token without consuming it
+	Token peek();
+
+	/// @brief Consumes and returns the next token if it matches the expected type, throwing a `CompileError` if not
+	/// @param expected_type Token type to expect
+	/// @return Token consumed
+	Token expect(TokenType expected_type);
+
+	inline bool is_done() const noexcept { return done; }
 };
