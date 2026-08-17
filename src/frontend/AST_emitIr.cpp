@@ -13,7 +13,8 @@ namespace ast
 
 		ir::VRegId dst_reg = writer.new_vreg(irType);
 		// load imm instruction ignores op1 and op2 regs
-		writer.add_instr(ir::Op::LoadImm, dst_reg, ir::NO_VREG, ir::NO_VREG, raw_value);
+		throw CompilerError::unimplemented("TODO");
+		// writer.add_instr(ir::Op::LoadImm, dst_reg, ir::NO_VREG, ir::NO_VREG, raw_value);
 		return dst_reg;
 	}
 

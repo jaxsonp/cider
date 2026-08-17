@@ -564,17 +564,31 @@ namespace parse
 		while (type_annotation_pos != tok.str.end() && is_numeric(*type_annotation_pos))
 			++type_annotation_pos;
 
-		std::string value_str(tok.str.begin(), type_annotation_pos);
-		std::string type_str(type_annotation_pos, tok.str.end());
+		std::string_view value_str(tok.str.begin(), type_annotation_pos);
+		std::string_view type_str(type_annotation_pos, tok.str.end());
 
 		// parsing type and value
 		FrontendType type_annotation = FrontendType::from_string(type_str);
 		if (!type_annotation.is_integer())
 			throw CompilerError::type_error("Invalid type annotation on integer literal, must be an integer type", tok.loc);
 
-		long long value_ll = std::stoll(value_str, nullptr, base);
+		ArbInteger value;
+		switch (base)
+		{
+		case 2:
+		case 8:
+		case 16:
+			throw CompilerError::unimplemented("TODO non-decimal int literals");
+			break;
+		case 10:
+			value = ArbInteger::from_str_base10(value_str);
+			break;
+		default:
+			throw CompilerError::internal("Invalid base in \"try_parse_integer_literal\"");
+			break;
+		}
 
-		return std::make_unique<ast::IntegerLiteralExpression>(tok.loc, uint32_t(value_ll), type_annotation);
+		return std::make_unique<ast::IntegerLiteralExpression>(tok.loc, value, type_annotation);
 	}
 
 	std::optional<std::unique_ptr<ast::BooleanLiteralExpression>> try_parse_boolean_literal(Lexer &lexer)

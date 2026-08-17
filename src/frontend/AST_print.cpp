@@ -12,7 +12,7 @@ namespace ast
 	{
 		for (size_t i = 0; i < depth; ++i)
 			out << INDENTATION_STR;
-		out << "Integer literal (value: " << this->raw_value << ", type: " << this->type.to_string() << ")";
+		out << "Integer literal (value: " << this->value.to_string() << ", type: " << this->type.to_string() << ")";
 		out << " [" << this->src_loc.to_string() << "]" << std::endl;
 	}
 

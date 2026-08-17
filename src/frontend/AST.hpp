@@ -14,6 +14,7 @@
 #include "ir/IrWriter.hpp"
 #include "utils/common.hpp"
 #include "utils/error.hpp"
+#include "utils/ArbInteger.hpp"
 
 namespace ast
 {
@@ -140,13 +141,13 @@ namespace ast
 	/// Integer literal
 	struct IntegerLiteralExpression : public ExpressionNode
 	{
-		uint64_t raw_value;
+		ArbInteger value;
 
-		IntegerLiteralExpression(SourceLocRange src_loc, uint64_t value)
-			: ExpressionNode(src_loc, FrontendType::unresolved_int()), raw_value(value) {}
+		IntegerLiteralExpression(SourceLocRange src_loc, ArbInteger value)
+			: ExpressionNode(src_loc, FrontendType::unresolved_int()), value(value) {}
 
-		IntegerLiteralExpression(SourceLocRange src_loc, uint64_t value, FrontendType type_annotation)
-			: ExpressionNode(src_loc, type_annotation), raw_value(value) {}
+		IntegerLiteralExpression(SourceLocRange src_loc, ArbInteger value, FrontendType type_annotation)
+			: ExpressionNode(src_loc, type_annotation), value(value) {}
 
 		void resolve_symbols(SymbolScope *scope) override;
 

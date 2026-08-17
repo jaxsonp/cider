@@ -63,11 +63,12 @@ bool is_delimiter(char c);
 
 std::string_view bool_str(bool b);
 
-// Generates a bitmask with the N least-significant bits set
-template <typename T = uint32_t>
+/// @brief Generates a bitmask with the N least-significant bits set
+template <typename T>
+	requires std::is_integral_v<T> && std::is_unsigned_v<T>
 constexpr T lower_bitmask(size_t n)
 {
-	static_assert(std::is_integral_v<T>, "Template type must be an integral type.");
+	// static_assert(std::is_integral_v<T>, "Template type must be an integral type.");
 	if (n == 0)
 		return 0;
 	else if (n >= 32)
