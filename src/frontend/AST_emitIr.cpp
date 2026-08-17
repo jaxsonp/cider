@@ -2,12 +2,13 @@
 
 #include <format>
 
+#include "ir/IrWriter.hpp"
 #include "utils/error.hpp"
 #include "utils/logging.hpp"
 
 namespace ast
 {
-	ir::VRegId IntegerLiteralExpression::emit_ir(IrWriter &writer) const
+	ir::VRegId IntegerLiteralExpression::emit_ir(IrFunctionWriter &writer) const
 	{
 		ir::IrType irType = this->type.resolveType();
 
@@ -17,7 +18,7 @@ namespace ast
 		return dst_reg;
 	}
 
-	ir::VRegId BooleanLiteralExpression::emit_ir(IrWriter &writer) const
+	ir::VRegId BooleanLiteralExpression::emit_ir(IrFunctionWriter &writer) const
 	{
 
 		ir::VRegId dst_reg = writer.new_vreg(ir::IrType::boolean());
@@ -26,12 +27,12 @@ namespace ast
 		return dst_reg;
 	}
 
-	ir::VRegId IdentifierExpression::emit_ir(IrWriter &writer) const
+	ir::VRegId IdentifierExpression::emit_ir(IrFunctionWriter &writer) const
 	{
 		throw CompilerError::unimplemented("TODO IdentifierExpression::emit_ir");
 	}
 
-	ir::VRegId BinaryExpression::emit_ir(IrWriter &writer) const
+	ir::VRegId BinaryExpression::emit_ir(IrFunctionWriter &writer) const
 	{
 		if (this->operation == BinaryOperation::LogicalOr || this->operation == BinaryOperation::LogicalAnd)
 			throw CompilerError::unimplemented(std::format("TODO: emit ir (operator '{}')", this->operator_string()));
@@ -99,7 +100,7 @@ namespace ast
 		return dst_reg;
 	}
 
-	ir::VRegId UnaryExpression::emit_ir(IrWriter &writer) const
+	ir::VRegId UnaryExpression::emit_ir(IrFunctionWriter &writer) const
 	{
 		ir::IrType irType = this->type.resolveType();
 
@@ -127,12 +128,12 @@ namespace ast
 		return dst_reg;
 	}
 
-	ir::VRegId FunctionCall::emit_ir(IrWriter &writer) const
+	ir::VRegId FunctionCall::emit_ir(IrFunctionWriter &writer) const
 	{
 		throw CompilerError::unimplemented("TODO FunctionCall::emit_ir");
 	}
 
-	void ReturnStatement::emit_ir(IrWriter &writer) const
+	void ReturnStatement::emit_ir(IrFunctionWriter &writer) const
 	{
 		if (this->expr.has_value())
 		{
@@ -147,25 +148,25 @@ namespace ast
 
 	void FunctionDefinition::emit_ir(IrWriter &writer) const
 	{
-		writer.new_function(this->name);
+		IrFunctionWriter fn_writer = writer.start_function(this->name);
 
 		// args
 		unsigned short arg_index = 0;
 		for (const ArgDefinition &arg : this->args)
 		{
 			// TODO
-			// writer.add_instr(new instr::LoadArgInstruction(writer.new_vreg(), arg_index));
+			// fn_writer.add_instr(new instr::LoadArgInstruction(fn_writer.new_vreg(), arg_index));
 			++arg_index;
 		}
 
 		// body
 		for (const std::unique_ptr<StatementNode> &stmt : this->body_statements)
-			stmt->emit_ir(writer);
+			stmt->emit_ir(fn_writer);
 		if (this->body_return_expr.has_value())
 		{
 			// create implicit return
-			ir::VRegId return_reg = this->body_return_expr.value()->emit_ir(writer);
-			writer.add_return(return_reg);
+			ir::VRegId return_reg = this->body_return_expr.value()->emit_ir(fn_writer);
+			fn_writer.add_return(return_reg);
 		}
 	}
 }

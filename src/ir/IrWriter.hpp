@@ -1,14 +1,30 @@
 #pragma once
 
-#include <stdint.h>
-#include <vector>
-#include <unordered_map>
+#include <string>
 
 #include "ir/IR.hpp"
 
-/// @brief Wrapper around logic for building an ir::Object. User must claim and clean up resultant object
+class IrFunctionWriter;
+
+/// @brief Container for logic/state for building an ir::Object. User must claim and clean up resultant object
 class IrWriter
 {
+	ir::Object obj;
+
+public:
+	IrWriter();
+
+	/// @brief Creates a new function in this object, returning a writer scoped to it
+	IrFunctionWriter start_function(const std::string &name);
+
+	ir::Object get_obj() { return std::move(this->obj); }
+};
+
+/// @brief Container for logic/state for building a single ir::Function. Created with IrWriter::start_function
+class IrFunctionWriter
+{
+	friend class IrWriter;
+
 	using VRegMap = std::unordered_map<std::string, ir::VRegId>;
 
 	/// @brief A stack of vreg maps, mapping names to assigned virtual registers
@@ -28,19 +44,13 @@ class IrWriter
 		}
 	};
 	/// @brief Map of VRegs loaded with constant immediates, keyed by their type and value
-	/// Note to self, clear for every function
 	std::unordered_map<ConstCacheKey, ir::VRegId, ConstCacheKeyHash> const_cache;
 
-	ir::Object obj;
+	IrFunctionWriter(ir::Function *fn);
 
 public:
-	ir::Function *cur_function = nullptr;
-	ir::BasicBlock *cur_bblock = nullptr;
-
-	IrWriter();
-
-	/// @brief Creates a new function, and sets this writer's context there
-	void new_function(const std::string &name);
+	ir::Function *cur_function;
+	ir::BasicBlock *cur_bblock;
 
 	/// @brief Creates a new local in the current scope, returning its vreg
 	// ir::VRegId new_local(const std::string &name);
@@ -56,8 +66,6 @@ public:
 
 	/// @brief Get a vreg with a constant value (loading it if doesn't exist)
 	ir::VRegId get_const_vreg(ir::IrType type, uint64_t value);
-
-	ir::Object get_obj() { return std::move(this->obj); }
 
 	/// @brief Creates and appends an instruction into the current basic block
 	void add_instr(ir::Op opcode, ir::VRegId dst, ir::VRegId op1, ir::VRegId op2, uint64_t data = 0u);

@@ -121,7 +121,7 @@ namespace ast
 
 		/// @brief Write IR for this node to the provided writer
 		/// @return ID of output register
-		virtual ir::VRegId emit_ir(IrWriter &writer) const = 0;
+		virtual ir::VRegId emit_ir(IrFunctionWriter &writer) const = 0;
 	};
 
 	// statement interface
@@ -132,7 +132,7 @@ namespace ast
 
 	public:
 		/// @brief Write IR for this node to the provided writer
-		virtual void emit_ir(IrWriter &writer) const = 0;
+		virtual void emit_ir(IrFunctionWriter &writer) const = 0;
 	};
 
 	// EXPRESSIONS =============================================================
@@ -153,7 +153,7 @@ namespace ast
 		void resolve_type() override;
 		void check_semantics(SemanticAnalysisState &state) const override;
 
-		ir::VRegId emit_ir(IrWriter &writer) const override;
+		ir::VRegId emit_ir(IrFunctionWriter &writer) const override;
 
 		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
@@ -171,7 +171,7 @@ namespace ast
 		void resolve_type() override;
 		void check_semantics(SemanticAnalysisState &state) const override;
 
-		ir::VRegId emit_ir(IrWriter &writer) const override;
+		ir::VRegId emit_ir(IrFunctionWriter &writer) const override;
 		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
 
@@ -189,7 +189,7 @@ namespace ast
 		void resolve_type() override;
 		void check_semantics(SemanticAnalysisState &state) const override;
 
-		ir::VRegId emit_ir(IrWriter &writer) const override;
+		ir::VRegId emit_ir(IrFunctionWriter &writer) const override;
 		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
 
@@ -229,7 +229,7 @@ namespace ast
 		void resolve_type() override;
 		void check_semantics(SemanticAnalysisState &state) const override;
 
-		ir::VRegId emit_ir(IrWriter &writer) const override;
+		ir::VRegId emit_ir(IrFunctionWriter &writer) const override;
 
 		void print(std::ostream &out, unsigned int depth = 0) const;
 		std::string_view operator_string() const;
@@ -254,7 +254,7 @@ namespace ast
 		void resolve_type() override;
 		void check_semantics(SemanticAnalysisState &state) const override;
 
-		ir::VRegId emit_ir(IrWriter &writer) const override;
+		ir::VRegId emit_ir(IrFunctionWriter &writer) const override;
 
 		void print(std::ostream &out, unsigned int depth = 0) const;
 		std::string_view operator_string() const;
@@ -272,7 +272,7 @@ namespace ast
 		void resolve_type() override;
 		void check_semantics(SemanticAnalysisState &state) const override;
 
-		ir::VRegId emit_ir(IrWriter &writer) const override;
+		ir::VRegId emit_ir(IrFunctionWriter &writer) const override;
 		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
 
@@ -292,7 +292,7 @@ namespace ast
 
 		void check_semantics(SemanticAnalysisState &state) const override;
 
-		void emit_ir(IrWriter &writer) const override;
+		void emit_ir(IrFunctionWriter &writer) const override;
 
 		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
