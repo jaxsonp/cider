@@ -295,6 +295,19 @@ namespace ast
 		}
 	}
 
+	// ==== ExpressionStatement =========================================
+
+	void ExpressionStatement::resolve_symbols(SymbolScope *scope)
+	{
+		this->expr->resolve_symbols(scope);
+	}
+
+	void ExpressionStatement::check_semantics(SemanticAnalysisState &state) const
+	{
+		this->expr->resolve_type();
+		this->expr->check_semantics(state);
+	}
+
 	// ==== ArgDefinition =========================================
 
 	void ArgDefinition::resolve_symbols(SymbolScope *scope)
@@ -360,6 +373,27 @@ namespace ast
 						state.cur_fn_return_type.value().to_string(),
 						expr_type.to_string()),
 					this->body_return_expr.value()->src_loc);
+		}
+
+		// a non-void function has to end by returning something, either with a return statement or a trailing
+		// expression without a semicolon. void functions may simply fall off the end.
+		// TODO: once there's control flow, this needs to check every path rather than just the last statement
+		if (this->return_type.variant != FrontendType::Variant::VOID && !this->body_return_expr.has_value())
+		{
+			const StatementNode *last_stmt = this->body_statements.empty() ? nullptr : this->body_statements.back().get();
+			if (dynamic_cast<const ReturnStatement *>(last_stmt) == nullptr)
+			{
+				std::string hint;
+				auto *last_expr_stmt = dynamic_cast<const ExpressionStatement *>(last_stmt);
+				if (last_expr_stmt != nullptr && last_expr_stmt->expr->type == this->return_type)
+					hint = " (remove the semicolon after the last expression to return it)";
+
+				throw CompilerError::type_error(
+					std::format(
+						"Function '{}' must return '{}', but its body ends without a return statement or trailing expression{}",
+						this->name, this->return_type.to_string(), hint),
+					last_stmt != nullptr ? last_stmt->src_loc : this->src_loc);
+			}
 		}
 
 		state.cur_fn_return_type = std::nullopt;

@@ -134,6 +134,15 @@ namespace ast
 			this->expr.value()->print(out, depth + 1);
 	}
 
+	void ExpressionStatement::print(std::ostream &out, unsigned int depth) const
+	{
+		for (size_t i = 0; i < depth; ++i)
+			out << INDENTATION_STR;
+		out << "Expression statement";
+		out << " [" << this->src_loc.to_string() << "]" << std::endl;
+		this->expr->print(out, depth + 1);
+	}
+
 	// FUNCTION STUFF ==========================================================
 
 	void ArgDefinition::print(std::ostream &out, unsigned int depth) const

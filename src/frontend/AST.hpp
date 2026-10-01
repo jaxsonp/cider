@@ -298,6 +298,23 @@ namespace ast
 		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
 
+	/// An expression evaluated only for its side effects, its value (if any) is discarded
+	struct ExpressionStatement : StatementNode
+	{
+		std::unique_ptr<ExpressionNode> expr;
+
+		ExpressionStatement(SourceLocRange src_loc, std::unique_ptr<ExpressionNode> expr)
+			: StatementNode(src_loc), expr(std::move(expr)) {};
+
+		void resolve_symbols(SymbolScope *scope) override;
+
+		void check_semantics(SemanticAnalysisState &state) const override;
+
+		void emit_ir(IrFunctionWriter &writer) const override;
+
+		void print(std::ostream &out, unsigned int depth = 0) const;
+	};
+
 	// FUNCTION STUFF ==========================================================
 
 	struct ArgDefinition : Node

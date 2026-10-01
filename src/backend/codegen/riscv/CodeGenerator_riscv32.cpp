@@ -459,29 +459,47 @@ namespace codegen
 
 		// load it from stack
 		RegSlot *slot = this->get_empty_slot(code);
-		uint32_t offset = uint32_t(this->spilled_vreg_fp_offsets[vreg]);
+		this->load_spilled_vreg(code, slot->physical, vreg);
+		slot->resident = vreg;
+		slot->occupied = true;
+		return slot;
+	}
+
+	void CodeGenerator_riscv32::load_spilled_vreg(CodeBuffer &code, Register dest, ir::VRegId vreg)
+	{
+		auto found = this->spilled_vreg_fp_offsets.find(vreg);
+		if (found == this->spilled_vreg_fp_offsets.end())
+			throw CompilerError::internal(std::format("RV32 codegen: vreg %{} is neither in a register nor on the stack", vreg));
+		uint32_t offset = uint32_t(found->second);
 		ir::IrType vreg_type = this->cur_fn->vregs.at(vreg);
 		switch (vreg_type.get_size())
 		{
 		case 1:
 			if (vreg_type.is_signed())
-				code.write_lb(slot->physical, Register::fp, offset);
+				code.write_lb(dest, Register::fp, offset);
 			else
-				code.write_lbu(slot->physical, Register::fp, offset);
+				code.write_lbu(dest, Register::fp, offset);
 			break;
 		case 2:
 			if (vreg_type.is_signed())
-				code.write_lh(slot->physical, Register::fp, offset);
+				code.write_lh(dest, Register::fp, offset);
 			else
-				code.write_lhu(slot->physical, Register::fp, offset);
+				code.write_lhu(dest, Register::fp, offset);
 			break;
 		default:
-			code.write_lw(slot->physical, Register::fp, offset);
+			code.write_lw(dest, Register::fp, offset);
 			break;
 		}
-		slot->resident = vreg;
-		slot->occupied = true;
-		return slot;
+	}
+
+	CodeGenerator_riscv32::RegSlot &CodeGenerator_riscv32::slot_for(Register reg)
+	{
+		for (RegSlot &slot : this->registers)
+		{
+			if (slot.physical == reg)
+				return slot;
+		}
+		throw CompilerError::internal("RV32 codegen: register is not managed by the register allocator");
 	}
 
 	CodeGenerator_riscv32::RegSlot *CodeGenerator_riscv32::load_dest_vreg(CodeBuffer &code, ir::VRegId vreg)
@@ -505,7 +523,8 @@ namespace codegen
 		}
 		else
 		{
-			fp_offset = -4 * (this->spilled_vreg_fp_offsets.size() + 4);
+			// spill N lives at fp - 4 * (N + 3), right below the saved ra (fp - 4) and fp (fp - 8)
+			fp_offset = -4 * int32_t(this->spilled_vreg_fp_offsets.size() + 3);
 			this->spilled_vreg_fp_offsets.insert({vreg_id, fp_offset});
 		}
 		switch (vreg_type.get_size())
@@ -590,6 +609,9 @@ namespace codegen
 
 		/// Tasklist of instructions that need their immediates to be retrofitted with the epilogue's offset
 		std::vector<size_t> epilogue_backpatch_list;
+
+		/// Call sites in the body (position of the auipc, callee name), resolved in lower_ir
+		std::vector<std::tuple<size_t, std::string>> call_backpatch_list;
 
 		// prefix traversal of body
 		std::set<ir::BBlockId> seen;
@@ -902,9 +924,60 @@ namespace codegen
 						throw CompilerError::internal("Uncaught UnaryOp variant");
 					}
 				}
+				else if (const ir::LoadArgInstruction *arg_ptr = std::get_if<ir::LoadArgInstruction>(&instr_slot))
+				{
+					const ir::LoadArgInstruction &instr = *arg_ptr;
+
+					if (instr.index >= MAX_REGISTER_ARGS)
+						throw CompilerError::unimplemented(
+							std::format("RV32 codegen: functions with more than {} parameters (stack-passed arguments)", MAX_REGISTER_ARGS));
+
+					// the argument is already sitting in its a-register, so just claim that register for the vreg.
+					// this only works while nothing else has been allocated there, ie at the very start of the function
+					RegSlot &slot = this->slot_for(Register(uint8_t(Register::a0) + instr.index));
+					if (slot.occupied)
+						throw CompilerError::internal("RV32 codegen: argument register was clobbered before its argument was loaded");
+					slot.resident = instr.dest;
+					slot.occupied = true;
+					slot.dirty = true;
+				}
+				else if (const ir::CallInstruction *call_ptr = std::get_if<ir::CallInstruction>(&instr_slot))
+				{
+					const ir::CallInstruction &instr = *call_ptr;
+
+					if (instr.args.size() > MAX_REGISTER_ARGS)
+						throw CompilerError::unimplemented(
+							std::format("RV32 codegen: calls with more than {} arguments (stack-passed arguments)", MAX_REGISTER_ARGS));
+
+					// every allocatable register is caller saved, so everything live has to go to the stack first
+					for (RegSlot &slot : this->registers)
+					{
+						if (slot.dirty)
+							this->spill_slot(body, slot);
+						slot.occupied = false;
+					}
+
+					// now every vreg is on the stack. loading arguments straight from there avoids having to shuffle
+					// values between registers, and the sized loads also give the callee properly extended values
+					for (size_t i = 0; i < instr.args.size(); ++i)
+						this->load_spilled_vreg(body, Register(uint8_t(Register::a0) + i), instr.args[i]);
+
+					// auipc + jalr reaches anywhere in the address space, offsets are filled in by lower_ir
+					size_t pos = body.write_auipc(Register::ra, 0u);
+					body.write_jalr(Register::ra, Register::ra, 0u);
+					call_backpatch_list.push_back({pos, instr.callee});
+
+					if (instr.dest.has_value())
+					{
+						RegSlot &ret_slot = this->slot_for(Register::a0);
+						ret_slot.resident = instr.dest.value();
+						ret_slot.occupied = true;
+						ret_slot.dirty = true;
+					}
+				}
 				else
 				{
-					throw CompilerError::unimplemented("RISC-V codegen: function call/argument lowering is not implemented yet");
+					throw CompilerError::internal("RV32 codegen: uncaught IR instruction variant");
 				}
 			}
 
@@ -920,6 +993,12 @@ namespace codegen
 					// the value leaves the compiler here, so it has to be in its canonical form
 					this->truncate_reg(body, ret_value_slot);
 					body.write_addi(Register::a0, ret_value_slot->physical, 0u);
+				}
+				else if (fn.name == "main")
+				{
+					// main's return value becomes the exit code, so a void main must exit cleanly rather than with
+					// whatever was left in a0
+					body.write_addi(Register::a0, Register::zero, 0u);
 				}
 
 				size_t pos = body.write_jal(Register::zero, 0u);
@@ -1050,6 +1129,11 @@ namespace codegen
 			.code_offset = obj.code.size(),
 		});
 
+		// call sites are relative to the body, make them relative to the object
+		size_t body_start = obj.code.size() + 4 * prologue.cur_offset();
+		for (const auto &[pos, callee] : call_backpatch_list)
+			this->call_fixups.push_back(CallFixup{.code_offset = body_start + 4 * pos, .callee = callee});
+
 		// write to .text
 		prologue.dump_to_bytes(obj.code);
 		body.dump_to_bytes(obj.code);
@@ -1063,9 +1147,48 @@ namespace codegen
 		log_vv("Starting lowering to RV32");
 		Object obj;
 
+		this->call_fixups.clear();
 		for (const auto &[name, fn] : ir.functions)
 		{
 			this->lower_function(*fn, obj);
+		}
+
+		// now every function has a known offset, so calls can be pointed at them
+		log_vvv("Resolving {} call site(s)", this->call_fixups.size());
+		std::unordered_map<std::string, size_t> fn_offsets;
+		for (const Object::Function &fn : obj.functions)
+			fn_offsets.insert({fn.name, fn.code_offset});
+
+		auto read_word = [&obj](size_t at)
+		{
+			uint32_t word = 0;
+			for (size_t i = 0; i < 4; ++i)
+				word |= uint32_t(obj.code.at(at + i)) << (8 * i);
+			return word;
+		};
+		auto write_word = [&obj](size_t at, uint32_t word)
+		{
+			for (size_t i = 0; i < 4; ++i)
+				obj.code.at(at + i) = uint8_t(word >> (8 * i));
+		};
+
+		for (const CallFixup &fixup : this->call_fixups)
+		{
+			auto target = fn_offsets.find(fixup.callee);
+			if (target == fn_offsets.end())
+				throw CompilerError::internal(std::format("RV32 codegen: call to unknown function \"{}\"", fixup.callee));
+
+			// auipc and jalr both sit at fixup.code_offset when the address is computed, so the offset is
+			// relative to the auipc
+			uint32_t rel_offset = uint32_t(target->second) - uint32_t(fixup.code_offset);
+			// jalr sign extends its 12 bit immediate, so round the upper part to compensate
+			uint32_t hi = (rel_offset + 0x800u) & ~lower_bitmask<uint32_t>(12);
+			uint32_t lo = rel_offset & lower_bitmask<uint32_t>(12);
+
+			size_t auipc_at = fixup.code_offset;
+			size_t jalr_at = fixup.code_offset + 4;
+			write_word(auipc_at, (read_word(auipc_at) & lower_bitmask<uint32_t>(12)) | hi);
+			write_word(jalr_at, (read_word(jalr_at) & lower_bitmask<uint32_t>(20)) | (lo << 20));
 		}
 
 		return obj;

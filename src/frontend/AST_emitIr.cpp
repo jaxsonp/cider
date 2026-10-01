@@ -164,6 +164,12 @@ namespace ast
 		}
 	}
 
+	void ExpressionStatement::emit_ir(IrFunctionWriter &writer) const
+	{
+		// the resulting vreg (if any) is just never used
+		this->expr->emit_ir(writer);
+	}
+
 	void FunctionDefinition::emit_ir(IrWriter &writer) const
 	{
 		std::vector<ir::IrType> param_types;
@@ -203,6 +209,12 @@ namespace ast
 				ir::VRegId return_reg = return_expr->emit_ir(fn_writer);
 				fn_writer.add_return(return_reg);
 			}
+		}
+		else if (this->return_type.variant == FrontendType::Variant::VOID)
+		{
+			// falling off the end of a void function returns. if the body already ended in a return, this lands in
+			// the fresh unreachable block that return left behind, which is harmless
+			fn_writer.add_return();
 		}
 	}
 }

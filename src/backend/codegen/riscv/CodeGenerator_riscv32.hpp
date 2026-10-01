@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "backend/codegen/CodeGenerator.hpp"
 
@@ -24,6 +25,11 @@ namespace codegen
 	/// Register allocation strategy:
 	/// Local allocation - Per basic-block, assign and track vregs in registers, spill to stack as needed or at end of bb.
 	/// Currently only uses caller saved registers
+	///
+	/// Calling convention (subset of the standard ILP32 ABI):
+	/// Arguments are passed in a0-a7 (stack-passed arguments are not supported yet), and the return value comes
+	/// back in a0. Narrow integer arguments and return values are sign/zero extended to 32 bits. Since every
+	/// allocatable register is caller saved, all live values are spilled to the stack before a call.
 	class CodeGenerator_riscv32 : public CodeGenerator
 	{
 		/// @brief Maximum size that an immediate can fit into an I-type instruction
@@ -190,6 +196,28 @@ namespace codegen
 
 		/// Function currently being lowered, for looking up vreg types (spill width, div/rem signedness, etc.)
 		const ir::Function *cur_fn = nullptr;
+
+		/// Number of arguments that can be passed in registers (a0-a7)
+		static constexpr size_t MAX_REGISTER_ARGS = 8;
+
+		/// @brief A call site whose target offset isn't known until every function has been lowered
+		struct CallFixup
+		{
+			/// Byte offset into the object's code of the call's auipc (immediately followed by its jalr)
+			size_t code_offset;
+			/// Name of the function being called
+			std::string callee;
+		};
+
+		/// Call sites across the whole object, patched once every function has a known offset
+		std::vector<CallFixup> call_fixups;
+
+		/// @brief Returns the register slot for a specific physical register
+		RegSlot &slot_for(Register reg);
+
+		/// @brief Loads a spilled vreg from its stack slot into a physical register, sign/zero extending narrow
+		/// types. Does not touch register allocation state
+		void load_spilled_vreg(CodeBuffer &code, Register dest, ir::VRegId vreg);
 
 		/// @brief Gets a physical register loaded with the value of a virtual register
 		/// @param vreg ID of vreg to put into a register

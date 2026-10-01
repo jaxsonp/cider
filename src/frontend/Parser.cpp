@@ -66,6 +66,7 @@ namespace parse
 		// body
 		lexer.expect(TokenType::L_CURLY_BRACKET);
 		std::vector<std::unique_ptr<ast::StatementNode>> body_statements;
+		std::optional<std::unique_ptr<ast::ExpressionNode>> return_expr = std::nullopt;
 		while (true)
 		{
 			if (auto statement = try_parse_stmt(lexer))
@@ -73,14 +74,21 @@ namespace parse
 				body_statements.emplace_back(std::move(statement.value()));
 				continue;
 			}
-			break;
-		}
 
-		// optional return expression
-		std::optional<std::unique_ptr<ast::ExpressionNode>> return_expr = std::nullopt;
-		if (auto parsed_return_expr = try_parse_expr(lexer))
-		{
-			return_expr = std::move(parsed_return_expr.value());
+			// an expression is either an expression statement (followed by ';') or the optional trailing return
+			// expression, which has to be the last thing in the block
+			if (auto expr = try_parse_expr(lexer))
+			{
+				if (lexer.peek().type == TokenType::SEMICOLON)
+				{
+					SourceLoc stmt_end = lexer.take().loc.end;
+					SourceLocRange stmt_loc{expr.value()->src_loc.start, stmt_end};
+					body_statements.emplace_back(std::make_unique<ast::ExpressionStatement>(stmt_loc, std::move(expr.value())));
+					continue;
+				}
+				return_expr = std::move(expr.value());
+			}
+			break;
 		}
 
 		SourceLoc end = lexer.expect(TokenType::R_CURLY_BRACKET).loc.end;
