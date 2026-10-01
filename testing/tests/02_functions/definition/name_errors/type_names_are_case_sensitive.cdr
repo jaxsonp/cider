@@ -1,0 +1,5 @@
+//! BUILD_EXIT_CODE=2
+
+fn main() -> I32 {
+	0i32
+}

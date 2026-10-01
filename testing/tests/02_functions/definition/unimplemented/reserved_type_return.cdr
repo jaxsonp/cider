@@ -1,0 +1,6 @@
+//! BUILD_EXIT_CODE=253
+
+// addr is reserved by the grammar but not implemented yet. update this test once it is
+fn main() -> addr {
+	0i32
+}

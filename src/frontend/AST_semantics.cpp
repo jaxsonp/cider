@@ -46,6 +46,12 @@ namespace ast
 	void IdentifierExpression::resolve_type()
 	{
 		this->type = this->symbol->type;
+
+		// there are no function values (pointers) yet, so a function name is only meaningful when it's being called
+		if (this->type.is_function() && !this->is_callee)
+			throw CompilerError::type_error(
+				std::format("Function '{}' can only be called, functions can't be used as values", this->name),
+				this->src_loc);
 	}
 
 	void IdentifierExpression::check_semantics(SemanticAnalysisState &state) const {}
@@ -223,6 +229,8 @@ namespace ast
 
 	void FunctionCall::resolve_type()
 	{
+		if (auto *callee_ident = dynamic_cast<IdentifierExpression *>(this->callee.get()))
+			callee_ident->is_callee = true;
 		this->callee->resolve_type();
 
 		if (!this->callee->type.is_function())

@@ -5,7 +5,7 @@ top_level_decl = function_definition
 
 function_definition = "fn", ident, "(", arg_definition_list, ")", [ "->", type ], block ;
 
-arg_definition_list = [ arg_definition, { ",", arg_definition } ] ;
+arg_definition_list = [ arg_definition, { ",", arg_definition }, [ "," ] ] ;
 
 arg_definition = ident, ":", type ;
 

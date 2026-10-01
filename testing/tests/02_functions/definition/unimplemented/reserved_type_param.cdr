@@ -1,0 +1,8 @@
+//! BUILD_EXIT_CODE=253
+
+// u64 is reserved by the grammar but not implemented yet. update this test once it is
+fn f(x: u64) {}
+
+fn main() -> i32 {
+	0i32
+}

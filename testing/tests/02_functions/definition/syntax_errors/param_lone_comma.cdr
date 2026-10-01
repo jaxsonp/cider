@@ -1,0 +1,7 @@
+//! BUILD_EXIT_CODE=1
+
+fn f(,) {}
+
+fn main() -> i32 {
+	0i32
+}

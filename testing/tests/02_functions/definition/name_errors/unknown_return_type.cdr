@@ -1,0 +1,5 @@
+//! BUILD_EXIT_CODE=2
+
+fn main() -> foo {
+	0i32
+}

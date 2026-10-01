@@ -129,8 +129,8 @@ namespace ast
 	ir::VRegId FunctionCall::emit_ir(IrFunctionWriter &writer) const
 	{
 		// Cider has no function-pointer values yet, so a callable expression can only be a direct
-		// reference to a named top-level function (enforced by FrontendType::resolveType rejecting
-		// FUNCTION-typed values elsewhere)
+		// reference to a named top-level function (enforced by IdentifierExpression::resolve_type rejecting
+		// function names anywhere other than as a callee)
 		auto *callee_ident = dynamic_cast<IdentifierExpression *>(this->callee.get());
 		if (callee_ident == nullptr)
 			throw CompilerError::internal("FunctionCall::emit_ir: callee is not a direct function reference");

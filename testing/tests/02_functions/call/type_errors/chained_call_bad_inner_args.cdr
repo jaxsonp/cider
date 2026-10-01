@@ -1,0 +1,10 @@
+//! BUILD_EXIT_CODE=3
+
+// the inner call is checked first, so its argument count is the reported error
+fn five() -> i32 {
+	5i32
+}
+
+fn main() -> i32 {
+	five(1i32)()
+}

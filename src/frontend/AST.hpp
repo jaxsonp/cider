@@ -180,9 +180,12 @@ namespace ast
 		std::string name;
 		/// @brief Symbol that this identifier is referencing. nullptr until `.resolved_symbols(...)` is called
 		Symbol *symbol = nullptr;
+		/// @brief Whether this identifier is directly being called, the only place a function name may appear until
+		/// there are function values. Set by the enclosing FunctionCall
+		bool is_callee = false;
 
-		IdentifierExpression(SourceLocRange src_loc, std::string_view name)
-			: ExpressionNode(src_loc), name(name) {}
+		IdentifierExpression(SourceLocRange src_loc, std::string_view name, bool is_callee = false)
+			: ExpressionNode(src_loc), name(name), is_callee(is_callee) {}
 
 		void resolve_symbols(SymbolScope *scope) override;
 

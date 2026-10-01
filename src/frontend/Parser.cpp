@@ -9,6 +9,19 @@
 
 namespace parse
 {
+	/// @brief Looks up the type named by an identifier token, throwing if no such type exists
+	static FrontendType type_from_token(const Token &tok)
+	{
+		FrontendType type = FrontendType::from_string(tok.str);
+		if (type.variant != FrontendType::Variant::UNKNOWN)
+			return type;
+
+		// these are reserved by the grammar but have no backing implementation yet
+		if (tok.str == "u64" || tok.str == "i64" || tok.str == "addr")
+			throw CompilerError::unimplemented(std::format("Type '{}' is not supported yet", tok.str), tok.loc);
+		throw CompilerError::name_error(std::format("Unknown type '{}'", tok.str), tok.loc);
+	}
+
 	// TOP LEVEL ===============================================================
 
 	std::optional<std::unique_ptr<ast::TopLevelDeclaration>> try_parse_top_level_decl(Lexer &lexer)
@@ -45,11 +58,11 @@ namespace parse
 					lexer.take();
 					continue;
 				}
-				else if (lexer.peek().type == TokenType::R_PAREN)
-					lexer.take();
+				else
+					lexer.expect(TokenType::R_PAREN);
 			}
-			else if (lexer.peek().type == TokenType::R_PAREN)
-				lexer.take();
+			else
+				lexer.expect(TokenType::R_PAREN);
 
 			break;
 		}
@@ -60,7 +73,7 @@ namespace parse
 		{
 			lexer.take();
 			Token type_tok = lexer.expect(TokenType::IDENT);
-			return_type = FrontendType::from_string(type_tok.str);
+			return_type = type_from_token(type_tok);
 		}
 
 		// body
@@ -107,7 +120,7 @@ namespace parse
 		return ast::ArgDefinition(
 			SourceLocRange{name_tok.loc.start, type_tok.loc.end},
 			std::move(name_tok.str),
-			FrontendType::from_string(type_tok.str));
+			type_from_token(type_tok));
 	}
 
 	// STATEMENTS ==============================================================
@@ -476,12 +489,14 @@ namespace parse
 		if (!subject.has_value())
 			return std::nullopt;
 
-		if (lexer.peek().type == TokenType::L_PAREN)
+		// postfix operators chain left to right, eg f()() calls whatever f() returns
+		std::unique_ptr<ast::ExpressionNode> expr = std::move(subject.value());
+		while (lexer.peek().type == TokenType::L_PAREN)
 		{
 			// function call
 			lexer.take();
 
-			auto callee_expr = std::move(subject.value());
+			auto callee_expr = std::move(expr);
 
 			// parsing arguments
 			std::vector<std::unique_ptr<ast::ExpressionNode>> args;
@@ -502,11 +517,10 @@ namespace parse
 
 			SourceLoc end = lexer.expect(TokenType::R_PAREN).loc.end;
 
-			return std::make_unique<ast::FunctionCall>(SourceLocRange{callee_expr->src_loc.start, end}, std::move(callee_expr), std::move(args));
+			expr = std::make_unique<ast::FunctionCall>(SourceLocRange{callee_expr->src_loc.start, end}, std::move(callee_expr), std::move(args));
 		}
 
-		// normal expression, no postfix operator
-		return subject;
+		return expr;
 	}
 
 	/// Primary expression (aka "atom"), transparent so doesn't produce a node of its own

@@ -21,19 +21,17 @@ _For Jaxson's eyes only_
 	- Platform detection
 	- Non-decimal int literals
 	- Stack-passed function arguments (more than 8, only a0-a7 are supported right now)
-	- `five == five` (comparing function names) passes type checking then hits an internal error in IR emission
-	- Unknown type names (`fn f(x: foo)`, `-> foo`) are an internal error instead of a name error
-	- Trailing comma is accepted in parameter lists (`fn f(a: i32,)`) but not call args, grammar allows neither
-	- Chained postfix ops (`f()()`) don't parse, try_parse_postfix doesn't loop like the grammar says
 	- Missing-return check only looks at the last statement, needs real control flow analysis once ifs/loops exist
 	- Indirect function calling
 - Before self-hosting:
+	- control flow analysis (for checking if a function returns, among others probably)
 	- locals vars
 	- if statements
 	- loops
 	- floats
 	- global vars
 		- global init dependency checking
+	- higher-order functions (AST identifier exprs will no longer need the 'is_callee' member)
 	- structs
 	- traits
 	- stdlib

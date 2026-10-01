@@ -1,0 +1,13 @@
+//! EXIT_CODE=7
+
+fn sub(a: i32, b: i32,) -> i32 {
+	a - b
+}
+
+fn one(a: i32,) -> i32 {
+	a
+}
+
+fn main() -> i32 {
+	sub(9i32, 2i32) * one(1i32)
+}
