@@ -1,0 +1,9 @@
+//! EXIT_CODE=50
+
+fn identity(x: i32) -> i32 {
+	x
+}
+
+fn main() -> i32 {
+	return identity(5i32 * 10i32);
+}

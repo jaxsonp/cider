@@ -1,0 +1,14 @@
+//! EXIT_CODE=33
+
+// a and b arrive in a0/a1, which the inner call clobbers
+fn ten() -> i32 {
+	10i32
+}
+
+fn combine(a: i32, b: i32) -> i32 {
+	a + ten() + b
+}
+
+fn main() -> i32 {
+	return combine(20i32, 3i32);
+}

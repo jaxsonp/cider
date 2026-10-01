@@ -1,0 +1,9 @@
+//! EXIT_CODE=10
+
+fn add(a: i32, b: i32) -> i32 {
+	a + b
+}
+
+fn main() -> i32 {
+	return add(add(1i32, 2i32), add(3i32, 4i32));
+}

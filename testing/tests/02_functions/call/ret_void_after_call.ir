@@ -1,0 +1,13 @@
+fn five() -> i32 {
+  %0: i32
+bb0: // five start
+  %0 = loadimm 5
+  ret %0
+}
+
+fn main() {
+  %0: i32
+bb0: // main start
+  %0 = call five()
+  ret
+}

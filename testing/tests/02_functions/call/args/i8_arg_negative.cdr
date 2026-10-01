@@ -1,0 +1,10 @@
+//! EXIT_CODE=228
+
+// 100i8 + 100i8 wraps to -56i8, -56 / 2 is -28, which exits as 228
+fn half(x: i8) -> i8 {
+	x / 2i8
+}
+
+fn main() -> i8 {
+	return half(100i8 + 100i8);
+}

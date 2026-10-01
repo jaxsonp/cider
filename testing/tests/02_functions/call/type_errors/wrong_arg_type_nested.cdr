@@ -1,0 +1,9 @@
+//! BUILD_EXIT_CODE=3
+
+fn add(a: i32, b: i32) -> i32 {
+	a + b
+}
+
+fn main() -> i32 {
+	add(add(1i32, 2u32), 3i32)
+}

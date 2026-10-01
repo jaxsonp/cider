@@ -1,0 +1,8 @@
+//! EXIT_CODE=7
+
+fn nothing() {}
+
+fn main() -> i32 {
+	nothing();
+	return 7i32;
+}

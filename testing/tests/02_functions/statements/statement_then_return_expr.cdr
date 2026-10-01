@@ -1,0 +1,10 @@
+//! EXIT_CODE=4
+
+fn five() -> i32 {
+	5i32
+}
+
+fn main() -> i32 {
+	five();
+	4i32
+}

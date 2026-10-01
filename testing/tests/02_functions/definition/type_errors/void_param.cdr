@@ -1,0 +1,7 @@
+//! BUILD_EXIT_CODE=3
+
+fn f(x: void) {}
+
+fn main() -> i32 {
+	0i32
+}

@@ -1,1 +1,4 @@
+//! BUILD_EXIT_CODE=3
+
+// a non-void function needs a return statement or trailing expression
 fn main() -> u32 {}

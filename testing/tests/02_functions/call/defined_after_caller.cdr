@@ -1,0 +1,9 @@
+//! EXIT_CODE=9
+
+fn main() -> i32 {
+	return later();
+}
+
+fn later() -> i32 {
+	return 9i32;
+}

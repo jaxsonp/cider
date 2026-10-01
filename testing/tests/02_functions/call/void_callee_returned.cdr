@@ -1,0 +1,9 @@
+//! EXIT_CODE=0
+
+fn nothing() {
+	return;
+}
+
+fn main() {
+	return nothing();
+}
