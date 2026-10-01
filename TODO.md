@@ -18,13 +18,13 @@ _For Jaxson's eyes only_
 		- Test timeouts
 		- finish stdout/stderr checking
 	- Platform detection
+	- Non-decimal int literals
+	- Function arguments
+	- Indirect function calling
 - Before self-hosting:
 	- locals vars
 	- if statements
 	- loops
-	- functions
-		- function definitions/declaration
-		- arguments
 	- floats
 	- global vars
 		- global init dependency checking
@@ -55,6 +55,8 @@ _For Jaxson's eyes only_
 - Perhaps?
 	- No bitwise operators, only methods with explicit behavior such as wrapping, unchecked, etc
 	- If I do macros, macros for cur fn and line
+	- Trailing commas in function calls, etc
+	- register-immediate instructions in IR
 
 ## Notes for documentation
 

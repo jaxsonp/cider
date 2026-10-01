@@ -263,9 +263,10 @@ namespace ast
 	struct FunctionCall : public ExpressionNode
 	{
 		std::unique_ptr<ExpressionNode> callee;
+		std::vector<std::unique_ptr<ExpressionNode>> args;
 
-		FunctionCall(SourceLocRange src_loc, std::unique_ptr<ExpressionNode> callee)
-			: ExpressionNode(src_loc), callee(std::move(callee)) {}
+		FunctionCall(SourceLocRange src_loc, std::unique_ptr<ExpressionNode> callee, std::vector<std::unique_ptr<ExpressionNode>> args)
+			: ExpressionNode(src_loc), callee(std::move(callee)), args(std::move(args)) {}
 
 		void resolve_symbols(SymbolScope *scope) override;
 

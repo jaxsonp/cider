@@ -1,10 +1,14 @@
 #include "ir/IrWriter.hpp"
 
+#include <format>
+
+#include "utils/error.hpp"
+
 IrWriter::IrWriter() = default;
 
-IrFunctionWriter IrWriter::start_function(const std::string &name)
+IrFunctionWriter IrWriter::start_function(const std::string &name, std::vector<ir::IrType> param_types, std::optional<ir::IrType> return_type)
 {
-	ir::Function *fn = new ir::Function(name);
+	ir::Function *fn = new ir::Function(name, std::move(param_types), std::move(return_type));
 	this->obj.functions.insert({name, fn});
 	return IrFunctionWriter(fn);
 }
@@ -15,9 +19,9 @@ IrFunctionWriter::IrFunctionWriter(ir::Function *fn)
 	this->vreg_map_scopes.emplace_back();
 }
 
-/*ir::VRegId IrFunctionWriter::new_local(const std::string &name)
+ir::VRegId IrFunctionWriter::new_local(const std::string &name, ir::IrType type)
 {
-	ir::VRegId id = this->new_vreg();
+	ir::VRegId id = this->new_vreg(type);
 	this->vreg_map_scopes.back().insert({name, id});
 	return id;
 }
@@ -34,7 +38,7 @@ ir::VRegId IrFunctionWriter::get_local(const std::string &name) const
 		}
 	}
 	throw CompilerError::internal(std::format("Failed to find vreg allocation for name \"{}\"", name));
-}*/
+}
 
 void IrFunctionWriter::push_scope()
 {
@@ -69,16 +73,41 @@ ir::VRegId IrFunctionWriter::get_const_vreg(ir::IrType type, uint64_t value)
 		this->const_cache.insert({key, dest});
 
 		// load the value
-		this->add_instr(ir::Op::LoadImm, dest, ir::NO_VREG, ir::NO_VREG, value);
+		this->add_immediate(dest, value);
 
 		return dest;
 	}
 }
 
-void IrFunctionWriter::add_instr(ir::Op opcode, ir::VRegId dst, ir::VRegId op1, ir::VRegId op2, uint64_t data)
+void IrFunctionWriter::add_binary(ir::BinaryOp op, ir::VRegId dest, ir::VRegId lhs, ir::VRegId rhs)
 {
-	ir::Instruction instr{opcode, dst, op1, op2, data};
-	this->cur_bblock->instructions.push_back(instr);
+	this->cur_bblock->instructions.push_back(ir::BinaryInstruction{op, dest, lhs, rhs});
+}
+
+void IrFunctionWriter::add_unary(ir::UnaryOp op, ir::VRegId dest, ir::VRegId src)
+{
+	this->cur_bblock->instructions.push_back(ir::UnaryInstruction{op, dest, src});
+}
+
+void IrFunctionWriter::add_immediate(ir::VRegId dest, uint64_t value)
+{
+	this->cur_bblock->instructions.push_back(ir::ImmediateInstruction{dest, value});
+}
+
+void IrFunctionWriter::add_load_arg(ir::VRegId dest, uint64_t index)
+{
+	this->cur_bblock->instructions.push_back(ir::LoadArgInstruction{dest, index});
+}
+
+ir::VRegId IrFunctionWriter::add_call(const std::string &callee, std::optional<ir::IrType> return_type, std::vector<ir::VRegId> args)
+{
+	std::optional<ir::VRegId> dest;
+	if (return_type.has_value())
+		dest = this->new_vreg(*return_type);
+
+	this->cur_bblock->instructions.push_back(ir::CallInstruction{dest, callee, std::move(args)});
+
+	return dest.value_or(ir::NO_VREG);
 }
 
 void IrFunctionWriter::add_return(ir::VRegId ret_value)

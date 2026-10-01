@@ -13,8 +13,7 @@ namespace ast
 		ir::IrType irType = this->type.resolveType();
 
 		ir::VRegId dst_reg = writer.new_vreg(irType);
-		// load imm instruction ignores op1 and op2 regs
-		writer.add_instr(ir::Op::LoadImm, dst_reg, ir::NO_VREG, ir::NO_VREG, raw_value);
+		writer.add_immediate(dst_reg, raw_value);
 		return dst_reg;
 	}
 
@@ -22,14 +21,13 @@ namespace ast
 	{
 
 		ir::VRegId dst_reg = writer.new_vreg(ir::IrType::boolean());
-		// load imm instruction ignores op1 and op2 regs
-		writer.add_instr(ir::Op::LoadImm, dst_reg, ir::NO_VREG, ir::NO_VREG, this->value ? 1u : 0u);
+		writer.add_immediate(dst_reg, this->value ? 1u : 0u);
 		return dst_reg;
 	}
 
 	ir::VRegId IdentifierExpression::emit_ir(IrFunctionWriter &writer) const
 	{
-		throw CompilerError::unimplemented("TODO IdentifierExpression::emit_ir");
+		return writer.get_local(this->name);
 	}
 
 	ir::VRegId BinaryExpression::emit_ir(IrFunctionWriter &writer) const
@@ -37,56 +35,56 @@ namespace ast
 		if (this->operation == BinaryOperation::LogicalOr || this->operation == BinaryOperation::LogicalAnd)
 			throw CompilerError::unimplemented(std::format("TODO: emit ir (operator '{}')", this->operator_string()));
 
-		ir::Op op_code;
+		ir::BinaryOp op_code;
 		switch (this->operation)
 		{
 		case BinaryOperation::Equal:
-			op_code = ir::Op::CmpEq;
+			op_code = ir::BinaryOp::CmpEq;
 			break;
 		case BinaryOperation::NotEqual:
-			op_code = ir::Op::CmpNe;
+			op_code = ir::BinaryOp::CmpNe;
 			break;
 		case BinaryOperation::LessThan:
-			op_code = ir::Op::CmpLt;
+			op_code = ir::BinaryOp::CmpLt;
 			break;
 		case BinaryOperation::LessThanOrEqual:
-			op_code = ir::Op::CmpLte;
+			op_code = ir::BinaryOp::CmpLte;
 			break;
 		case BinaryOperation::GreaterThan:
-			op_code = ir::Op::CmpGt;
+			op_code = ir::BinaryOp::CmpGt;
 			break;
 		case BinaryOperation::GreaterThanOrEqual:
-			op_code = ir::Op::CmpGte;
+			op_code = ir::BinaryOp::CmpGte;
 			break;
 		case BinaryOperation::BitwiseOr:
-			op_code = ir::Op::BitOr;
+			op_code = ir::BinaryOp::BitOr;
 			break;
 		case BinaryOperation::BitwiseXor:
-			op_code = ir::Op::BitXor;
+			op_code = ir::BinaryOp::BitXor;
 			break;
 		case BinaryOperation::BitwiseAnd:
-			op_code = ir::Op::BitAnd;
+			op_code = ir::BinaryOp::BitAnd;
 			break;
 		case BinaryOperation::ShiftLeft:
-			op_code = ir::Op::BitShl;
+			op_code = ir::BinaryOp::BitShl;
 			break;
 		case BinaryOperation::ShiftRight:
-			op_code = ir::Op::BitShr;
+			op_code = ir::BinaryOp::BitShr;
 			break;
 		case BinaryOperation::Add:
-			op_code = ir::Op::Add;
+			op_code = ir::BinaryOp::Add;
 			break;
 		case BinaryOperation::Subtract:
-			op_code = ir::Op::Sub;
+			op_code = ir::BinaryOp::Sub;
 			break;
 		case BinaryOperation::Multiply:
-			op_code = ir::Op::Mul;
+			op_code = ir::BinaryOp::Mul;
 			break;
 		case BinaryOperation::Divide:
-			op_code = ir::Op::Div;
+			op_code = ir::BinaryOp::Div;
 			break;
 		case BinaryOperation::Modulus:
-			op_code = ir::Op::Rem;
+			op_code = ir::BinaryOp::Rem;
 			break;
 		default:
 			throw CompilerError::internal("Uncaught BinaryExpression::Operator variant");
@@ -96,7 +94,7 @@ namespace ast
 		ir::VRegId l_reg = this->l_expr->emit_ir(writer);
 		ir::VRegId r_reg = this->r_expr->emit_ir(writer);
 		ir::VRegId dst_reg = writer.new_vreg(irType);
-		writer.add_instr(op_code, dst_reg, l_reg, r_reg);
+		writer.add_binary(op_code, dst_reg, l_reg, r_reg);
 		return dst_reg;
 	}
 
@@ -109,17 +107,17 @@ namespace ast
 		switch (this->operation)
 		{
 		case UnaryOperation::Negation:
-			writer.add_instr(ir::Op::Neg, dst_reg, src_reg, ir::NO_VREG);
+			writer.add_unary(ir::UnaryOp::Neg, dst_reg, src_reg);
 			break;
 		case UnaryOperation::LogicalNot:
 		{
 			ir::VRegId one_reg = writer.get_const_vreg(irType, 1u);
-			writer.add_instr(ir::Op::BitXor, dst_reg, src_reg, one_reg);
+			writer.add_binary(ir::BinaryOp::BitXor, dst_reg, src_reg, one_reg);
 			break;
 		}
 		case UnaryOperation::BitwiseNot:
 		{
-			writer.add_instr(ir::Op::BitNot, dst_reg, src_reg, ir::NO_VREG);
+			writer.add_unary(ir::UnaryOp::BitNot, dst_reg, src_reg);
 			break;
 		}
 		default:
@@ -130,32 +128,61 @@ namespace ast
 
 	ir::VRegId FunctionCall::emit_ir(IrFunctionWriter &writer) const
 	{
-		throw CompilerError::unimplemented("TODO FunctionCall::emit_ir");
+		// Cider has no function-pointer values yet, so a callable expression can only be a direct
+		// reference to a named top-level function (enforced by FrontendType::resolveType rejecting
+		// FUNCTION-typed values elsewhere)
+		auto *callee_ident = dynamic_cast<IdentifierExpression *>(this->callee.get());
+		if (callee_ident == nullptr)
+			throw CompilerError::internal("FunctionCall::emit_ir: callee is not a direct function reference");
+
+		std::vector<ir::VRegId> arg_regs;
+		arg_regs.reserve(this->args.size());
+		for (const std::unique_ptr<ExpressionNode> &arg : this->args)
+			arg_regs.push_back(arg->emit_ir(writer));
+
+		std::optional<ir::IrType> return_type;
+		if (this->type.variant != FrontendType::Variant::VOID)
+			return_type = this->type.resolveType();
+
+		// if return_type is nullopt, the returned vreg is ir::NO_VREG and must not be used
+		return writer.add_call(callee_ident->name, return_type, std::move(arg_regs));
 	}
 
 	void ReturnStatement::emit_ir(IrFunctionWriter &writer) const
 	{
-		if (this->expr.has_value())
+		if (this->expr.has_value() && this->expr.value()->type.variant != FrontendType::Variant::VOID)
 		{
 			ir::VRegId return_reg = this->expr.value()->emit_ir(writer);
 			writer.add_return(return_reg);
 		}
 		else
 		{
+			// a void expression (only a void function call today) is still emitted for its side effects
+			if (this->expr.has_value())
+				this->expr.value()->emit_ir(writer);
 			writer.add_return();
 		}
 	}
 
 	void FunctionDefinition::emit_ir(IrWriter &writer) const
 	{
-		IrFunctionWriter fn_writer = writer.start_function(this->name);
+		std::vector<ir::IrType> param_types;
+		param_types.reserve(this->args.size());
+		for (const ArgDefinition &arg : this->args)
+			param_types.push_back(arg.type.resolveType());
+
+		std::optional<ir::IrType> ir_return_type;
+		if (this->return_type.variant != FrontendType::Variant::VOID)
+			ir_return_type = this->return_type.resolveType();
+
+		IrFunctionWriter fn_writer = writer.start_function(this->name, std::move(param_types), ir_return_type);
 
 		// args
-		unsigned short arg_index = 0;
+		uint64_t arg_index = 0;
 		for (const ArgDefinition &arg : this->args)
 		{
-			// TODO
-			// fn_writer.add_instr(new instr::LoadArgInstruction(fn_writer.new_vreg(), arg_index));
+			ir::VRegId arg_reg = fn_writer.new_local(arg.name, arg.type.resolveType());
+			fn_writer.add_load_arg(arg_reg, arg_index);
 			++arg_index;
 		}
 
@@ -165,8 +192,17 @@ namespace ast
 		if (this->body_return_expr.has_value())
 		{
 			// create implicit return
-			ir::VRegId return_reg = this->body_return_expr.value()->emit_ir(fn_writer);
-			fn_writer.add_return(return_reg);
+			const std::unique_ptr<ExpressionNode> &return_expr = this->body_return_expr.value();
+			if (return_expr->type.variant == FrontendType::Variant::VOID)
+			{
+				return_expr->emit_ir(fn_writer);
+				fn_writer.add_return();
+			}
+			else
+			{
+				ir::VRegId return_reg = return_expr->emit_ir(fn_writer);
+				fn_writer.add_return(return_reg);
+			}
 		}
 	}
 }

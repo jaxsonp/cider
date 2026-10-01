@@ -15,7 +15,7 @@ public:
 	IrWriter();
 
 	/// @brief Creates a new function in this object, returning a writer scoped to it
-	IrFunctionWriter start_function(const std::string &name);
+	IrFunctionWriter start_function(const std::string &name, std::vector<ir::IrType> param_types, std::optional<ir::IrType> return_type);
 
 	ir::Object get_obj() { return std::move(this->obj); }
 };
@@ -53,10 +53,10 @@ public:
 	ir::BasicBlock *cur_bblock;
 
 	/// @brief Creates a new local in the current scope, returning its vreg
-	// ir::VRegId new_local(const std::string &name);
+	ir::VRegId new_local(const std::string &name, ir::IrType type);
 
 	/// @brief Find the vreg allocation of a name in the current or surrounding scopes (throws if cannot find)
-	// ir::VRegId get_local(const std::string &name) const;
+	ir::VRegId get_local(const std::string &name) const;
 
 	void push_scope();
 	void pop_scope();
@@ -67,8 +67,21 @@ public:
 	/// @brief Get a vreg with a constant value (loading it if doesn't exist)
 	ir::VRegId get_const_vreg(ir::IrType type, uint64_t value);
 
-	/// @brief Creates and appends an instruction into the current basic block
-	void add_instr(ir::Op opcode, ir::VRegId dst, ir::VRegId op1, ir::VRegId op2, uint64_t data = 0u);
+	/// @brief Creates and appends a binary instruction into the current basic block
+	void add_binary(ir::BinaryOp op, ir::VRegId dest, ir::VRegId lhs, ir::VRegId rhs);
+
+	/// @brief Creates and appends a unary instruction into the current basic block
+	void add_unary(ir::UnaryOp op, ir::VRegId dest, ir::VRegId src);
+
+	/// @brief Creates and appends an instruction loading a constant immediate into dest
+	void add_immediate(ir::VRegId dest, uint64_t value);
+
+	/// @brief Creates and appends an instruction loading the Nth argument into dest
+	void add_load_arg(ir::VRegId dest, uint64_t index);
+
+	/// @brief Creates and appends a call instruction into the current basic block. Returns the dest vreg
+	/// holding the return value, or ir::NO_VREG if return_type is nullopt (the callee returns void)
+	ir::VRegId add_call(const std::string &callee, std::optional<ir::IrType> return_type, std::vector<ir::VRegId> args);
 
 	/// @brief Sets the current basic block's terminator to a return instruction and sets up a new basic block
 	void add_return(ir::VRegId ret_value);

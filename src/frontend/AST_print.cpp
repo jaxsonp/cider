@@ -115,10 +115,11 @@ namespace ast
 	{
 		for (size_t i = 0; i < depth; ++i)
 			out << INDENTATION_STR;
-		out << "Function call";
+		out << "Function call (args: " << this->args.size() << ")";
 		out << " [" << this->src_loc.to_string() << "]" << std::endl;
-		// TODO args
 		this->callee->print(out, depth + 1);
+		for (const std::unique_ptr<ExpressionNode> &arg : this->args)
+			arg->print(out, depth + 1);
 	}
 
 	// STATEMENTS ==============================================================
@@ -137,7 +138,10 @@ namespace ast
 
 	void ArgDefinition::print(std::ostream &out, unsigned int depth) const
 	{
-		throw CompilerError::unimplemented("TODO printing arg def AST node");
+		for (size_t i = 0; i < depth; ++i)
+			out << INDENTATION_STR;
+		out << "Arg definition (name: \"" << this->name << "\", type: " << this->type.to_string() << ")";
+		out << " [" << this->src_loc.to_string() << "]" << std::endl;
 	}
 
 	void FunctionDefinition::print(std::ostream &out, unsigned int depth) const

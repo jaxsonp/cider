@@ -475,11 +475,26 @@ namespace parse
 
 			auto callee_expr = std::move(subject.value());
 
-			// TODO args
+			// parsing arguments
+			std::vector<std::unique_ptr<ast::ExpressionNode>> args;
+			if (lexer.peek().type != TokenType::R_PAREN)
+			{
+				while (true)
+				{
+					auto arg = try_parse_expr(lexer);
+					if (!arg.has_value())
+						throw CompilerError::syntax_error("Expected expression in argument list", lexer.peek().loc.start);
+					args.push_back(std::move(arg.value()));
+
+					if (lexer.peek().type != TokenType::COMMA)
+						break;
+					lexer.take();
+				}
+			}
 
 			SourceLoc end = lexer.expect(TokenType::R_PAREN).loc.end;
 
-			return std::make_unique<ast::FunctionCall>(SourceLocRange{callee_expr->src_loc.start, end}, std::move(callee_expr));
+			return std::make_unique<ast::FunctionCall>(SourceLocRange{callee_expr->src_loc.start, end}, std::move(callee_expr), std::move(args));
 		}
 
 		// normal expression, no postfix operator

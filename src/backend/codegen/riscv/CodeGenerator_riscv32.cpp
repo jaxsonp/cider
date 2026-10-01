@@ -617,15 +617,15 @@ namespace codegen
 			}
 
 			// emit all instructions in basic block
-			for (ir::Instruction &instr : bb->instructions)
+			for (auto &instr_slot : bb->instructions)
 			{
-				switch (instr.opcode)
+				if (const ir::ImmediateInstruction *imm_ptr = std::get_if<ir::ImmediateInstruction>(&instr_slot))
 				{
-				case ir::Op::LoadImm:
-				{
+					const ir::ImmediateInstruction &instr = *imm_ptr;
+
 					// load immmediate
 					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					uint32_t immediate = static_cast<uint32_t>(instr.data);
+					uint32_t immediate = static_cast<uint32_t>(instr.value);
 
 					// if 12th bit is 1, the below addi will sign extend the immediate to be negative, we can
 					// cancel it out by adding the difference
@@ -642,250 +642,269 @@ namespace codegen
 					{
 						body.write_addi(dest->physical, Register::zero, immediate);
 					}
+				}
+				else if (const ir::BinaryInstruction *bin_ptr = std::get_if<ir::BinaryInstruction>(&instr_slot))
+				{
+					const ir::BinaryInstruction &instr = *bin_ptr;
 
-					break;
-				}
-				case ir::Op::Add:
-				{
-					// add register to register
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					body.write_add(dest->physical, op1->physical, op2->physical);
-					break;
-				}
-				case ir::Op::Sub:
-				{
-					// subtact register from register
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					body.write_sub(dest->physical, op1->physical, op2->physical);
-					break;
-				}
-				case ir::Op::Mul:
-				{
-					// multiply register to register
-					// TODO check for m extension
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					body.write_mul(dest->physical, op1->physical, op2->physical);
-					break;
-				}
-				case ir::Op::Div:
-				{
-					// divide register to register
-					// TODO check for m extension
-					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					// division reads the whole register, so both operands must be truncated first
-					this->truncate_reg(body, op1);
-					this->truncate_reg(body, op2);
-					if (op_type.is_signed())
-						body.write_div(dest->physical, op1->physical, op2->physical);
-					else
-						body.write_divu(dest->physical, op1->physical, op2->physical);
-					break;
-				}
-				case ir::Op::Rem:
-				{
-					// mod register to register
-					// TODO check for m extension
-					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					// division reads the whole register, so both operands must be truncated first
-					this->truncate_reg(body, op1);
-					this->truncate_reg(body, op2);
-					if (op_type.is_signed())
-						body.write_rem(dest->physical, op1->physical, op2->physical);
-					else
-						body.write_remu(dest->physical, op1->physical, op2->physical);
-					break;
-				}
-				case ir::Op::BitAnd:
-				{
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					body.write_and(dest->physical, op1->physical, op2->physical);
-					break;
-				}
-				case ir::Op::BitOr:
-				{
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					body.write_or(dest->physical, op1->physical, op2->physical);
-					break;
-				}
-				case ir::Op::BitXor:
-				{
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					body.write_xor(dest->physical, op1->physical, op2->physical);
-					break;
-				}
-				case ir::Op::BitNot:
-				{
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-
-					// XORing with bitmask to "flip bits"
-					auto size = this->cur_fn->vregs.at(op1->resident).get_size();
-					uint32_t flip_mask = lower_bitmask<uint32_t>(size * 8);
-
-					// if 12th bit is 1, the xori will sign extend the immediate to be negative, we can
-					// cancel it out by adding the difference
-					if ((flip_mask & (1 << 11)) != 0)
-						flip_mask += (1 << 12);
-
-					if (flip_mask > I_TYPE_IMMEDIATE_MAX_SIZE)
+					switch (instr.op)
 					{
-						// get scratch reg to put immediate in
-						RegSlot *op2 = this->get_empty_slot(body);
-						body.write_lui(op2->physical, flip_mask);
-						body.write_addi(op2->physical, op2->physical, flip_mask);
-						body.write_xor(dest->physical, op2->physical, op1->physical);
-					}
-					else
+					case ir::BinaryOp::Add:
 					{
-						// flip mask can fit in I-type instruction
-						body.write_xori(dest->physical, op1->physical, flip_mask);
+						// add register to register
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						body.write_add(dest->physical, op1->physical, op2->physical);
+						break;
 					}
-					break;
+					case ir::BinaryOp::Sub:
+					{
+						// subtact register from register
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						body.write_sub(dest->physical, op1->physical, op2->physical);
+						break;
+					}
+					case ir::BinaryOp::Mul:
+					{
+						// multiply register to register
+						// TODO check for m extension
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						body.write_mul(dest->physical, op1->physical, op2->physical);
+						break;
+					}
+					case ir::BinaryOp::Div:
+					{
+						// divide register to register
+						// TODO check for m extension
+						ir::IrType op_type = this->cur_fn->vregs.at(instr.lhs);
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						// division reads the whole register, so both operands must be truncated first
+						this->truncate_reg(body, op1);
+						this->truncate_reg(body, op2);
+						if (op_type.is_signed())
+							body.write_div(dest->physical, op1->physical, op2->physical);
+						else
+							body.write_divu(dest->physical, op1->physical, op2->physical);
+						break;
+					}
+					case ir::BinaryOp::Rem:
+					{
+						// mod register to register
+						// TODO check for m extension
+						ir::IrType op_type = this->cur_fn->vregs.at(instr.lhs);
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						// division reads the whole register, so both operands must be truncated first
+						this->truncate_reg(body, op1);
+						this->truncate_reg(body, op2);
+						if (op_type.is_signed())
+							body.write_rem(dest->physical, op1->physical, op2->physical);
+						else
+							body.write_remu(dest->physical, op1->physical, op2->physical);
+						break;
+					}
+					case ir::BinaryOp::BitAnd:
+					{
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						body.write_and(dest->physical, op1->physical, op2->physical);
+						break;
+					}
+					case ir::BinaryOp::BitOr:
+					{
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						body.write_or(dest->physical, op1->physical, op2->physical);
+						break;
+					}
+					case ir::BinaryOp::BitXor:
+					{
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						body.write_xor(dest->physical, op1->physical, op2->physical);
+						break;
+					}
+					case ir::BinaryOp::BitShl:
+					{
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						body.write_sll(dest->physical, op1->physical, op2->physical);
+						break;
+					}
+					case ir::BinaryOp::BitShr:
+					{
+						ir::IrType op_type = this->cur_fn->vregs.at(instr.lhs);
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						// the bits shifted in come from the upper bits, so the value must be truncated
+						this->truncate_reg(body, op1);
+						if (op_type.is_signed())
+							body.write_sra(dest->physical, op1->physical, op2->physical);
+						else
+							body.write_srl(dest->physical, op1->physical, op2->physical);
+						break;
+					}
+					case ir::BinaryOp::CmpEq:
+					{
+						ir::IrType op_type = this->cur_fn->vregs.at(instr.lhs);
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						// the xor below is only zero for equal values if both are truncated the same way
+						this->truncate_reg(body, op1);
+						this->truncate_reg(body, op2);
+						// compare the registers (always unsigned check, cus -123 is less than 1 but means not equal)
+						body.write_xor(dest->physical, op1->physical, op2->physical);
+						body.write_sltiu(dest->physical, dest->physical, 1);
+						break;
+					}
+					case ir::BinaryOp::CmpNe:
+					{
+						ir::IrType op_type = this->cur_fn->vregs.at(instr.lhs);
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						// the xor below is only zero for equal values if both are truncated the same way
+						this->truncate_reg(body, op1);
+						this->truncate_reg(body, op2);
+						// compare the registers
+						body.write_xor(dest->physical, op1->physical, op2->physical);
+						// unequal exactly when the xor is nonzero, always an unsigned test (see CmpEq)
+						body.write_sltu(dest->physical, Register::zero, dest->physical);
+						break;
+					}
+					case ir::BinaryOp::CmpGt:
+					{
+						ir::IrType op_type = this->cur_fn->vregs.at(instr.lhs);
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						// comparisons read the whole register, so both operands must be truncated first
+						this->truncate_reg(body, op1);
+						this->truncate_reg(body, op2);
+						if (op_type.is_signed())
+							body.write_slt(dest->physical, op2->physical, op1->physical);
+						else
+							body.write_sltu(dest->physical, op2->physical, op1->physical);
+						break;
+					}
+					case ir::BinaryOp::CmpGte:
+					{
+						ir::IrType op_type = this->cur_fn->vregs.at(instr.lhs);
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						// comparisons read the whole register, so both operands must be truncated first
+						this->truncate_reg(body, op1);
+						this->truncate_reg(body, op2);
+						// check if less than
+						if (op_type.is_signed())
+							body.write_slt(dest->physical, op1->physical, op2->physical);
+						else
+							body.write_sltu(dest->physical, op1->physical, op2->physical);
+						// negate
+						body.write_xori(dest->physical, dest->physical, 1u);
+						break;
+					}
+					case ir::BinaryOp::CmpLt:
+					{
+						ir::IrType op_type = this->cur_fn->vregs.at(instr.lhs);
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						// comparisons read the whole register, so both operands must be truncated first
+						this->truncate_reg(body, op1);
+						this->truncate_reg(body, op2);
+						if (op_type.is_signed())
+							body.write_slt(dest->physical, op1->physical, op2->physical);
+						else
+							body.write_sltu(dest->physical, op1->physical, op2->physical);
+						break;
+					}
+					case ir::BinaryOp::CmpLte:
+					{
+						ir::IrType op_type = this->cur_fn->vregs.at(instr.lhs);
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.lhs);
+						RegSlot *op2 = this->load_src_vreg(body, instr.rhs);
+						// comparisons read the whole register, so both operands must be truncated first
+						this->truncate_reg(body, op1);
+						this->truncate_reg(body, op2);
+						// check if greater than
+						if (op_type.is_signed())
+							body.write_slt(dest->physical, op2->physical, op1->physical);
+						else
+							body.write_sltu(dest->physical, op2->physical, op1->physical);
+						// negate
+						body.write_xori(dest->physical, dest->physical, 1u);
+						break;
+					}
+					default:
+						throw CompilerError::internal("Uncaught BinaryOp variant");
+					}
 				}
-				case ir::Op::BitShl:
+				else if (const ir::UnaryInstruction *un_ptr = std::get_if<ir::UnaryInstruction>(&instr_slot))
 				{
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					body.write_sll(dest->physical, op1->physical, op2->physical);
-					break;
+					const ir::UnaryInstruction &instr = *un_ptr;
+
+					switch (instr.op)
+					{
+					case ir::UnaryOp::Neg:
+					{
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *src = this->load_src_vreg(body, instr.src);
+						body.write_sub(dest->physical, Register::zero, src->physical);
+						break;
+					}
+					case ir::UnaryOp::BitNot:
+					{
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						RegSlot *op1 = this->load_src_vreg(body, instr.src);
+
+						// XORing with bitmask to "flip bits"
+						auto size = this->cur_fn->vregs.at(op1->resident).get_size();
+						uint32_t flip_mask = lower_bitmask<uint32_t>(size * 8);
+
+						// if 12th bit is 1, the xori will sign extend the immediate to be negative, we can
+						// cancel it out by adding the difference
+						if ((flip_mask & (1 << 11)) != 0)
+							flip_mask += (1 << 12);
+
+						if (flip_mask > I_TYPE_IMMEDIATE_MAX_SIZE)
+						{
+							// get scratch reg to put immediate in
+							RegSlot *op2 = this->get_empty_slot(body);
+							body.write_lui(op2->physical, flip_mask);
+							body.write_addi(op2->physical, op2->physical, flip_mask);
+							body.write_xor(dest->physical, op2->physical, op1->physical);
+						}
+						else
+						{
+							// flip mask can fit in I-type instruction
+							body.write_xori(dest->physical, op1->physical, flip_mask);
+						}
+						break;
+					}
+					default:
+						throw CompilerError::internal("Uncaught UnaryOp variant");
+					}
 				}
-				case ir::Op::BitShr:
+				else
 				{
-					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					// the bits shifted in come from the upper bits, so the value must be truncated
-					this->truncate_reg(body, op1);
-					if (op_type.is_signed())
-						body.write_sra(dest->physical, op1->physical, op2->physical);
-					else
-						body.write_srl(dest->physical, op1->physical, op2->physical);
-					break;
-				}
-				case ir::Op::Neg:
-				{
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *src = this->load_src_vreg(body, instr.op1);
-					body.write_sub(dest->physical, Register::zero, src->physical);
-					break;
-				}
-				case ir::Op::CmpEq:
-				{
-					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					// the xor below is only zero for equal values if both are truncated the same way
-					this->truncate_reg(body, op1);
-					this->truncate_reg(body, op2);
-					// compare the registers (always unsigned check, cus -123 is less than 1 but means not equal)
-					body.write_xor(dest->physical, op1->physical, op2->physical);
-					body.write_sltiu(dest->physical, dest->physical, 1);
-					break;
-				}
-				case ir::Op::CmpNe:
-				{
-					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					// the xor below is only zero for equal values if both are truncated the same way
-					this->truncate_reg(body, op1);
-					this->truncate_reg(body, op2);
-					// compare the registers
-					body.write_xor(dest->physical, op1->physical, op2->physical);
-					// unequal exactly when the xor is nonzero, always an unsigned test (see CmpEq)
-					body.write_sltu(dest->physical, Register::zero, dest->physical);
-					break;
-				}
-				case ir::Op::CmpGt:
-				{
-					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					// comparisons read the whole register, so both operands must be truncated first
-					this->truncate_reg(body, op1);
-					this->truncate_reg(body, op2);
-					if (op_type.is_signed())
-						body.write_slt(dest->physical, op2->physical, op1->physical);
-					else
-						body.write_sltu(dest->physical, op2->physical, op1->physical);
-					break;
-				}
-				case ir::Op::CmpGte:
-				{
-					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					// comparisons read the whole register, so both operands must be truncated first
-					this->truncate_reg(body, op1);
-					this->truncate_reg(body, op2);
-					// check if less than
-					if (op_type.is_signed())
-						body.write_slt(dest->physical, op1->physical, op2->physical);
-					else
-						body.write_sltu(dest->physical, op1->physical, op2->physical);
-					// negate
-					body.write_xori(dest->physical, dest->physical, 1u);
-					break;
-				}
-				case ir::Op::CmpLt:
-				{
-					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					// comparisons read the whole register, so both operands must be truncated first
-					this->truncate_reg(body, op1);
-					this->truncate_reg(body, op2);
-					if (op_type.is_signed())
-						body.write_slt(dest->physical, op1->physical, op2->physical);
-					else
-						body.write_sltu(dest->physical, op1->physical, op2->physical);
-					break;
-				}
-				case ir::Op::CmpLte:
-				{
-					ir::IrType op_type = this->cur_fn->vregs.at(instr.op1);
-					RegSlot *dest = this->load_dest_vreg(body, instr.dest);
-					RegSlot *op1 = this->load_src_vreg(body, instr.op1);
-					RegSlot *op2 = this->load_src_vreg(body, instr.op2);
-					// comparisons read the whole register, so both operands must be truncated first
-					this->truncate_reg(body, op1);
-					this->truncate_reg(body, op2);
-					// check if greater than
-					if (op_type.is_signed())
-						body.write_slt(dest->physical, op2->physical, op1->physical);
-					else
-						body.write_sltu(dest->physical, op2->physical, op1->physical);
-					// negate
-					body.write_xori(dest->physical, dest->physical, 1u);
-					break;
-				}
-				default:
-					throw CompilerError::unimplemented("Unhandled instruction variant");
+					throw CompilerError::unimplemented("RISC-V codegen: function call/argument lowering is not implemented yet");
 				}
 			}
 
