@@ -18,12 +18,10 @@ _For Jaxson's eyes only_
 		- Overhaul how tests are ran (move away from qemu-user, maybe containers? maybe only native?)
 		- Test timeouts
 		- finish stdout/stderr checking
+	- Use callee saved registers for rv32g register allocation
+- Before self-hosting:
 	- Platform detection
 	- Non-decimal int literals
-	- Stack-passed function arguments (more than 8, only a0-a7 are supported right now)
-	- Missing-return check only looks at the last statement, needs real control flow analysis once ifs/loops exist
-	- Indirect function calling
-- Before self-hosting:
 	- control flow analysis (for checking if a function returns, among others probably)
 	- locals vars
 	- if statements
@@ -31,7 +29,7 @@ _For Jaxson's eyes only_
 	- floats
 	- global vars
 		- global init dependency checking
-	- higher-order functions (AST identifier exprs will no longer need the 'is_callee' member)
+	- higher-order functions, indirect calling (AST identifier exprs will no longer need the 'is_callee' member)
 	- structs
 	- traits
 	- stdlib

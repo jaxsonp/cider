@@ -1,0 +1,10 @@
+//! EXIT_CODE=153
+
+// each argument is one bit of the result (mod 256), the ninth one is passed on the stack
+fn bits(a: u32, b: u32, c: u32, d: u32, e: u32, f: u32, g: u32, h: u32, i: u32) -> u32 {
+	(a * 256u32 + b * 128u32 + c * 64u32 + d * 32u32 + e * 16u32 + f * 8u32 + g * 4u32 + h * 2u32 + i) % 256u32
+}
+
+fn main() -> u32 {
+	return bits(1u32, 1u32, 0u32, 0u32, 1u32, 1u32, 0u32, 0u32, 1u32);
+}

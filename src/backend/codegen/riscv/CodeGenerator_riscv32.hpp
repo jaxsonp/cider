@@ -15,19 +15,22 @@ namespace codegen
 	///
 	/// Stack layout:
 	/// ```
-	/// | vregs... | saved fp | saved ra |
-	/// ^ sp                             ^ fp
-	/// <-- lower addresses      higher addresses -->
+	/// | outgoing stack args... | spilled vregs... | saved fp | saved ra | incoming stack args... |
+	/// ^ sp                                                             ^ fp
+	/// <-- lower addresses                                      higher addresses -->
 	/// <-- stack grows this way
 	/// ```
-	/// vregs will be at fp - (4 * (spill number + 3))
+	/// - spilled vregs will be at fp - (4 * (spill number + 3))
+	/// - outgoing stack args are the stack-passed arguments (9th onwards) of calls this function makes. The
+	///   area is sized for the largest such call, argument i goes at sp + 4 * (i - 8)
+	/// - incoming stack args are the same area in the caller's frame, so argument i is at fp + 4 * (i - 8)
 	///
 	/// Register allocation strategy:
 	/// Local allocation - Per basic-block, assign and track vregs in registers, spill to stack as needed or at end of bb.
 	/// Currently only uses caller saved registers
 	///
 	/// Calling convention (subset of the standard ILP32 ABI):
-	/// Arguments are passed in a0-a7 (stack-passed arguments are not supported yet), and the return value comes
+	/// The first 8 arguments are passed in a0-a7, the rest in 4 byte stack slots at the caller's sp (the callee's fp). The return value comes
 	/// back in a0. Narrow integer arguments and return values are sign/zero extended to 32 bits. Since every
 	/// allocatable register is caller saved, all live values are spilled to the stack before a call.
 	class CodeGenerator_riscv32 : public CodeGenerator
@@ -170,6 +173,9 @@ namespace codegen
 
 		/// Required space in the stack for this frame. Starts at 8 for return address and saved frame ptr.
 		int32_t stack_size;
+
+		/// Bytes at the bottom of the frame (from sp up) reserved for stack-passed arguments of calls made by this function
+		int32_t stack_passed_args_size = 0;
 
 		/// Register assignment states, in order of priority (heuristic = caller saved first (is this good? idk))
 		std::array<RegSlot, 15> registers = {

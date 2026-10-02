@@ -1,0 +1,22 @@
+//! EXIT_CODE=1
+
+fn neg(a: u32, b: u32, c: u32, d: u32, e: u32, f: u32, g: u32, h: u32, i: i8, j: u8, k: bool) -> bool {
+	i == -5i8
+}
+
+fn wide(a: u32, b: u32, c: u32, d: u32, e: u32, f: u32, g: u32, h: u32, i: i8, j: u8, k: bool) -> u8 {
+	j
+}
+
+fn flag(a: u32, b: u32, c: u32, d: u32, e: u32, f: u32, g: u32, h: u32, i: i8, j: u8, k: bool) -> bool {
+	k
+}
+
+fn if_all(x: bool, y: bool, z: bool) -> bool {
+	(x == y) == z
+}
+
+// narrow values passed on the stack must still arrive correctly extended
+fn main() -> bool {
+	return if_all(neg(0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, -5i8, 200u8, true), wide(0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, -5i8, 200u8, true) == 200u8, flag(0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, 0u32, -5i8, 200u8, true));
+}

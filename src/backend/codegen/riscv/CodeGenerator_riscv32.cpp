@@ -1,5 +1,6 @@
 #include "CodeGenerator_riscv32.hpp"
 
+#include <algorithm>
 #include <format>
 #include <vector>
 #include <set>
@@ -594,6 +595,7 @@ namespace codegen
 		// resetting state
 		this->cur_fn = &fn;
 		this->stack_size = 8; // for saved fp and ra
+		this->stack_passed_args_size = 0;
 		this->next_to_spill = 0;
 		this->spilled_vreg_fp_offsets.clear();
 
@@ -929,25 +931,27 @@ namespace codegen
 					const ir::LoadArgInstruction &instr = *arg_ptr;
 
 					if (instr.index >= MAX_REGISTER_ARGS)
-						throw CompilerError::unimplemented(
-							std::format("RV32 codegen: functions with more than {} parameters (stack-passed arguments)", MAX_REGISTER_ARGS));
-
-					// the argument is already sitting in its a-register, so just claim that register for the vreg.
-					// this only works while nothing else has been allocated there, ie at the very start of the function
-					RegSlot &slot = this->slot_for(Register(uint8_t(Register::a0) + instr.index));
-					if (slot.occupied)
-						throw CompilerError::internal("RV32 codegen: argument register was clobbered before its argument was loaded");
-					slot.resident = instr.dest;
-					slot.occupied = true;
-					slot.dirty = true;
+					{
+						// stack-passed arguments sit just above the caller's sp, which is our fp. every argument takes a
+						// 4 byte slot and was stored already extended by the caller
+						RegSlot *dest = this->load_dest_vreg(body, instr.dest);
+						body.write_lw(dest->physical, Register::fp, uint32_t(4 * (instr.index - MAX_REGISTER_ARGS)));
+					}
+					else
+					{
+						// the argument is already sitting in its a-register, so just claim that register for the vreg.
+						// this only works while nothing else has been allocated there, ie at the very start of the function
+						RegSlot &slot = this->slot_for(Register(uint8_t(Register::a0) + instr.index));
+						if (slot.occupied)
+							throw CompilerError::internal("RV32 codegen: argument register was clobbered before its argument was loaded");
+						slot.resident = instr.dest;
+						slot.occupied = true;
+						slot.dirty = true;
+					}
 				}
 				else if (const ir::CallInstruction *call_ptr = std::get_if<ir::CallInstruction>(&instr_slot))
 				{
 					const ir::CallInstruction &instr = *call_ptr;
-
-					if (instr.args.size() > MAX_REGISTER_ARGS)
-						throw CompilerError::unimplemented(
-							std::format("RV32 codegen: calls with more than {} arguments (stack-passed arguments)", MAX_REGISTER_ARGS));
 
 					// every allocatable register is caller saved, so everything live has to go to the stack first
 					for (RegSlot &slot : this->registers)
@@ -959,7 +963,18 @@ namespace codegen
 
 					// now every vreg is on the stack. loading arguments straight from there avoids having to shuffle
 					// values between registers, and the sized loads also give the callee properly extended values
-					for (size_t i = 0; i < instr.args.size(); ++i)
+
+					// arguments past the eighth go to the bottom of our frame, where the callee finds them at its fp.
+					// done first since t0 is free as scratch, and a0-a7 are about to be overwritten anyway
+					if (instr.args.size() > MAX_REGISTER_ARGS)
+						this->stack_passed_args_size = std::max(this->stack_passed_args_size, int32_t(4 * (instr.args.size() - MAX_REGISTER_ARGS)));
+					for (size_t i = MAX_REGISTER_ARGS; i < instr.args.size(); ++i)
+					{
+						this->load_spilled_vreg(body, Register::t0, instr.args[i]);
+						body.write_sw(Register::sp, Register::t0, uint32_t(4 * (i - MAX_REGISTER_ARGS)));
+					}
+					// now load
+					for (size_t i = 0; i < std::min(instr.args.size(), MAX_REGISTER_ARGS); ++i)
 						this->load_spilled_vreg(body, Register(uint8_t(Register::a0) + i), instr.args[i]);
 
 					// auipc + jalr reaches anywhere in the address space, offsets are filled in by lower_ir
@@ -1097,6 +1112,7 @@ namespace codegen
 		// build prologue -------------
 
 		this->stack_size += (this->spilled_vreg_fp_offsets.size() * 4);
+		this->stack_size += this->stack_passed_args_size;
 		log_vvvv("calculated stack size: {}", this->stack_size);
 		int32_t padded_stack_size = ((this->stack_size + 15) / 16) * 16;
 		log_vvvv("padded stack size: {}", padded_stack_size);
