@@ -455,7 +455,10 @@ namespace codegen
 		for (RegSlot &slot : this->registers)
 		{
 			if (slot.occupied && slot.resident == vreg)
+			{
+				slot.locked = true;
 				return &slot;
+			}
 		}
 
 		// load it from stack
@@ -463,6 +466,7 @@ namespace codegen
 		this->load_spilled_vreg(code, slot->physical, vreg);
 		slot->resident = vreg;
 		slot->occupied = true;
+		slot->locked = true;
 		return slot;
 	}
 
@@ -509,6 +513,7 @@ namespace codegen
 		reg->resident = vreg;
 		reg->occupied = true;
 		reg->dirty = true;
+		reg->locked = true;
 		return reg;
 	}
 
@@ -555,7 +560,7 @@ namespace codegen
 		// then check for non-dirty slots and evict
 		for (RegSlot &slot : this->registers)
 		{
-			if (!slot.dirty)
+			if (!slot.dirty && !slot.locked)
 			{
 				slot.occupied = false;
 				return &slot;
@@ -565,9 +570,12 @@ namespace codegen
 		// worst case: spill register
 
 		// choose a victim >:)
-		size_t victim_index = this->next_to_spill;
-		this->next_to_spill = (this->next_to_spill + 1) % this->registers.size();
-		RegSlot *victim = &this->registers.at(victim_index);
+		RegSlot *victim;
+		do
+		{
+			victim = &this->registers.at(this->next_to_spill);
+			this->next_to_spill = (this->next_to_spill + 1) % this->registers.size();
+		} while (victim->locked);
 
 		this->spill_slot(code, *victim);
 
@@ -578,9 +586,10 @@ namespace codegen
 	void CodeGenerator_riscv32::truncate_reg(CodeBuffer &code, RegSlot *slot)
 	{
 		ir::IrType ir_type = this->cur_fn->vregs.at(slot->resident);
-		unsigned int shift = (32u - 8u) * ir_type.get_size();
-		if (shift == 0)
+		// full width values have nothing to truncate
+		if (ir_type.get_size() >= 4)
 			return;
+		unsigned int shift = 32u - 8u * ir_type.get_size();
 		code.write_slli(slot->physical, slot->physical, static_cast<uint32_t>(shift));
 		if (ir_type.is_signed())
 			code.write_srai(slot->physical, slot->physical, static_cast<uint32_t>(shift));
@@ -643,6 +652,10 @@ namespace codegen
 			// emit all instructions in basic block
 			for (auto &instr_slot : bb->instructions)
 			{
+				// registers are only locked for the duration of one instruction
+				for (RegSlot &slot : this->registers)
+					slot.locked = false;
+
 				if (const ir::ImmediateInstruction *imm_ptr = std::get_if<ir::ImmediateInstruction>(&instr_slot))
 				{
 					const ir::ImmediateInstruction &instr = *imm_ptr;
@@ -1016,20 +1029,16 @@ namespace codegen
 					body.write_addi(Register::a0, Register::zero, 0u);
 				}
 
+				// no need to spill anything, nothing in this function runs after a return
 				size_t pos = body.write_jal(Register::zero, 0u);
 				epilogue_backpatch_list.push_back(pos);
 				break;
 			}
 			default:
+				// TODO when adding branching terminators, dirty registers must be spilled *before* the jump, since
+				// the next bb starts with an empty register file
 				throw CompilerError::unimplemented("Unhandled bb terminator kind variant");
 			};
-
-			// spilling dirty registers
-			for (RegSlot &slot : this->registers)
-			{
-				if (slot.dirty)
-					this->spill_slot(body, slot);
-			}
 		}
 
 		// TEMP for debugging
@@ -1116,6 +1125,10 @@ namespace codegen
 		log_vvvv("calculated stack size: {}", this->stack_size);
 		int32_t padded_stack_size = ((this->stack_size + 15) / 16) * 16;
 		log_vvvv("padded stack size: {}", padded_stack_size);
+		// the prologue's `addi fp, sp, size` and all fp/sp relative loads and stores use signed 12 bit offsets
+		if (padded_stack_size > 2047)
+			throw CompilerError::unimplemented(
+				std::format("RV32 codegen: stack frames over 2KiB (function \"{}\" needs {} bytes)", fn.name, padded_stack_size));
 
 		// allocate stack space
 		prologue.write_addi(Register::sp, Register::sp, uint32_t(-padded_stack_size)); // TODO this will break for >12 bit stack sizes
@@ -1221,7 +1234,8 @@ namespace codegen
 
 			CodeBuffer code;
 			// call main
-			code.write_auipc(Register::ra, shifted_main_offset);
+			// jalr sign extends its 12 bit immediate, so round the upper part to compensate (same as call sites)
+			code.write_auipc(Register::ra, shifted_main_offset + 0x800u);
 			code.write_jalr(Register::ra, Register::ra, shifted_main_offset);
 			// return value still in a0, will leave it there
 			// call linux exit syscall

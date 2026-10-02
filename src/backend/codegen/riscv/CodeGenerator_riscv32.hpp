@@ -87,6 +87,9 @@ namespace codegen
 			bool occupied = false;
 			/// Whether the virtual register here has been written to
 			bool dirty = false;
+			/// Whether the current instruction is using this register, so it can't be evicted until the instruction
+			/// is done (otherwise loading one operand could evict another, or the destination)
+			bool locked = false;
 
 			RegSlot(Register reg)
 				: physical(reg) {}

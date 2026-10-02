@@ -7,8 +7,6 @@ _For Jaxson's eyes only_
 - Soon:
 	- Arbitrary-precision ints
 	- Memleaks
-	- investigate if spilling is broken (ref count slots? abstract out register loading?) (fixed spill slots overlapping past sp, might be more)
-	- investigate function frame setup, unnecessary extra registers being saved?
 	- define/enforce function name rules
 	- riscv type truncation on explicit casts (once it exists)
 	- integer literals wrapping around their range (2000i8 == -48i8), a few tests falsely lean on it, see binary_op/{addition,subtraction,bitwise_*}/i8_*.cdr
@@ -19,6 +17,7 @@ _For Jaxson's eyes only_
 		- finish stdout/stderr checking
 	- Use callee saved registers for rv32g register allocation
 - Before self-hosting:
+	- Fix: stack frames over 2KiB (12 bit offsets in prologue and fp-relative spills), currently an unimplemented error
 	- Platform detection
 	- Non-decimal int literals
 	- control flow analysis (for checking if a function returns, among others probably)
@@ -53,6 +52,8 @@ _For Jaxson's eyes only_
 		- Optimize load immediate then operations into immediate operations
 		- Better register allocator (use callee saved first on busy functions?)
 		- Optimize out LUI (how?)
+		- Frame setup: leaf functions save/restore ra for no reason, and leaf functions with no spills don't need a frame at all
+		- Spilling: no liveness info, so dead values get spilled (at calls and bb ends) and every spilled vreg keeps its own slot forever. Frames grow with vreg count, ~260 live-across-a-call values is enough to hit the 2KiB limit
 - Perhaps?
 	- No bitwise operators, only methods with explicit behavior such as wrapping, unchecked, etc
 	- If I do macros, macros for cur fn and line
