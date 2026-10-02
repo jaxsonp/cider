@@ -293,21 +293,24 @@ namespace parse
 		if (!maybe_l_expr.has_value())
 			return std::nullopt;
 
-		// check for operator
-		if (lexer.peek().type != TokenType::OR)
-			return std::move(maybe_l_expr.value());
-		Token op_tok = lexer.take();
+		std::unique_ptr<ast::ExpressionNode> ret = std::move(maybe_l_expr.value());
 
-		std::unique_ptr<ast::ExpressionNode> l_expr = std::move(maybe_l_expr.value());
+		while (true)
+		{
+			// check for operator
+			if (lexer.peek().type != TokenType::OR)
+				return ret;
+			Token op_tok = lexer.take();
 
-		// parse right hand expression
-		auto maybe_r_expr = try_parse_bitwise_xor(lexer);
-		if (!maybe_r_expr.has_value())
-			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		std::unique_ptr<ast::ExpressionNode> r_expr = std::move(maybe_r_expr.value());
+			// parse right hand expression
+			auto maybe_r_expr = try_parse_bitwise_xor(lexer);
+			if (!maybe_r_expr.has_value())
+				throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			std::unique_ptr<ast::ExpressionNode> r_expr = std::move(maybe_r_expr.value());
 
-		SourceLocRange src_loc{l_expr->src_loc.start, r_expr->src_loc.end};
-		return std::make_unique<ast::BinaryExpression>(src_loc, std::move(l_expr), std::move(r_expr), ast::BinaryExpression::BinaryOperation::BitwiseOr);
+			SourceLocRange src_loc{ret->src_loc.start, r_expr->src_loc.end};
+			ret = std::make_unique<ast::BinaryExpression>(src_loc, std::move(ret), std::move(r_expr), ast::BinaryExpression::BinaryOperation::BitwiseOr);
+		}
 	}
 
 	std::optional<std::unique_ptr<ast::ExpressionNode>> try_parse_bitwise_xor(Lexer &lexer)
@@ -317,21 +320,24 @@ namespace parse
 		if (!maybe_l_expr.has_value())
 			return std::nullopt;
 
-		// check for operator
-		if (lexer.peek().type != TokenType::CARET)
-			return std::move(maybe_l_expr.value());
-		Token op_tok = lexer.take();
+		std::unique_ptr<ast::ExpressionNode> ret = std::move(maybe_l_expr.value());
 
-		std::unique_ptr<ast::ExpressionNode> l_expr = std::move(maybe_l_expr.value());
+		while (true)
+		{
+			// check for operator
+			if (lexer.peek().type != TokenType::CARET)
+				return ret;
+			Token op_tok = lexer.take();
 
-		// parse right hand expression
-		auto maybe_r_expr = try_parse_bitwise_and(lexer);
-		if (!maybe_r_expr.has_value())
-			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		std::unique_ptr<ast::ExpressionNode> r_expr = std::move(maybe_r_expr.value());
+			// parse right hand expression
+			auto maybe_r_expr = try_parse_bitwise_and(lexer);
+			if (!maybe_r_expr.has_value())
+				throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			std::unique_ptr<ast::ExpressionNode> r_expr = std::move(maybe_r_expr.value());
 
-		SourceLocRange src_loc{l_expr->src_loc.start, r_expr->src_loc.end};
-		return std::make_unique<ast::BinaryExpression>(src_loc, std::move(l_expr), std::move(r_expr), ast::BinaryExpression::BinaryOperation::BitwiseXor);
+			SourceLocRange src_loc{ret->src_loc.start, r_expr->src_loc.end};
+			ret = std::make_unique<ast::BinaryExpression>(src_loc, std::move(ret), std::move(r_expr), ast::BinaryExpression::BinaryOperation::BitwiseXor);
+		}
 	}
 
 	std::optional<std::unique_ptr<ast::ExpressionNode>> try_parse_bitwise_and(Lexer &lexer)
@@ -341,21 +347,24 @@ namespace parse
 		if (!maybe_l_expr.has_value())
 			return std::nullopt;
 
-		// check for operator
-		if (lexer.peek().type != TokenType::AND)
-			return std::move(maybe_l_expr.value());
-		Token op_tok = lexer.take();
+		std::unique_ptr<ast::ExpressionNode> ret = std::move(maybe_l_expr.value());
 
-		std::unique_ptr<ast::ExpressionNode> l_expr = std::move(maybe_l_expr.value());
+		while (true)
+		{
+			// check for operator
+			if (lexer.peek().type != TokenType::AND)
+				return ret;
+			Token op_tok = lexer.take();
 
-		// parse right hand expression
-		auto maybe_r_expr = try_parse_bitshift(lexer);
-		if (!maybe_r_expr.has_value())
-			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		std::unique_ptr<ast::ExpressionNode> r_expr = std::move(maybe_r_expr.value());
+			// parse right hand expression
+			auto maybe_r_expr = try_parse_bitshift(lexer);
+			if (!maybe_r_expr.has_value())
+				throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			std::unique_ptr<ast::ExpressionNode> r_expr = std::move(maybe_r_expr.value());
 
-		SourceLocRange src_loc{l_expr->src_loc.start, r_expr->src_loc.end};
-		return std::make_unique<ast::BinaryExpression>(src_loc, std::move(l_expr), std::move(r_expr), ast::BinaryExpression::BinaryOperation::BitwiseAnd);
+			SourceLocRange src_loc{ret->src_loc.start, r_expr->src_loc.end};
+			ret = std::make_unique<ast::BinaryExpression>(src_loc, std::move(ret), std::move(r_expr), ast::BinaryExpression::BinaryOperation::BitwiseAnd);
+		}
 	}
 
 	std::optional<std::unique_ptr<ast::ExpressionNode>> try_parse_bitshift(Lexer &lexer)
@@ -393,6 +402,7 @@ namespace parse
 			return std::nullopt;
 
 		std::unique_ptr<ast::ExpressionNode> ret = std::move(maybe_l_expr.value());
+
 		while (true)
 		{
 			// check for operator

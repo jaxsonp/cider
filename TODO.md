@@ -5,7 +5,6 @@ _For Jaxson's eyes only_
 ## To implement
 
 - Soon:
-	- Chained bitwise ops (`a | b | c`) fail to parse, bitwise_{or,xor,and} parsers don't loop like the others
 	- Arbitrary-precision ints
 	- Memleaks
 	- investigate if spilling is broken (ref count slots? abstract out register loading?) (fixed spill slots overlapping past sp, might be more)
