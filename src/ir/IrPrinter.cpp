@@ -9,94 +9,91 @@
 
 namespace ir
 {
-	std::string op_mnemonic(Op opcode)
+	std::string binary_op_mnemonic(BinaryOp op)
 	{
-		switch (opcode)
+		switch (op)
 		{
-		case Op::Add:
+		case BinaryOp::Add:
 			return "add";
-		case Op::Sub:
+		case BinaryOp::Sub:
 			return "sub";
-		case Op::Mul:
+		case BinaryOp::Mul:
 			return "mul";
-		case Op::Div:
+		case BinaryOp::Div:
 			return "div";
-		case Op::Rem:
+		case BinaryOp::Rem:
 			return "rem";
-		case Op::BitAnd:
+		case BinaryOp::BitAnd:
 			return "and";
-		case Op::BitOr:
+		case BinaryOp::BitOr:
 			return "or";
-		case Op::BitXor:
+		case BinaryOp::BitXor:
 			return "xor";
-		case Op::BitNot:
-			return "not";
-		case Op::BitShl:
+		case BinaryOp::BitShl:
 			return "shl";
-		case Op::BitShr:
+		case BinaryOp::BitShr:
 			return "shr";
-		case Op::Neg:
-			return "neg";
-		case Op::CmpEq:
+		case BinaryOp::CmpEq:
 			return "cmp_eq";
-		case Op::CmpNe:
+		case BinaryOp::CmpNe:
 			return "cmp_ne";
-		case Op::CmpGt:
+		case BinaryOp::CmpGt:
 			return "cmp_gt";
-		case Op::CmpGte:
+		case BinaryOp::CmpGte:
 			return "cmp_gte";
-		case Op::CmpLt:
+		case BinaryOp::CmpLt:
 			return "cmp_lt";
-		case Op::CmpLte:
+		case BinaryOp::CmpLte:
 			return "cmp_lte";
-		case Op::Load:
-			return "load";
-		case Op::Store:
-			return "store";
-		case Op::Move:
-			return "move";
-		case Op::LoadImm:
-			return "loadimm";
-		case Op::LoadArg:
-			return "loadarg";
 		};
-		throw CompilerError::internal("Uncaught IR opcode");
+		throw CompilerError::internal("Uncaught IR binary opcode");
+	}
+
+	std::string unary_op_mnemonic(UnaryOp op)
+	{
+		switch (op)
+		{
+		case UnaryOp::Neg:
+			return "neg";
+		case UnaryOp::BitNot:
+			return "not";
+		};
+		throw CompilerError::internal("Uncaught IR unary opcode");
 	}
 
 	namespace
 	{
 		std::string vreg_name(VRegId id) { return std::format("%{}", id); }
 
-		/// @brief Whether an instruction's result register is meaningful
-		bool has_dest(Op opcode)
+		void print_binary_instruction(const BinaryInstruction &instr, std::ostream &out)
 		{
-			return opcode != Op::Store;
+			out << std::format("  {} = {} {} {}\n", vreg_name(instr.dest), binary_op_mnemonic(instr.op), vreg_name(instr.lhs), vreg_name(instr.rhs));
 		}
 
-		/// @brief Whether an instruction carries an immediate in its `data` field
-		bool has_immediate(Op opcode)
+		void print_unary_instruction(const UnaryInstruction &instr, std::ostream &out)
 		{
-			return opcode == Op::LoadImm || opcode == Op::LoadArg;
+			out << std::format("  {} = {} {}\n", vreg_name(instr.dest), unary_op_mnemonic(instr.op), vreg_name(instr.src));
 		}
 
-		void print_instruction(const Instruction &instr, std::ostream &out)
+		void print_immediate_instruction(const ImmediateInstruction &instr, std::ostream &out)
+		{
+			out << std::format("  {} = loadimm {}\n", vreg_name(instr.dest), instr.value);
+		}
+
+		void print_load_arg_instruction(const LoadArgInstruction &instr, std::ostream &out)
+		{
+			out << std::format("  {} = loadarg {}\n", vreg_name(instr.dest), instr.index);
+		}
+
+		void print_call_instruction(const CallInstruction &instr, std::ostream &out)
 		{
 			out << "  ";
-			if (has_dest(instr.opcode))
-				out << std::format("{} = ", vreg_name(instr.dest));
-			out << op_mnemonic(instr.opcode);
-
-			// unused operands are marked NO_VREG by the emitter, and are not printed
-			if (!has_dest(instr.opcode))
-				out << std::format(" {}", vreg_name(instr.dest));
-			if (instr.op1 != NO_VREG)
-				out << std::format(" {}", vreg_name(instr.op1));
-			if (instr.op2 != NO_VREG)
-				out << std::format(" {}", vreg_name(instr.op2));
-			if (has_immediate(instr.opcode))
-				out << std::format(" {}", instr.data);
-
-			out << '\n';
+			if (instr.dest.has_value())
+				out << std::format("{} = ", vreg_name(*instr.dest));
+			out << std::format("call {}(", instr.callee);
+			for (std::size_t i = 0; i < instr.args.size(); ++i)
+				out << (i == 0 ? "" : ", ") << vreg_name(instr.args[i]);
+			out << ")\n";
 		}
 
 		void print_block_args(const BasicBlockTerminator::Successor &succ, std::ostream &out)
@@ -170,7 +167,13 @@ namespace ir
 
 		void print_function(const Function &fn, std::ostream &out)
 		{
-			out << std::format("fn {} {{\n", fn.name);
+			out << std::format("fn {}(", fn.name);
+			for (std::size_t i = 0; i < fn.param_types.size(); ++i)
+				out << (i == 0 ? "" : ", ") << fn.param_types[i].to_string();
+			out << ')';
+			if (fn.return_type.has_value())
+				out << std::format(" -> {}", fn.return_type->to_string());
+			out << " {\n";
 
 			// vreg declarations, ordered by id
 			std::vector<VRegId> vreg_ids;
@@ -188,8 +191,19 @@ namespace ir
 					out << std::format(" // {}", bb->note);
 				out << '\n';
 
-				for (const Instruction &instr : bb->instructions)
-					print_instruction(instr, out);
+				for (const auto &instr : bb->instructions)
+				{
+					if (const BinaryInstruction *i = std::get_if<BinaryInstruction>(&instr))
+						print_binary_instruction(*i, out);
+					else if (const UnaryInstruction *i = std::get_if<UnaryInstruction>(&instr))
+						print_unary_instruction(*i, out);
+					else if (const ImmediateInstruction *i = std::get_if<ImmediateInstruction>(&instr))
+						print_immediate_instruction(*i, out);
+					else if (const LoadArgInstruction *i = std::get_if<LoadArgInstruction>(&instr))
+						print_load_arg_instruction(*i, out);
+					else
+						print_call_instruction(std::get<CallInstruction>(instr), out);
+				}
 				print_terminator(bb->terminator, out);
 			}
 

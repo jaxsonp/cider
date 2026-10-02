@@ -46,6 +46,12 @@ namespace ast
 	void IdentifierExpression::resolve_type()
 	{
 		this->type = this->symbol->type;
+
+		// there are no function values (pointers) yet, so a function name is only meaningful when it's being called
+		if (this->type.is_function() && !this->is_callee)
+			throw CompilerError::type_error(
+				std::format("Function '{}' can only be called, functions can't be used as values", this->name),
+				this->src_loc);
 	}
 
 	void IdentifierExpression::check_semantics(SemanticAnalysisState &state) const {}
@@ -217,14 +223,40 @@ namespace ast
 	void FunctionCall::resolve_symbols(SymbolScope *scope)
 	{
 		this->callee->resolve_symbols(scope);
+		for (const std::unique_ptr<ExpressionNode> &arg : this->args)
+			arg->resolve_symbols(scope);
 	}
 
 	void FunctionCall::resolve_type()
 	{
+		if (auto *callee_ident = dynamic_cast<IdentifierExpression *>(this->callee.get()))
+			callee_ident->is_callee = true;
 		this->callee->resolve_type();
 
 		if (!this->callee->type.is_function())
 			throw CompilerError::type_error(std::format("Type '{}' is not callable", this->callee->type.to_string()), this->callee->src_loc);
+
+		for (const std::unique_ptr<ExpressionNode> &arg : this->args)
+			arg->resolve_type();
+
+		const std::vector<FrontendType> &param_types = this->callee->type.param_types();
+
+		if (this->args.size() != param_types.size())
+			throw CompilerError::type_error(
+				std::format(
+					"Function '{}' expects {} argument{}, found {}",
+					this->callee->type.to_string(), param_types.size(), param_types.size() == 1 ? "" : "s", this->args.size()),
+				this->src_loc);
+
+		for (std::size_t i = 0; i < this->args.size(); ++i)
+		{
+			if (this->args[i]->type != param_types[i])
+				throw CompilerError::type_error(
+					std::format(
+						"Argument {} has type '{}', expected '{}'",
+						i + 1, this->args[i]->type.to_string(), param_types[i].to_string()),
+					this->args[i]->src_loc);
+		}
 
 		this->type = *this->callee->type.function_return_type;
 	}
@@ -232,6 +264,8 @@ namespace ast
 	void FunctionCall::check_semantics(SemanticAnalysisState &state) const
 	{
 		this->callee->check_semantics(state);
+		for (const std::unique_ptr<ExpressionNode> &arg : this->args)
+			arg->check_semantics(state);
 	}
 
 	// ==== ReturnSTatement =========================================
@@ -250,6 +284,7 @@ namespace ast
 		if (this->expr.has_value())
 		{
 			this->expr.value()->resolve_type();
+			this->expr.value()->check_semantics(state);
 			return_type = this->expr.value()->type;
 		}
 
@@ -268,6 +303,19 @@ namespace ast
 		}
 	}
 
+	// ==== ExpressionStatement =========================================
+
+	void ExpressionStatement::resolve_symbols(SymbolScope *scope)
+	{
+		this->expr->resolve_symbols(scope);
+	}
+
+	void ExpressionStatement::check_semantics(SemanticAnalysisState &state) const
+	{
+		this->expr->resolve_type();
+		this->expr->check_semantics(state);
+	}
+
 	// ==== ArgDefinition =========================================
 
 	void ArgDefinition::resolve_symbols(SymbolScope *scope)
@@ -278,7 +326,8 @@ namespace ast
 
 	void ArgDefinition::check_semantics(SemanticAnalysisState &state) const
 	{
-		throw CompilerError::unimplemented("TODO ArgDefinition::check_semantics");
+		if (this->type.variant == FrontendType::Variant::VOID)
+			throw CompilerError::type_error(std::format("Parameter '{}' cannot have type 'void'", this->name), this->src_loc);
 	}
 
 	// ==== FunctionDefinition =========================================
@@ -296,6 +345,11 @@ namespace ast
 		for (auto &stmt : this->body_statements)
 		{
 			stmt->resolve_symbols(this->scope.get());
+		}
+
+		if (this->body_return_expr.has_value())
+		{
+			this->body_return_expr.value()->resolve_symbols(this->scope.get());
 		}
 	}
 
@@ -317,6 +371,7 @@ namespace ast
 
 		if (this->body_return_expr.has_value())
 		{
+			this->body_return_expr.value()->resolve_type();
 			this->body_return_expr.value()->check_semantics(state);
 			FrontendType expr_type = this->body_return_expr.value()->type;
 			if (state.cur_fn_return_type.has_value() && expr_type != state.cur_fn_return_type.value())
@@ -326,6 +381,27 @@ namespace ast
 						state.cur_fn_return_type.value().to_string(),
 						expr_type.to_string()),
 					this->body_return_expr.value()->src_loc);
+		}
+
+		// a non-void function has to end by returning something, either with a return statement or a trailing
+		// expression without a semicolon. void functions may simply fall off the end.
+		// TODO: once there's control flow, this needs to check every path rather than just the last statement
+		if (this->return_type.variant != FrontendType::Variant::VOID && !this->body_return_expr.has_value())
+		{
+			const StatementNode *last_stmt = this->body_statements.empty() ? nullptr : this->body_statements.back().get();
+			if (dynamic_cast<const ReturnStatement *>(last_stmt) == nullptr)
+			{
+				std::string hint;
+				auto *last_expr_stmt = dynamic_cast<const ExpressionStatement *>(last_stmt);
+				if (last_expr_stmt != nullptr && last_expr_stmt->expr->type == this->return_type)
+					hint = " (remove the semicolon after the last expression to return it)";
+
+				throw CompilerError::type_error(
+					std::format(
+						"Function '{}' must return '{}', but its body ends without a return statement or trailing expression{}",
+						this->name, this->return_type.to_string(), hint),
+					last_stmt != nullptr ? last_stmt->src_loc : this->src_loc);
+			}
 		}
 
 		state.cur_fn_return_type = std::nullopt;

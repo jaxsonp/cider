@@ -1,0 +1,5 @@
+//! EXIT_CODE=49
+
+fn main() -> u8 {
+	return 16u8 | 32u8 | 1u8;
+}

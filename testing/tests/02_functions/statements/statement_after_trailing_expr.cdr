@@ -1,0 +1,11 @@
+//! BUILD_EXIT_CODE=1
+
+// the trailing return expression has to be the last thing in the body
+fn five() -> i32 {
+	5i32
+}
+
+fn main() -> i32 {
+	5i32
+	five();
+}

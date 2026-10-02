@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "backend/codegen/CodeGenerator.hpp"
 
@@ -14,16 +15,24 @@ namespace codegen
 	///
 	/// Stack layout:
 	/// ```
-	/// | vregs... | saved fp | saved ra |
-	/// ^ sp                             ^ fp
-	/// <-- lower addresses      higher addresses -->
+	/// | outgoing stack args... | spilled vregs... | saved fp | saved ra | incoming stack args... |
+	/// ^ sp                                                             ^ fp
+	/// <-- lower addresses                                      higher addresses -->
 	/// <-- stack grows this way
 	/// ```
-	/// vregs will be at fp - (4 * (spill number + 3))
+	/// - spilled vregs will be at fp - (4 * (spill number + 3))
+	/// - outgoing stack args are the stack-passed arguments (9th onwards) of calls this function makes. The
+	///   area is sized for the largest such call, argument i goes at sp + 4 * (i - 8)
+	/// - incoming stack args are the same area in the caller's frame, so argument i is at fp + 4 * (i - 8)
 	///
 	/// Register allocation strategy:
 	/// Local allocation - Per basic-block, assign and track vregs in registers, spill to stack as needed or at end of bb.
 	/// Currently only uses caller saved registers
+	///
+	/// Calling convention (subset of the standard ILP32 ABI):
+	/// The first 8 arguments are passed in a0-a7, the rest in 4 byte stack slots at the caller's sp (the callee's fp). The return value comes
+	/// back in a0. Narrow integer arguments and return values are sign/zero extended to 32 bits. Since every
+	/// allocatable register is caller saved, all live values are spilled to the stack before a call.
 	class CodeGenerator_riscv32 : public CodeGenerator
 	{
 		/// @brief Maximum size that an immediate can fit into an I-type instruction
@@ -78,6 +87,9 @@ namespace codegen
 			bool occupied = false;
 			/// Whether the virtual register here has been written to
 			bool dirty = false;
+			/// Whether the current instruction is using this register, so it can't be evicted until the instruction
+			/// is done (otherwise loading one operand could evict another, or the destination)
+			bool locked = false;
 
 			RegSlot(Register reg)
 				: physical(reg) {}
@@ -165,6 +177,9 @@ namespace codegen
 		/// Required space in the stack for this frame. Starts at 8 for return address and saved frame ptr.
 		int32_t stack_size;
 
+		/// Bytes at the bottom of the frame (from sp up) reserved for stack-passed arguments of calls made by this function
+		int32_t stack_passed_args_size = 0;
+
 		/// Register assignment states, in order of priority (heuristic = caller saved first (is this good? idk))
 		std::array<RegSlot, 15> registers = {
 			RegSlot(Register::t0),
@@ -190,6 +205,28 @@ namespace codegen
 
 		/// Function currently being lowered, for looking up vreg types (spill width, div/rem signedness, etc.)
 		const ir::Function *cur_fn = nullptr;
+
+		/// Number of arguments that can be passed in registers (a0-a7)
+		static constexpr size_t MAX_REGISTER_ARGS = 8;
+
+		/// @brief A call site whose target offset isn't known until every function has been lowered
+		struct CallFixup
+		{
+			/// Byte offset into the object's code of the call's auipc (immediately followed by its jalr)
+			size_t code_offset;
+			/// Name of the function being called
+			std::string callee;
+		};
+
+		/// Call sites across the whole object, patched once every function has a known offset
+		std::vector<CallFixup> call_fixups;
+
+		/// @brief Returns the register slot for a specific physical register
+		RegSlot &slot_for(Register reg);
+
+		/// @brief Loads a spilled vreg from its stack slot into a physical register, sign/zero extending narrow
+		/// types. Does not touch register allocation state
+		void load_spilled_vreg(CodeBuffer &code, Register dest, ir::VRegId vreg);
 
 		/// @brief Gets a physical register loaded with the value of a virtual register
 		/// @param vreg ID of vreg to put into a register

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import sys
 import os
@@ -9,6 +10,7 @@ import shutil
 import os
 import time
 import traceback
+from typing import Callable
 
 TESTS_DIR = Path(__file__).parent / "tests"
 
@@ -21,7 +23,7 @@ PROGRESS_BAR_WIDTH = 80
 TEST_DEFINITION_PAT = r"^//!\s*([^=]+)=(.*)"
 
 # All supported platforms to test. Map of target names to lambdas that create a cmd from a file
-PLATFORM_EMULATORS = {
+PLATFORM_EMULATORS: list[str, Callable[[str], list[str, str]]] = {
     "linux-riscv32g": lambda file: ["qemu-riscv32-static", file],
 }
 
@@ -149,7 +151,6 @@ class TestRunner:
             print(f"\nException thrown during testing: {e}")
             traceback.format_exc()
 
-
     async def progress_bar_task(self):
         """
         Periodically prints testing progress info/bar
@@ -170,8 +171,6 @@ class TestRunner:
                 await self.print_progress()
             # show cursor
             sys.stdout.write("\x1b[?25h")
-
-
 
     async def print_progress(self):
         progress = float(self.tests_ran) / float(self.total_test_count)
@@ -435,7 +434,8 @@ if __name__ == "__main__":
     use_color = (
         args.color is None
         and (
-            is_tty if "FORCE_COLOR" not in os.environ
+            is_tty
+            if "FORCE_COLOR" not in os.environ
             else (os.environ["FORCE_COLOR"] != "0")
         )
     ) or args.color

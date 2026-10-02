@@ -1,0 +1,10 @@
+//! EXIT_CODE=29
+
+// enough live temporaries to need several stack slots across the call
+fn one() -> i32 {
+	1i32
+}
+
+fn main() -> i32 {
+	return 1i32 + (2i32 + (3i32 + (4i32 + (5i32 + (6i32 + (7i32 + one()))))));
+}

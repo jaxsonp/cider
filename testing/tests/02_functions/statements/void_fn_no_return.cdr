@@ -1,0 +1,10 @@
+//! EXIT_CODE=0
+
+fn nothing(x: i32) {
+	x + 1i32;
+}
+
+fn main() {
+	nothing(1i32);
+	nothing(2i32);
+}

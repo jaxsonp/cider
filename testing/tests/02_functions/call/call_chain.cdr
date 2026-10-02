@@ -1,0 +1,17 @@
+//! EXIT_CODE=6
+
+fn one() -> i32 {
+	1i32
+}
+
+fn two() -> i32 {
+	one() + 1i32
+}
+
+fn three() -> i32 {
+	two() + 1i32
+}
+
+fn main() -> i32 {
+	one() + two() + three()
+}

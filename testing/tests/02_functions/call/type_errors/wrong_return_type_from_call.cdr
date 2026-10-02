@@ -1,0 +1,9 @@
+//! BUILD_EXIT_CODE=3
+
+fn unsigned() -> u32 {
+	1u32
+}
+
+fn main() -> i32 {
+	unsigned()
+}

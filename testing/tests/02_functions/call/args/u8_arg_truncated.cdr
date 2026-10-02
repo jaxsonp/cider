@@ -1,0 +1,10 @@
+//! EXIT_CODE=22
+
+// 200u8 + 100u8 wraps to 44u8, the callee must not see the upper bits
+fn half(x: u8) -> u8 {
+	x >> 1u8
+}
+
+fn main() -> u8 {
+	return half(200u8 + 100u8);
+}

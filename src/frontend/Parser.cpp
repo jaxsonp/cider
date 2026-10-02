@@ -9,6 +9,19 @@
 
 namespace parse
 {
+	/// @brief Looks up the type named by an identifier token, throwing if no such type exists
+	static FrontendType type_from_token(const Token &tok)
+	{
+		FrontendType type = FrontendType::from_string(tok.str);
+		if (type.variant != FrontendType::Variant::UNKNOWN)
+			return type;
+
+		// these are reserved by the grammar but have no backing implementation yet
+		if (tok.str == "u64" || tok.str == "i64" || tok.str == "addr")
+			throw CompilerError::unimplemented(std::format("Type '{}' is not supported yet", tok.str), tok.loc);
+		throw CompilerError::name_error(std::format("Unknown type '{}'", tok.str), tok.loc);
+	}
+
 	// TOP LEVEL ===============================================================
 
 	std::optional<std::unique_ptr<ast::TopLevelDeclaration>> try_parse_top_level_decl(Lexer &lexer)
@@ -45,11 +58,11 @@ namespace parse
 					lexer.take();
 					continue;
 				}
-				else if (lexer.peek().type == TokenType::R_PAREN)
-					lexer.take();
+				else
+					lexer.expect(TokenType::R_PAREN);
 			}
-			else if (lexer.peek().type == TokenType::R_PAREN)
-				lexer.take();
+			else
+				lexer.expect(TokenType::R_PAREN);
 
 			break;
 		}
@@ -60,12 +73,13 @@ namespace parse
 		{
 			lexer.take();
 			Token type_tok = lexer.expect(TokenType::IDENT);
-			return_type = FrontendType::from_string(type_tok.str);
+			return_type = type_from_token(type_tok);
 		}
 
 		// body
 		lexer.expect(TokenType::L_CURLY_BRACKET);
 		std::vector<std::unique_ptr<ast::StatementNode>> body_statements;
+		std::optional<std::unique_ptr<ast::ExpressionNode>> return_expr = std::nullopt;
 		while (true)
 		{
 			if (auto statement = try_parse_stmt(lexer))
@@ -73,14 +87,21 @@ namespace parse
 				body_statements.emplace_back(std::move(statement.value()));
 				continue;
 			}
-			break;
-		}
 
-		// optional return expression
-		std::optional<std::unique_ptr<ast::ExpressionNode>> return_expr = std::nullopt;
-		if (auto parsed_return_expr = try_parse_expr(lexer))
-		{
-			return_expr = std::move(parsed_return_expr.value());
+			// an expression is either an expression statement (followed by ';') or the optional trailing return
+			// expression, which has to be the last thing in the block
+			if (auto expr = try_parse_expr(lexer))
+			{
+				if (lexer.peek().type == TokenType::SEMICOLON)
+				{
+					SourceLoc stmt_end = lexer.take().loc.end;
+					SourceLocRange stmt_loc{expr.value()->src_loc.start, stmt_end};
+					body_statements.emplace_back(std::make_unique<ast::ExpressionStatement>(stmt_loc, std::move(expr.value())));
+					continue;
+				}
+				return_expr = std::move(expr.value());
+			}
+			break;
 		}
 
 		SourceLoc end = lexer.expect(TokenType::R_CURLY_BRACKET).loc.end;
@@ -99,7 +120,7 @@ namespace parse
 		return ast::ArgDefinition(
 			SourceLocRange{name_tok.loc.start, type_tok.loc.end},
 			std::move(name_tok.str),
-			FrontendType::from_string(type_tok.str));
+			type_from_token(type_tok));
 	}
 
 	// STATEMENTS ==============================================================
@@ -272,21 +293,24 @@ namespace parse
 		if (!maybe_l_expr.has_value())
 			return std::nullopt;
 
-		// check for operator
-		if (lexer.peek().type != TokenType::OR)
-			return std::move(maybe_l_expr.value());
-		Token op_tok = lexer.take();
+		std::unique_ptr<ast::ExpressionNode> ret = std::move(maybe_l_expr.value());
 
-		std::unique_ptr<ast::ExpressionNode> l_expr = std::move(maybe_l_expr.value());
+		while (true)
+		{
+			// check for operator
+			if (lexer.peek().type != TokenType::OR)
+				return ret;
+			Token op_tok = lexer.take();
 
-		// parse right hand expression
-		auto maybe_r_expr = try_parse_bitwise_xor(lexer);
-		if (!maybe_r_expr.has_value())
-			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		std::unique_ptr<ast::ExpressionNode> r_expr = std::move(maybe_r_expr.value());
+			// parse right hand expression
+			auto maybe_r_expr = try_parse_bitwise_xor(lexer);
+			if (!maybe_r_expr.has_value())
+				throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			std::unique_ptr<ast::ExpressionNode> r_expr = std::move(maybe_r_expr.value());
 
-		SourceLocRange src_loc{l_expr->src_loc.start, r_expr->src_loc.end};
-		return std::make_unique<ast::BinaryExpression>(src_loc, std::move(l_expr), std::move(r_expr), ast::BinaryExpression::BinaryOperation::BitwiseOr);
+			SourceLocRange src_loc{ret->src_loc.start, r_expr->src_loc.end};
+			ret = std::make_unique<ast::BinaryExpression>(src_loc, std::move(ret), std::move(r_expr), ast::BinaryExpression::BinaryOperation::BitwiseOr);
+		}
 	}
 
 	std::optional<std::unique_ptr<ast::ExpressionNode>> try_parse_bitwise_xor(Lexer &lexer)
@@ -296,21 +320,24 @@ namespace parse
 		if (!maybe_l_expr.has_value())
 			return std::nullopt;
 
-		// check for operator
-		if (lexer.peek().type != TokenType::CARET)
-			return std::move(maybe_l_expr.value());
-		Token op_tok = lexer.take();
+		std::unique_ptr<ast::ExpressionNode> ret = std::move(maybe_l_expr.value());
 
-		std::unique_ptr<ast::ExpressionNode> l_expr = std::move(maybe_l_expr.value());
+		while (true)
+		{
+			// check for operator
+			if (lexer.peek().type != TokenType::CARET)
+				return ret;
+			Token op_tok = lexer.take();
 
-		// parse right hand expression
-		auto maybe_r_expr = try_parse_bitwise_and(lexer);
-		if (!maybe_r_expr.has_value())
-			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		std::unique_ptr<ast::ExpressionNode> r_expr = std::move(maybe_r_expr.value());
+			// parse right hand expression
+			auto maybe_r_expr = try_parse_bitwise_and(lexer);
+			if (!maybe_r_expr.has_value())
+				throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			std::unique_ptr<ast::ExpressionNode> r_expr = std::move(maybe_r_expr.value());
 
-		SourceLocRange src_loc{l_expr->src_loc.start, r_expr->src_loc.end};
-		return std::make_unique<ast::BinaryExpression>(src_loc, std::move(l_expr), std::move(r_expr), ast::BinaryExpression::BinaryOperation::BitwiseXor);
+			SourceLocRange src_loc{ret->src_loc.start, r_expr->src_loc.end};
+			ret = std::make_unique<ast::BinaryExpression>(src_loc, std::move(ret), std::move(r_expr), ast::BinaryExpression::BinaryOperation::BitwiseXor);
+		}
 	}
 
 	std::optional<std::unique_ptr<ast::ExpressionNode>> try_parse_bitwise_and(Lexer &lexer)
@@ -320,21 +347,24 @@ namespace parse
 		if (!maybe_l_expr.has_value())
 			return std::nullopt;
 
-		// check for operator
-		if (lexer.peek().type != TokenType::AND)
-			return std::move(maybe_l_expr.value());
-		Token op_tok = lexer.take();
+		std::unique_ptr<ast::ExpressionNode> ret = std::move(maybe_l_expr.value());
 
-		std::unique_ptr<ast::ExpressionNode> l_expr = std::move(maybe_l_expr.value());
+		while (true)
+		{
+			// check for operator
+			if (lexer.peek().type != TokenType::AND)
+				return ret;
+			Token op_tok = lexer.take();
 
-		// parse right hand expression
-		auto maybe_r_expr = try_parse_bitshift(lexer);
-		if (!maybe_r_expr.has_value())
-			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
-		std::unique_ptr<ast::ExpressionNode> r_expr = std::move(maybe_r_expr.value());
+			// parse right hand expression
+			auto maybe_r_expr = try_parse_bitshift(lexer);
+			if (!maybe_r_expr.has_value())
+				throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+			std::unique_ptr<ast::ExpressionNode> r_expr = std::move(maybe_r_expr.value());
 
-		SourceLocRange src_loc{l_expr->src_loc.start, r_expr->src_loc.end};
-		return std::make_unique<ast::BinaryExpression>(src_loc, std::move(l_expr), std::move(r_expr), ast::BinaryExpression::BinaryOperation::BitwiseAnd);
+			SourceLocRange src_loc{ret->src_loc.start, r_expr->src_loc.end};
+			ret = std::make_unique<ast::BinaryExpression>(src_loc, std::move(ret), std::move(r_expr), ast::BinaryExpression::BinaryOperation::BitwiseAnd);
+		}
 	}
 
 	std::optional<std::unique_ptr<ast::ExpressionNode>> try_parse_bitshift(Lexer &lexer)
@@ -372,6 +402,7 @@ namespace parse
 			return std::nullopt;
 
 		std::unique_ptr<ast::ExpressionNode> ret = std::move(maybe_l_expr.value());
+
 		while (true)
 		{
 			// check for operator
@@ -468,22 +499,38 @@ namespace parse
 		if (!subject.has_value())
 			return std::nullopt;
 
-		if (lexer.peek().type == TokenType::L_PAREN)
+		// postfix operators chain left to right, eg f()() calls whatever f() returns
+		std::unique_ptr<ast::ExpressionNode> expr = std::move(subject.value());
+		while (lexer.peek().type == TokenType::L_PAREN)
 		{
 			// function call
 			lexer.take();
 
-			auto callee_expr = std::move(subject.value());
+			auto callee_expr = std::move(expr);
 
-			// TODO args
+			// parsing arguments
+			std::vector<std::unique_ptr<ast::ExpressionNode>> args;
+			if (lexer.peek().type != TokenType::R_PAREN)
+			{
+				while (true)
+				{
+					auto arg = try_parse_expr(lexer);
+					if (!arg.has_value())
+						throw CompilerError::syntax_error("Expected expression in argument list", lexer.peek().loc.start);
+					args.push_back(std::move(arg.value()));
+
+					if (lexer.peek().type != TokenType::COMMA)
+						break;
+					lexer.take();
+				}
+			}
 
 			SourceLoc end = lexer.expect(TokenType::R_PAREN).loc.end;
 
-			return std::make_unique<ast::FunctionCall>(SourceLocRange{callee_expr->src_loc.start, end}, std::move(callee_expr));
+			expr = std::make_unique<ast::FunctionCall>(SourceLocRange{callee_expr->src_loc.start, end}, std::move(callee_expr), std::move(args));
 		}
 
-		// normal expression, no postfix operator
-		return subject;
+		return expr;
 	}
 
 	/// Primary expression (aka "atom"), transparent so doesn't produce a node of its own

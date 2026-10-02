@@ -1,0 +1,9 @@
+//! EXIT_CODE=42
+
+fn sub(a: i32, b: i32) -> i32 {
+	a - b
+}
+
+fn main() -> i32 {
+	return sub(50i32, 8i32);
+}

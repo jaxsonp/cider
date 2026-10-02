@@ -1,0 +1,10 @@
+//! BUILD_EXIT_CODE=3
+
+// five() is an i32, so calling it again is a type error, not a syntax error
+fn five() -> i32 {
+	5i32
+}
+
+fn main() -> i32 {
+	five()()
+}

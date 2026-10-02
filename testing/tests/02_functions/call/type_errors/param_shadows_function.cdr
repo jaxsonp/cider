@@ -1,0 +1,14 @@
+//! BUILD_EXIT_CODE=3
+
+// inside g, 'five' is the i32 parameter, not the function
+fn five() -> i32 {
+	5i32
+}
+
+fn g(five: i32) -> i32 {
+	five()
+}
+
+fn main() -> i32 {
+	g(1i32)
+}

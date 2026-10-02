@@ -11,6 +11,9 @@ namespace ir
 	/// basic blocks in the order they are reached from the function entry.
 	void print(const Object &obj, std::ostream &out);
 
-	/// @brief Mnemonic for an opcode as it appears in textual IR
-	std::string op_mnemonic(Op opcode);
+	/// @brief Mnemonic for a binary opcode as it appears in textual IR
+	std::string binary_op_mnemonic(BinaryOp op);
+
+	/// @brief Mnemonic for a unary opcode as it appears in textual IR
+	std::string unary_op_mnemonic(UnaryOp op);
 }

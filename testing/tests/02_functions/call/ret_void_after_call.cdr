@@ -1,0 +1,10 @@
+//! EXIT_CODE=0
+
+// the callee leaves 5 in a0, a void main must still exit with 0
+fn five() -> i32 {
+	5i32
+}
+
+fn main() {
+	five();
+}

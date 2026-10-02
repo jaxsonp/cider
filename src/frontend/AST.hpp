@@ -180,9 +180,12 @@ namespace ast
 		std::string name;
 		/// @brief Symbol that this identifier is referencing. nullptr until `.resolved_symbols(...)` is called
 		Symbol *symbol = nullptr;
+		/// @brief Whether this identifier is directly being called, the only place a function name may appear until
+		/// there are function values. Set by the enclosing FunctionCall
+		bool is_callee = false;
 
-		IdentifierExpression(SourceLocRange src_loc, std::string_view name)
-			: ExpressionNode(src_loc), name(name) {}
+		IdentifierExpression(SourceLocRange src_loc, std::string_view name, bool is_callee = false)
+			: ExpressionNode(src_loc), name(name), is_callee(is_callee) {}
 
 		void resolve_symbols(SymbolScope *scope) override;
 
@@ -263,9 +266,10 @@ namespace ast
 	struct FunctionCall : public ExpressionNode
 	{
 		std::unique_ptr<ExpressionNode> callee;
+		std::vector<std::unique_ptr<ExpressionNode>> args;
 
-		FunctionCall(SourceLocRange src_loc, std::unique_ptr<ExpressionNode> callee)
-			: ExpressionNode(src_loc), callee(std::move(callee)) {}
+		FunctionCall(SourceLocRange src_loc, std::unique_ptr<ExpressionNode> callee, std::vector<std::unique_ptr<ExpressionNode>> args)
+			: ExpressionNode(src_loc), callee(std::move(callee)), args(std::move(args)) {}
 
 		void resolve_symbols(SymbolScope *scope) override;
 
@@ -286,6 +290,23 @@ namespace ast
 		ReturnStatement(SourceLocRange src_loc)
 			: StatementNode(src_loc) {};
 		ReturnStatement(SourceLocRange src_loc, std::unique_ptr<ExpressionNode> expr)
+			: StatementNode(src_loc), expr(std::move(expr)) {};
+
+		void resolve_symbols(SymbolScope *scope) override;
+
+		void check_semantics(SemanticAnalysisState &state) const override;
+
+		void emit_ir(IrFunctionWriter &writer) const override;
+
+		void print(std::ostream &out, unsigned int depth = 0) const;
+	};
+
+	/// An expression evaluated only for its side effects, its value (if any) is discarded
+	struct ExpressionStatement : StatementNode
+	{
+		std::unique_ptr<ExpressionNode> expr;
+
+		ExpressionStatement(SourceLocRange src_loc, std::unique_ptr<ExpressionNode> expr)
 			: StatementNode(src_loc), expr(std::move(expr)) {};
 
 		void resolve_symbols(SymbolScope *scope) override;

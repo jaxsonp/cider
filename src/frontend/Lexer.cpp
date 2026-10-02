@@ -63,6 +63,9 @@ Token Lexer::take()
 	case ';':
 		tok.type = TokenType::SEMICOLON;
 		break;
+	case ':':
+		tok.type = TokenType::COLON;
+		break;
 	case '(':
 		tok.type = TokenType::L_PAREN;
 		break;

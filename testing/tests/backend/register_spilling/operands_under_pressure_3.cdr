@@ -1,0 +1,6 @@
+//! EXIT_CODE=48
+
+// found by fuzzing: with every register occupied, loading one operand could evict the other operand or the destination
+fn id(x: u32) -> u32 { x }
+
+fn main() -> u32 { return (10u32 * ((((860u32 - (98u32 + 834u32)) * ((409u32 + 819u32) * (127u32 * 725u32))) - (((732u32 - 637u32) + (179u32 + 218u32)) * 577u32)) + ((142u32 - ((id(209u32) * ((771u32 + 235u32) + (865u32 * 38u32))) + 841u32)) + 19u32))); }

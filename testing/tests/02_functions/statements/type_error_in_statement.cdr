@@ -1,0 +1,8 @@
+//! BUILD_EXIT_CODE=3
+
+fn nothing() {}
+
+fn main() -> i32 {
+	nothing(1i32);
+	return 0i32;
+}

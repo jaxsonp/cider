@@ -1,0 +1,12 @@
+//! EXIT_CODE=60
+
+fn id(x: u32) -> u32 { x }
+
+fn sum10(a: u32, b: u32, c: u32, d: u32, e: u32, f: u32, g: u32, h: u32, i: u32, j: u32) -> u32 {
+	a + b + c + d + e + f + g + h + i + j
+}
+
+// values computed before the call must survive it, and the call's result is used afterwards
+fn main() -> u32 {
+	return 5u32 + sum10(1u32, 2u32, 3u32, 4u32, 5u32, 6u32, 7u32, 8u32, id(9u32), 10u32) - 5u32 + 5u32 - 0u32;
+}

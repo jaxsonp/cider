@@ -1,0 +1,6 @@
+//! BUILD_EXIT_CODE=3
+
+// with a semicolon this is a statement, so the function never returns its i32
+fn main() -> i32 {
+	5i32;
+}
