@@ -1,0 +1,5 @@
+//! EXIT_CODE=1
+
+fn main() -> bool {
+	return 2147483648u32 == ((32768u32 << 16u8) | 0u32);
+}

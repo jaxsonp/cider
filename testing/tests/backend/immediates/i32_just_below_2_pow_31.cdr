@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+
+// rounding the upper part up for the low 12 bits overflows it into the sign bit
+fn main() -> bool {
+	return (2147483647i32 - 2147483646i32 == 1i32) == (2147483647i32 / 3i32 == 715827882i32);
+}

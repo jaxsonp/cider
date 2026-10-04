@@ -1,0 +1,9 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+fn id(x: i64) -> i64 { x }
+
+// values computed before the call must survive it (on the stack, in 8 byte slots)
+fn main() -> bool {
+	return 5000000000i64 + id(6000000000i64) - 1000000000i64 == 10000000000i64;
+}

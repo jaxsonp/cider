@@ -1,0 +1,11 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// the ninth and tenth arguments are passed on the stack, and both need a whole 8 byte slot
+fn last_two(a: i64, b: i64, c: i64, d: i64, e: i64, f: i64, g: i64, h: i64, i: i64, j: i64) -> i64 {
+	i - j
+}
+
+fn main() -> bool {
+	return last_two(1i64, 2i64, 3i64, 4i64, 5i64, 6i64, 7i64, 8i64, 9000000000i64, -9000000000i64) == 18000000000i64;
+}

@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// no runs of zeroes to skip over, needs the longest sequence
+fn main() -> bool {
+	return 12297829382473034410u64 == ((43690u64 << 48u8) | (43690u64 << 32u8) | (43690u64 << 16u8) | 43690u64);
+}

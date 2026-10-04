@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+fn main() -> bool {
+	return 7000000000i64 / -2i64 == -3500000000i64;
+}

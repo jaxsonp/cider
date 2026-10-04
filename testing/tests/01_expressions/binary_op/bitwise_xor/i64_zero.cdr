@@ -1,0 +1,6 @@
+//! EXIT_CODE=0
+//! REQUIRES=64bit
+
+fn main() -> i64 {
+	return 9i64 ^ 9i64;
+}

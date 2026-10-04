@@ -26,9 +26,22 @@ applies to Cider-the-language and anything written in it.
 - `src/ir/` — the intermediate representation (`IR.*`, `IR_instructions.*`,
   `IrType.*`), the builder the frontend emits through (`IrWriter.*`), and a
   textual IR printer (`IrPrinter.*`) for debugging.
-- `src/backend/` — codegen and object file emission. `codegen/riscv/` is the
-  only backend right now (targets `linux-riscv32g`, RV32G/ILP32D, ELF32).
-  `objwriter/elf/` writes ELF output.
+- `src/backend/` — codegen and object file emission.
+  - `Target.*` — the table of supported targets. A target is an architecture
+    (`Arch`), a set of feature flags (ISA extensions), an ABI, an OS and an
+    object format. Adding a target of an existing architecture is one more
+    row in `supported_targets`.
+  - `codegen/CodeGenerator.*` — architecture independent driver: walks the
+    IR and calls a backend's `lower_*` hooks, then points calls at their
+    targets. `codegen/RegAllocator.*` is the (also architecture independent)
+    local register allocator backends allocate through.
+  - `codegen/riscv/` — the only backend right now, covering RV32 and RV64
+    with or without the C extension (targets `linux-riscv32g`,
+    `linux-riscv32gc`, `linux-riscv64g`, `linux-riscv64gc`).
+    `RiscvInstruction.*` encodes (and compresses) single instructions,
+    `RiscvAssembler.*` is the buffer instructions are written to, and
+    `CodeGenerator_riscv.*` implements the lowering hooks.
+  - `objwriter/elf/` writes ELF output (ELF32 and ELF64 from one template).
 - `src/utils/` — `CliParser` (custom argv parser), `error.hpp`
   (`CompilerError` with typed constructors: syntax/name/type/semantic/
   unsupported/file_io/unimplemented/internal, each mapping to an
@@ -39,10 +52,10 @@ applies to Cider-the-language and anything written in it.
 - `grammar.ebnf` — the authoritative grammar. Update this whenever syntax
   changes.
 - `testing/` — Python test runner and `.cdr` test fixtures (see below).
-- `README.md` — has a running TODO list (`## TODOs`, "For Jaxson's eyes
-  only") tracking near-term work and a list of pre-self-hosting
-  requirements. Check it for current priorities before assuming a feature
-  doesn't exist yet or planning new work.
+- `TODO.md` — the running TODO list ("For Jaxson's eyes only") tracking
+  near-term work and a list of pre-self-hosting requirements, plus notes for
+  the eventual language docs. Check it for current priorities before
+  assuming a feature doesn't exist yet or planning new work.
 
 ## Building
 
@@ -66,6 +79,9 @@ Produces `build/ciderc`.
 build/ciderc <file.cdr> -t linux-riscv32g -o out
 ```
 
+Targets are named `<os>-<isa>`, see `Target::supported_targets` (or pass a
+bogus `-t` to have them listed).
+
 `--emit=<kind>[,...]` selects which artifacts to produce: `ast`, `ir`,
 `asm`, or `exe` (the default). The compiler runs only as far as the furthest
 kind requested, so `--emit=ir` dumps IR without running codegen — useful when
@@ -85,7 +101,10 @@ Tests are `.cdr` files under `testing/tests/`, organized into numbered
 subdirectories by feature area (e.g. `00_main`, `01_expressions`). Expected
 results are declared as `//! KEY=VALUE` comments at the very top of the
 file (case-insensitive keys): `BUILD_EXIT_CODE`, `EXIT_CODE`, `STDOUT`,
-`STDERR`, all optional and defaulting to `0`/`""`.
+`STDERR`, all optional and defaulting to `0`/`""`. Every test runs once per
+target, so expected results must hold on all of them. `REQUIRES` (comma
+separated, `32bit`/`64bit`) restricts a test to targets with those features,
+e.g. `//! REQUIRES=64bit` for anything using `i64`/`u64`.
 
 Run the whole suite with:
 
@@ -93,8 +112,10 @@ Run the whole suite with:
 python3 testing/run_tests.py build/ciderc
 ```
 
-Requires Python >= 3.14 and `qemu-user-static` (tests run compiled RV32
-binaries under `qemu-riscv32-static`) since there's no native backend yet.
+Requires Python >= 3.12 and `qemu-user-static` (tests run compiled RISC-V
+binaries under `qemu-riscv32-static` and `qemu-riscv64-static`) since there's
+no native backend yet. Targets without the C extension are emulated on a CPU
+without it, so a stray compressed instruction fails the test.
 
 When adding a language feature, add `.cdr` test cases alongside it in the
 matching (or a new) numbered subdirectory rather than only relying on
@@ -111,6 +132,11 @@ manual testing.
   `100i32` — see `testing/tests/00_main/*.cdr` for examples).
 - `grammar.ebnf` is the source of truth for syntax — if a parser change
   alters accepted syntax, update the grammar file in the same change.
+- Language semantics must not depend on the target. Operations on types of
+  32 bits or less behave identically on 32 and 64 bit targets (including
+  shift amounts: only the lower 5 bits are used, or the lower 6 when
+  shifting a 64 bit value). `i64`/`u64` are the exception for now, backends
+  reject them on 32 bit targets with an `unsupported` error.
 
 ## Development guidelines
 
@@ -125,4 +151,4 @@ manual testing.
   `BUILD_EXIT_CODE`.
 - This is a solo/early-stage project — prefer small, direct changes over
   speculative abstraction. Don't add functionality beyond what's needed for
-  the language features described in the README TODO list.
+  the language features described in `TODO.md`.

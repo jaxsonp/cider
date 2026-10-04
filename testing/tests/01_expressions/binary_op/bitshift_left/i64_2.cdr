@@ -1,0 +1,6 @@
+//! EXIT_CODE=128
+//! REQUIRES=64bit
+
+fn main() -> i64 {
+	return 1i64 << 7u8;
+}

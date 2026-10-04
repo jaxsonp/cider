@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// the top bit is not a sign for an unsigned value
+fn main() -> bool {
+	return 9223372036854775808u64 >> 1u8 == 4611686018427387904u64;
+}

@@ -1,0 +1,6 @@
+//! BUILD_EXIT_CODE=4
+
+// one more than the largest u64, there's no integer type that this could fit in
+fn main() -> bool {
+	return 18446744073709551616u64 == 0u64;
+}

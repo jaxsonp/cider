@@ -1,0 +1,10 @@
+//! EXIT_CODE=1
+
+// 4000000000u32 + 4000000000u32 wraps to 3705032704u32, the callee must not see the upper bits
+fn half(x: u32) -> u32 {
+	x >> 1u8
+}
+
+fn main() -> bool {
+	return half(4000000000u32 + 4000000000u32) == 1852516352u32;
+}

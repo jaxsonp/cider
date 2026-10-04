@@ -1,0 +1,5 @@
+//! BUILD_EXIT_CODE=3
+
+fn main() -> bool {
+	return 38u64 == 6i8;
+}

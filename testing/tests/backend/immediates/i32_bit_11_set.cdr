@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+
+// the smallest value that doesn't fit in a 12 bit signed immediate
+fn main() -> bool {
+	return (2048i32 - 2047i32 == 1i32) == (2048i32 / 3i32 == 682i32);
+}

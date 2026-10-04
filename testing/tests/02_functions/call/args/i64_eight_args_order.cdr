@@ -1,0 +1,11 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// each argument lands in a different decimal digit pair, so any two swapped (or cut down to 32 bits) changes the result
+fn digits(a: i64, b: i64, c: i64, d: i64, e: i64, f: i64, g: i64, h: i64) -> i64 {
+	a * 100000000000000i64 + b * 1000000000000i64 + c * 10000000000i64 + d * 100000000i64 + e * 1000000i64 + f * 10000i64 + g * 100i64 + h
+}
+
+fn main() -> bool {
+	return digits(11i64, 22i64, 33i64, 44i64, 55i64, 66i64, 77i64, 88i64) == 1122334455667788i64;
+}

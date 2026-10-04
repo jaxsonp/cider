@@ -1,0 +1,5 @@
+//! BUILD_EXIT_CODE=3
+
+fn main() -> bool {
+	return 85i64 <= 6i8;
+}

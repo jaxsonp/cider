@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// rounding for the low 12 bits wraps all the way around
+fn main() -> bool {
+	return (9223372036854775807i64 - 9223372036854775806i64 == 1i64) == (9223372036854775807i64 / 3i64 == 3074457345618258602i64);
+}

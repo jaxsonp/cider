@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// arithmetic shift, every bit ends up a copy of the sign
+fn main() -> bool {
+	return -8i64 >> 63u8 == -1i64;
+}

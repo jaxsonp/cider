@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// logical shift, zeroes come in from the top
+fn main() -> bool {
+	return 18446744073709551615u64 >> 63u8 == 1u64;
+}

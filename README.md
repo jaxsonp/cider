@@ -28,6 +28,11 @@ Options:
 | Target | OS | Object format | ISA | ABI |
 | --- | --- | --- | --- | --- |
 | `linux-riscv32g` | Linux | ELF32 | RV32G | ILP32D |
+| `linux-riscv32gc` | Linux | ELF32 | RV32GC | ILP32D |
+| `linux-riscv64g` | Linux | ELF64 | RV64G | LP64D |
+| `linux-riscv64gc` | Linux | ELF64 | RV64GC | LP64D |
+
+64 bit integers (`i64`, `u64`) are only supported on the 64 bit targets for now.
 
 ## Tests
 
@@ -36,8 +41,8 @@ Options:
 #### Requirements:
 
 - Linux (probably)
-- Python >= 3.14
-- Qemu (specifically qemu-user-static, for binaries like `qemu-riscv32-static`, etc.)
+- Python >= 3.12 (older versions probably work)
+- Qemu (specifically qemu-user-static, for binaries like `qemu-riscv32-static`, `qemu-riscv64-static`, etc.)
 
 ### To run:
 
@@ -74,3 +79,6 @@ Tests are defined in the `tests/` subdirectory. Each test consists of a `.cdr` s
 | `EXIT_CODE` | int | `0` | Expected return value of the program |
 | `STDOUT` | string | `""` | Expected output to stdout |
 | `STDERR` | string | `""` | Expected output to stderr |
+| `REQUIRES` | list | `""` | Comma separated features a target needs to run this test (`32bit`, `64bit`). The test is skipped on targets without them |
+
+Every test is ran once for each supported target.

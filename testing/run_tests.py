@@ -23,8 +23,31 @@ PROGRESS_BAR_WIDTH = 80
 TEST_DEFINITION_PAT = r"^//!\s*([^=]+)=(.*)"
 
 # All supported platforms to test. Map of target names to lambdas that create a cmd from a file
-PLATFORM_EMULATORS: list[str, Callable[[str], list[str, str]]] = {
-    "linux-riscv32g": lambda file: ["qemu-riscv32-static", file],
+# Targets without the C extension are emulated on a cpu without it too, so that a compressed instruction
+# sneaking into their output is an illegal instruction rather than silently working
+PLATFORM_EMULATORS: dict[str, Callable[[str], list[str]]] = {
+    "linux-riscv32g": lambda file: [
+        "qemu-riscv32-static",
+        "-cpu",
+        "rv32,c=false",
+        file,
+    ],
+    "linux-riscv32gc": lambda file: ["qemu-riscv32-static", file],
+    "linux-riscv64g": lambda file: [
+        "qemu-riscv64-static",
+        "-cpu",
+        "rv64,c=false",
+        file,
+    ],
+    "linux-riscv64gc": lambda file: ["qemu-riscv64-static", file],
+}
+
+# Features of each platform that a test can ask for with the REQUIRES key
+PLATFORM_FEATURES: dict[str, set[str]] = {
+    "linux-riscv32g": {"32bit"},
+    "linux-riscv32gc": {"32bit"},
+    "linux-riscv64g": {"64bit"},
+    "linux-riscv64gc": {"64bit"},
 }
 
 
@@ -369,19 +392,27 @@ def create_tests_from_file(rel_path: Path) -> list[Test]:
                 break
             key = match.group(1)
             val = match.group(2)
-            match key:
-                case "BUILD_EXIT_CODE":
+            match key.casefold():
+                case "build_exit_code":
                     for t in new_tests:
                         t.expected_build_exit_code = int(val)
-                case "EXIT_CODE":
+                case "exit_code":
                     for t in new_tests:
                         t.expected_exit_code = int(val)
-                case "STDOUT":
+                case "stdout":
                     for t in new_tests:
                         t.expected_stdout = val
-                case "STDERR":
+                case "stderr":
                     for t in new_tests:
                         t.expected_stderr = val
+                case "requires":
+                    # only keep the platforms that have every feature asked for
+                    required = {feature.strip() for feature in val.split(",")}
+                    new_tests = [
+                        t
+                        for t in new_tests
+                        if required <= PLATFORM_FEATURES[t.platform]
+                    ]
     return new_tests
 
 

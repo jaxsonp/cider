@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+
+// nothing to add after loading the upper 20 bits
+fn main() -> bool {
+	return (305418240i32 - 305418239i32 == 1i32) == (305418240i32 / 3i32 == 101806080i32);
+}

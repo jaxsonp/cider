@@ -1,0 +1,6 @@
+//! EXIT_CODE=42
+//! REQUIRES=64bit
+
+fn main() -> i64 {
+	return 42i64;
+}

@@ -1,0 +1,10 @@
+//! EXIT_CODE=1
+
+fn double(x: i32) -> i32 {
+	x + x
+}
+
+// the callee's sum overflows, the caller must not see the upper bits
+fn main() -> bool {
+	return double(2000000000i32) / 2i32 == -147483648i32;
+}

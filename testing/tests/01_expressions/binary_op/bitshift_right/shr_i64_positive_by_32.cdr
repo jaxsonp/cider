@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// unlike the narrower types, a 64 bit value has room to be shifted by 32 or more
+fn main() -> bool {
+	return 8000000000000i64 >> 32u8 == 1862i64;
+}

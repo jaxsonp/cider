@@ -1,0 +1,6 @@
+//! EXIT_CODE=60
+//! REQUIRES=64bit
+
+fn main() -> i32 {
+	return 240i32 >> 2u64;
+}

@@ -1,0 +1,6 @@
+//! EXIT_CODE=112
+//! REQUIRES=64bit
+
+fn main() -> i64 {
+	return 127i64 ^ 15i64;
+}

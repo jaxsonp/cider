@@ -12,9 +12,11 @@ namespace ir
 			U8,
 			U16,
 			U32,
+			U64,
 			I8,
 			I16,
 			I32,
+			I64,
 		};
 
 		Variant variant;
@@ -26,9 +28,11 @@ namespace ir
 		static IrType i8() { return IrType(Variant::I8); }
 		static IrType i16() { return IrType(Variant::I16); }
 		static IrType i32() { return IrType(Variant::I32); }
+		static IrType i64() { return IrType(Variant::I64); }
 		static IrType u8() { return IrType(Variant::U8); }
 		static IrType u16() { return IrType(Variant::U16); }
 		static IrType u32() { return IrType(Variant::U32); }
+		static IrType u64() { return IrType(Variant::U64); }
 
 		/// @brief Get the size (in bytes) of this type
 		unsigned int get_size() const;

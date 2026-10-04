@@ -1,0 +1,8 @@
+//! BUILD_EXIT_CODE=16
+//! REQUIRES=32bit
+
+// 64 bit integers don't fit in a register on 32 bit targets, and splitting them across two isn't implemented yet.
+// this must fail to build rather than silently truncate. update this test once it is
+fn main() -> bool {
+	return 1i64 + 1i64 == 2i64;
+}

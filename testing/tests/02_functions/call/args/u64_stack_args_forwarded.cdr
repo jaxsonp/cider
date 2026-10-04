@@ -1,0 +1,15 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+fn sum10(a: u64, b: u64, c: u64, d: u64, e: u64, f: u64, g: u64, h: u64, i: u64, j: u64) -> u64 {
+	a + b + c + d + e + f + g + h + i + j
+}
+
+// stack arguments read from this function's incoming area are written to its outgoing area, in a different order
+fn forward(a: u64, b: u64, c: u64, d: u64, e: u64, f: u64, g: u64, h: u64, i: u64, j: u64) -> u64 {
+	sum10(j, i, h, g, f, e, d, c, b, a) + j - i
+}
+
+fn main() -> bool {
+	return forward(1u64, 2u64, 3u64, 4u64, 5u64, 6u64, 7u64, 8u64, 10000000000u64, 30000000000u64) == 60000000036u64;
+}
