@@ -23,7 +23,7 @@ PROGRESS_BAR_WIDTH = 80
 TEST_DEFINITION_PAT = r"^//!\s*([^=]+)=(.*)"
 
 # All supported platforms to test. Map of target names to lambdas that create a cmd from a file
-PLATFORM_EMULATORS: list[str, Callable[[str], list[str, str]]] = {
+PLATFORM_EMULATORS: dict[str, Callable[[str], list[str]]] = {
     "linux-riscv32g": lambda file: ["qemu-riscv32-static", file],
 }
 
@@ -140,9 +140,7 @@ class TestRunner:
                 print(f"{self.style_fg_green}All tests passing{self.style_reset}")
                 return True
             else:
-                print(
-                    f"{self.style_fg_red}{tests_failed} tests failed ({fail_percent:.2f}%){self.style_reset}"
-                )
+                print(f"{self.style_fg_red}{tests_failed} tests failed ({fail_percent:.2f}%){self.style_reset}")
                 return False
         except asyncio.CancelledError:
             print("\nTesting cancelled")
@@ -175,17 +173,11 @@ class TestRunner:
     async def print_progress(self):
         progress = float(self.tests_ran) / float(self.total_test_count)
         progress_percent = 100.0 * progress
-        success_rate = (
-            (100.0 * float(self.tests_passed) / float(self.tests_ran))
-            if self.tests_ran != 0
-            else 100.0
-        )
+        success_rate = (100.0 * float(self.tests_passed) / float(self.tests_ran)) if self.tests_ran != 0 else 100.0
 
         async with self._print_lock:
             # move up, clear line, write progress stats
-            sys.stdout.write(
-                f"\x1b[2A\x1b[2K | {progress_percent:.1f}% complete, {success_rate:.1f}% passed\n | "
-            )
+            sys.stdout.write(f"\x1b[2A\x1b[2K | {progress_percent:.1f}% complete, {success_rate:.1f}% passed\n | ")
 
             # then write progress bar
             for column in range(PROGRESS_BAR_WIDTH):
@@ -226,11 +218,7 @@ class TestRunner:
             sys.stdout.write("- ")
             sys.stdout.write(test.name)
             sys.stdout.write(" => ")
-            sys.stdout.write(
-                f"{self.style_fg_green}passed"
-                if success
-                else f"{self.style_fg_red}failed"
-            )
+            sys.stdout.write(f"{self.style_fg_green}passed" if success else f"{self.style_fg_red}failed")
             if message:
                 sys.stdout.write(f" ({message})")
             sys.stdout.write(self.style_reset)
@@ -277,12 +265,10 @@ class TestRunner:
                     open(build_stdout_path, "w") as build_stdout_f,
                     open(build_stderr_path, "w") as build_stderr_f,
                 ):
-                    build_subprocess: asyncio.subprocess.Process = (
-                        await asyncio.create_subprocess_exec(
-                            *build_cmd,
-                            stdout=build_stdout_f,
-                            stderr=build_stderr_f,
-                        )
+                    build_subprocess: asyncio.subprocess.Process = await asyncio.create_subprocess_exec(
+                        *build_cmd,
+                        stdout=build_stdout_f,
+                        stderr=build_stderr_f,
                     )
                     build_return_code = await build_subprocess.wait()
 
@@ -330,9 +316,7 @@ class TestRunner:
                     continue
                 elif test.expected_stdout != "" or test.expected_stderr != "":
                     # TODO
-                    await self.record_test_result(
-                        test, False, f"stdout/stderr checking is unimplemented"
-                    )
+                    await self.record_test_result(test, False, f"stdout/stderr checking is unimplemented")
                     self._test_queue.task_done()
                     continue
 
@@ -432,12 +416,7 @@ if __name__ == "__main__":
     is_tty = sys.stdout.isatty()
 
     use_color = (
-        args.color is None
-        and (
-            is_tty
-            if "FORCE_COLOR" not in os.environ
-            else (os.environ["FORCE_COLOR"] != "0")
-        )
+        args.color is None and (is_tty if "FORCE_COLOR" not in os.environ else (os.environ["FORCE_COLOR"] != "0"))
     ) or args.color
     show_progress = (args.progress is None and is_tty) or args.progress
     show_passed = args.show_results == "all"

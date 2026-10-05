@@ -5,8 +5,12 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(test_runner
-	${CMAKE_CURRENT_SOURCE_DIR}/test_runner.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/testing.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/unit/dummy.cpp
+	${PROJECT_SOURCE_DIR}/test_runner.cpp
+	${PROJECT_SOURCE_DIR}/testing.cpp
+
+	${CMAKE_SOURCE_DIR}/src/frontend/tests/lexer_tests.cpp
 )
-target_include_directories(test_runner PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(test_runner SYSTEM PRIVATE
+	${PROJECT_SOURCE_DIR}
+	${CMAKE_SOURCE_DIR}/src
+)
