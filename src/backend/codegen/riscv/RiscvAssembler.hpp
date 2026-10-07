@@ -42,6 +42,9 @@ namespace codegen::riscv
 		Assembler(unsigned int xlen, bool compress)
 			: xlen(xlen), compress(compress) {}
 
+		/// @brief Clears the contents of this buffer, p much a factory reset
+		void clear();
+
 		/// @brief Size in bytes of everything written so far, which is also the byte offset of the next instruction
 		size_t cur_offset() const { return this->byte_size; }
 

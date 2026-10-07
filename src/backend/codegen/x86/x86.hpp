@@ -11,15 +11,17 @@ namespace codegen::x86
 {
 	enum class Register : PhysReg
 	{
+		// in hardware order: the value of each register is the number it's encoded as in machine code
+
 		// legacy registers
 		RAX,
-		RBX,
 		RCX,
 		RDX,
-		RSI,
-		RDI,
+		RBX,
 		RSP,
 		RBP,
+		RSI,
+		RDI,
 		// x64 specific registers
 		R8,
 		R9,
@@ -30,8 +32,6 @@ namespace codegen::x86
 		R14,
 		R15,
 	};
-
-	std::span<const Register> get_x86_registers(Target target);
 
 	/// @brief How a register can be accessed, for example: RAX vs EAX vs AX vs AH vs AL.
 	enum class RegisterAccess : uint8_t

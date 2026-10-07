@@ -84,3 +84,13 @@ Tests are defined in the `tests/` subdirectory. Each test consists of a `.cdr` s
 | `REQUIRES` | list | `""` | Comma separated features a target needs to run this test (`32bit`, `64bit`). The test is skipped on targets without them |
 
 Every test is ran once for each supported target.
+
+## Reference material
+
+Relevant specs, manuals and documents that I'm bookmarking here:
+
+- ELF spec: [https://refspecs.linuxfoundation.org/elf/elf.pdf](https://refspecs.linuxfoundation.org/elf/elf.pdf)
+- Risc-V calling conventions/ABIs: [https://riscv.org/wp-content/uploads/2024/12/riscv-calling.pdf](https://riscv.org/wp-content/uploads/2024/12/riscv-calling.pdf)
+- Risc-V instruction set manual (unpriv): [https://docs.riscv.org/reference/isa/v20260120/unpriv/unpriv-index.html](https://docs.riscv.org/reference/isa/v20260120/unpriv/unpriv-index.html)
+- System V AMD64 ABI spec: [https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf](https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf)
+- System V i386 ABI spec: [https://refspecs.linuxbase.org/elf/abi386-4.pdf](https://refspecs.linuxbase.org/elf/abi386-4.pdf)

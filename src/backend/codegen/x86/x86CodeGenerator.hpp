@@ -8,24 +8,24 @@
 
 #include "backend/codegen/CodeGenerator.hpp"
 #include "backend/codegen/RegAllocator.hpp"
-#include "backend/codegen/x86/x86.hpp"
+#include "backend/codegen/x86/x86Assembler.hpp"
 
 namespace codegen
 {
 
 	/// @brief x86 backend
 	///
-	/// Stack layout:
+	/// Stack layout (relative to reg_width):
 	/// ```
-	/// | outgoing stack args... | spilled vregs... | saved fp | saved ra | incoming stack args... |
-	/// ^ sp                                                              ^ fp
+	/// | outgoing stack args... | spilled vregs...  | saved bp | return addr | incoming stack args... |
+	/// ^ sp                                         ^ bp
 	/// <-- lower addresses                                      higher addresses -->
 	/// <-- stack grows this way
 	/// ```
 	/// - spilled vregs will be at fp - (word * (spill number + 3))
 	/// - outgoing stack args are the stack-passed arguments (9th onwards) of calls this function makes. The
 	///   area is sized for the largest such call, argument i goes at sp + word * (i - 8)
-	/// - incoming stack args are the same area in the caller's frame, so argument i is at fp + word * (i - 8)
+	/// - incoming stack args: argument i is at bp + 2*reg_width + (i+2)*reg_width
 	///
 	/// Register allocation is done by `RegAllocator`. Currently only uses caller saved registers
 	///
@@ -47,6 +47,15 @@ namespace codegen
 
 		/// Target being compiled for, decides the register width and which extensions can be used
 		const Target target;
+
+		/// Register width 4 for 32bit, 8 for 64bit
+		const uint64_t reg_width;
+
+		/// @brief Register allocator state
+		RegAllocator regalloc;
+
+		/// @brief Instruction buffer for function body (not prologue/epilogue)
+		x86::Assembler body;
 
 		void store_spilled_vreg(PhysReg src, ir::VRegId vreg, size_t spill_index) override;
 

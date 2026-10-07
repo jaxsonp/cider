@@ -1,13 +1,20 @@
 #pragma once
 
+#include <stdint.h>
+
+#include "backend/codegen/x86/x86Instruction.hpp"
+
 namespace codegen::x86
 {
 	/// @brief Buffer for emission functions to write to
-	///
-	/// Instructions are referred to by their position (index) in the buffer, which is what the `write_*`
-	/// functions return. Since instructions can be 2 or 4 bytes long (with the C extension), positions are
-	/// not byte offsets, use `offset_of` for those
 	class Assembler
 	{
+		std::vector<uint8_t> buf;
+
+	public:
+		/// @brief Reset buffer contents
+		void clear();
+
+		size_t write(Instruction inst);
 	};
 }

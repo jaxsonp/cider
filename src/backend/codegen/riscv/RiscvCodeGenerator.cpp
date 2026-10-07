@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <format>
 #include <vector>
+#include <tuple>
 
 #include "utils/logging.hpp"
 #include "utils/error.hpp"
@@ -11,33 +12,47 @@ namespace codegen
 {
 	using riscv::Assembler;
 
-	/// Registers handed to the register allocator, in order of priority
-	static const std::vector<PhysReg> ALLOCATABLE_REGISTERS = {
-		PhysReg(riscv::Register::t0),
-		PhysReg(riscv::Register::t1),
-		PhysReg(riscv::Register::t2),
-		PhysReg(riscv::Register::t3),
-		PhysReg(riscv::Register::t4),
-		PhysReg(riscv::Register::t5),
-		// t6 is reserved as scratch
-		PhysReg(riscv::Register::a0),
-		PhysReg(riscv::Register::a1),
-		PhysReg(riscv::Register::a2),
-		PhysReg(riscv::Register::a3),
-		PhysReg(riscv::Register::a4),
-		PhysReg(riscv::Register::a5),
-		PhysReg(riscv::Register::a6),
-		PhysReg(riscv::Register::a7),
-		// TODO use s registers
-	};
-
-	/// Stack pointer alignment required by the ABI, in bytes
-	static constexpr int64_t STACK_ALIGNMENT = 16;
-
-	/// @brief Whether a value fits in the signed 12 bit immediate of I-type and S-type instructions
-	static bool fits_imm12(int64_t value)
+	namespace riscv
 	{
-		return value >= -2048 && value <= 2047;
+
+		/// Registers handed to the register allocator, in order of priority
+		static const std::tuple<const PhysReg, const bool> ALLOCATABLE_REGISTERS[] = {
+			{PhysReg(Register::t0), false},
+			{PhysReg(Register::t1), false},
+			{PhysReg(Register::t2), false},
+			{PhysReg(Register::t3), false},
+			{PhysReg(Register::t4), false},
+			{PhysReg(Register::t5), false},
+			// t6 is reserved as scratch
+			{PhysReg(Register::a0), false},
+			{PhysReg(Register::a1), false},
+			{PhysReg(Register::a2), false},
+			{PhysReg(Register::a3), false},
+			{PhysReg(Register::a4), false},
+			{PhysReg(Register::a5), false},
+			{PhysReg(Register::a6), false},
+			{PhysReg(Register::a7), false},
+			{PhysReg(Register::s2), true},
+			{PhysReg(Register::s3), true},
+			{PhysReg(Register::s4), true},
+			{PhysReg(Register::s5), true},
+			{PhysReg(Register::s6), true},
+			{PhysReg(Register::s7), true},
+			{PhysReg(Register::s8), true},
+			{PhysReg(Register::s9), true},
+			{PhysReg(Register::s10), true},
+			{PhysReg(Register::s11), true},
+		};
+
+		/// Stack pointer alignment required by the ABI, in bytes
+		static constexpr int64_t STACK_ALIGNMENT = 16;
+
+		/// @brief Whether a value fits in the signed 12 bit immediate of I-type and S-type instructions
+		static bool fits_imm12(int64_t value)
+		{
+			return value >= -2048 && value <= 2047;
+		}
+
 	}
 
 	RiscvCodeGenerator::RiscvCodeGenerator(const Target &target)
@@ -46,7 +61,7 @@ namespace codegen
 		  xlen(target.register_width()),
 		  word_size(target.register_width() / 8),
 		  body(xlen, target.has(Target::RiscvExt::C)),
-		  regalloc(*this, ALLOCATABLE_REGISTERS)
+		  regalloc(*this, std::span{riscv::ALLOCATABLE_REGISTERS})
 	{
 		if (target.arch != Target::Arch::RISCV32 && target.arch != Target::Arch::RISCV64)
 			throw CompilerError::internal("Tried to initalize Riscv code generator with non riscv arch");
@@ -72,7 +87,7 @@ namespace codegen
 
 	riscv::Register RiscvCodeGenerator::reach_offset(Assembler &code, Register base, int64_t &offset, Register scratch)
 	{
-		if (fits_imm12(offset))
+		if (riscv::fits_imm12(offset))
 			return base;
 
 		// the load/store sign extends its 12 bit offset, so round the upper part to compensate
@@ -191,11 +206,11 @@ namespace codegen
 
 		// resetting state
 		this->stack_passed_args_size = 0;
-		this->regalloc.start_function();
 		this->epilogue_backpatch_list.clear();
 		this->call_backpatch_list.clear();
+		this->body.clear();
 
-		this->body = Assembler(this->xlen, this->enable_compression);
+		this->regalloc.start_function();
 	}
 
 	void RiscvCodeGenerator::begin_block(const ir::BasicBlock &bb)
@@ -432,7 +447,7 @@ namespace codegen
 			// stack-passed arguments sit just above the caller's sp, which is our fp. every argument takes a
 			// word sized slot and was stored already extended by the caller
 			RegSlot *dest = this->regalloc.load_dest_vreg(instr.dest);
-			int64_t fp_offset = this->word_size * int64_t(instr.index - MAX_REGISTER_ARGS);
+			int64_t fp_offset = this->word_size * (instr.index - int64_t(MAX_REGISTER_ARGS));
 			this->write_load(this->body, reg_of(dest), Register::fp, fp_offset, this->word_size, true);
 		}
 		else
@@ -534,12 +549,12 @@ namespace codegen
 		stack_size += int64_t(this->regalloc.spill_count()) * this->word_size;
 		stack_size += this->stack_passed_args_size;
 		log_vvvv("calculated stack size: {}", stack_size);
-		int64_t padded_stack_size = ((stack_size + (STACK_ALIGNMENT - 1)) / STACK_ALIGNMENT) * STACK_ALIGNMENT;
+		int64_t padded_stack_size = ((stack_size + (riscv::STACK_ALIGNMENT - 1)) / riscv::STACK_ALIGNMENT) * riscv::STACK_ALIGNMENT;
 		log_vvvv("padded stack size: {}", padded_stack_size);
 
 		// the frame is allocated in two steps. the first is always the same small size and holds the saved
 		// ra and fp, so they can be reached with small offsets no matter how big the whole frame is
-		const int64_t save_area_size = STACK_ALIGNMENT;
+		const int64_t save_area_size = riscv::STACK_ALIGNMENT;
 		int64_t remaining_stack_size = padded_stack_size - save_area_size;
 
 		// build prologue -------------
@@ -553,7 +568,7 @@ namespace codegen
 		// set new frame pointer
 		prologue.write_addi(Register::fp, Register::sp, save_area_size);
 		// allocate the rest of the stack space
-		if (fits_imm12(-remaining_stack_size))
+		if (riscv::fits_imm12(-remaining_stack_size))
 		{
 			if (remaining_stack_size != 0)
 				prologue.write_addi(Register::sp, Register::sp, -remaining_stack_size);

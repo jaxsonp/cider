@@ -8,6 +8,12 @@
 
 namespace codegen::riscv
 {
+	void Assembler::clear()
+	{
+		this->buf.clear();
+		this->byte_size = 0;
+	}
+
 	size_t Assembler::write(const Instruction &instr, bool fixed_size)
 	{
 		bool can_compress = this->compress && !fixed_size && instr.try_compress(this->xlen).has_value();

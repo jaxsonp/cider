@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <stdint.h>
 
 #include "backend/codegen/RegAllocator.hpp"

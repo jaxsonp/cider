@@ -6,12 +6,17 @@
 
 namespace codegen
 {
-	RegAllocator::RegAllocator(SpillHandler &spill_handler, const std::vector<PhysReg> &pool)
+	RegAllocator::RegAllocator(SpillHandler &spill_handler, const std::span<const std::tuple<const PhysReg, const bool>> &reg_pool)
 		: spill_handler(spill_handler)
 	{
-		this->registers.reserve(pool.size());
-		for (PhysReg reg : pool)
-			this->registers.emplace_back(reg);
+		this->registers.reserve(reg_pool.size());
+		for (auto reg : reg_pool)
+		{
+			// TEMP skip callee saved registers for now
+			if (std::get<1>(reg))
+				continue;
+			this->registers.emplace_back(std::get<0>(reg), std::get<1>(reg));
+		}
 	}
 
 	void RegAllocator::start_function()

@@ -13,6 +13,10 @@ namespace codegen::x86
 	enum class Mnemonic : uint8_t
 	{
 		MOV,
+		/// Move with zero extension, from a narrower source
+		MOVZX,
+		/// Move with sign extension, from a narrower source
+		MOVSX,
 		LEA,
 		ADD,
 		SUB,
@@ -34,15 +38,22 @@ namespace codegen::x86
 	{
 		Register reg;
 		RegisterAccess access;
+
+		RegisterOperand(PhysReg reg, RegisterAccess access)
+			: reg(static_cast<Register>(reg)), access(access) {}
 	};
 
 	struct ImmediateOperand
 	{
 		int64_t value;
+
+		ImmediateOperand(int64_t value) : value(value) {}
 	};
 
 	struct MemoryOperand
 	{
+		/// Size (in bytes) of the value in memory
+		unsigned int size;
 		std::optional<Register> base_reg = std::nullopt;
 		std::optional<Register> index_reg = std::nullopt;
 		uint32_t index_scale = 0; // TODO investigate can this type be smaller?
@@ -56,5 +67,7 @@ namespace codegen::x86
 	{
 		Mnemonic mnemonic;
 		std::vector<Operand> operands;
+
+		void encode(std::vector<uint8_t> &buf);
 	};
 }

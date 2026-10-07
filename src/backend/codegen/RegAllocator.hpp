@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <unordered_map>
 #include <vector>
+#include <span>
+#include <tuple>
 
 #include "ir/IR.hpp"
 
@@ -45,6 +47,7 @@ namespace codegen
 		{
 			/// Physical register
 			const PhysReg physical;
+			const bool callee_saved;
 
 			/// ID of the current virtual register living here (if there is one)
 			ir::VRegId resident;
@@ -55,9 +58,11 @@ namespace codegen
 			/// Whether the current instruction is using this register, so it can't be evicted until the instruction
 			/// is done (otherwise loading one operand could evict another, or the destination)
 			bool locked = false;
+			/// Whether this slot has been used at all
+			bool used = false;
 
-			RegSlot(PhysReg reg)
-				: physical(reg) {}
+			RegSlot(PhysReg reg, bool callee_saved)
+				: physical(reg), callee_saved(callee_saved) {}
 		};
 
 	private:
@@ -75,8 +80,8 @@ namespace codegen
 
 	public:
 		/// @param spill_handler Backend to emit loads and stores through, must outlive the allocator
-		/// @param pool Registers to allocate from, in order of priority
-		RegAllocator(SpillHandler &spill_handler, const std::vector<PhysReg> &pool);
+		/// @param pool Registers to allocate from and if they are callee saved, in order of priority
+		RegAllocator(SpillHandler &spill_handler, const std::span<const std::tuple<const PhysReg, const bool>> &pool);
 
 		/// @brief Forgets everything, call when starting a new function
 		void start_function();
@@ -109,8 +114,8 @@ namespace codegen
 		/// @brief Spills a register slot's value back onto the stack, marking slot as not dirty
 		void spill_slot(RegSlot &slot);
 
-		/// @brief Spills every dirty register and empties all of them, so every live vreg is on the stack. Needed
-		/// before anything that clobbers the registers (ie a call)
+		/// @brief Spills every dirty caller-saved register and empties all of them, so every live vreg is on the
+		/// stack. Needed before anything that clobbers the registers (ie a func call)
 		void spill_all();
 
 		/// @brief Declares that a physical register already holds the (unsaved) value of a virtual register, for
