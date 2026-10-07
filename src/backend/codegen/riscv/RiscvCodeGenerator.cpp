@@ -42,11 +42,10 @@ namespace codegen
 
 	RiscvCodeGenerator::RiscvCodeGenerator(const Target &target)
 		: target(target),
+		  enable_compression(target.has(Target::RiscvExt::C)),
 		  xlen(target.register_width()),
 		  word_size(target.register_width() / 8),
-		  prologue(xlen, target.has(Target::RiscvExt::C)),
 		  body(xlen, target.has(Target::RiscvExt::C)),
-		  epilogue(xlen, target.has(Target::RiscvExt::C)),
 		  regalloc(*this, ALLOCATABLE_REGISTERS)
 	{
 		if (target.arch != Target::Arch::RISCV32 && target.arch != Target::Arch::RISCV64)
@@ -196,10 +195,7 @@ namespace codegen
 		this->epilogue_backpatch_list.clear();
 		this->call_backpatch_list.clear();
 
-		bool compress = this->target.has(Target::RiscvExt::C);
-		this->prologue = Assembler(this->xlen, compress);
-		this->body = Assembler(this->xlen, compress);
-		this->epilogue = Assembler(this->xlen, compress);
+		this->body = Assembler(this->xlen, this->enable_compression);
 	}
 
 	void RiscvCodeGenerator::begin_block(const ir::BasicBlock &bb)
@@ -227,8 +223,6 @@ namespace codegen
 
 	void RiscvCodeGenerator::lower_binary_instr(const ir::BinaryInstruction &instr)
 	{
-		Assembler &body = this->body;
-
 		ir::IrType op_type = this->cur_fn->vregs.at(instr.lhs);
 		RegSlot *dest_slot = this->regalloc.load_dest_vreg(instr.dest);
 		RegSlot *op1_slot = this->regalloc.load_src_vreg(instr.lhs);
@@ -247,24 +241,24 @@ namespace codegen
 		case ir::BinaryOp::Add:
 			// add register to register
 			if (word_op)
-				body.write_addw(dest, op1, op2);
+				this->body.write_addw(dest, op1, op2);
 			else
-				body.write_add(dest, op1, op2);
+				this->body.write_add(dest, op1, op2);
 			break;
 		case ir::BinaryOp::Sub:
 			// subtact register from register
 			if (word_op)
-				body.write_subw(dest, op1, op2);
+				this->body.write_subw(dest, op1, op2);
 			else
-				body.write_sub(dest, op1, op2);
+				this->body.write_sub(dest, op1, op2);
 			break;
 		case ir::BinaryOp::Mul:
 			// multiply register to register
 			this->require_m_extension("multiplication");
 			if (word_op)
-				body.write_mulw(dest, op1, op2);
+				this->body.write_mulw(dest, op1, op2);
 			else
-				body.write_mul(dest, op1, op2);
+				this->body.write_mul(dest, op1, op2);
 			break;
 		case ir::BinaryOp::Div:
 			// divide register to register
@@ -275,16 +269,16 @@ namespace codegen
 			if (word_op)
 			{
 				if (op_type.is_signed())
-					body.write_divw(dest, op1, op2);
+					this->body.write_divw(dest, op1, op2);
 				else
-					body.write_divuw(dest, op1, op2);
+					this->body.write_divuw(dest, op1, op2);
 			}
 			else
 			{
 				if (op_type.is_signed())
-					body.write_div(dest, op1, op2);
+					this->body.write_div(dest, op1, op2);
 				else
-					body.write_divu(dest, op1, op2);
+					this->body.write_divu(dest, op1, op2);
 			}
 			break;
 		case ir::BinaryOp::Rem:
@@ -296,34 +290,34 @@ namespace codegen
 			if (word_op)
 			{
 				if (op_type.is_signed())
-					body.write_remw(dest, op1, op2);
+					this->body.write_remw(dest, op1, op2);
 				else
-					body.write_remuw(dest, op1, op2);
+					this->body.write_remuw(dest, op1, op2);
 			}
 			else
 			{
 				if (op_type.is_signed())
-					body.write_rem(dest, op1, op2);
+					this->body.write_rem(dest, op1, op2);
 				else
-					body.write_remu(dest, op1, op2);
+					this->body.write_remu(dest, op1, op2);
 			}
 			break;
 		case ir::BinaryOp::BitAnd:
-			body.write_and(dest, op1, op2);
+			this->body.write_and(dest, op1, op2);
 			break;
 		case ir::BinaryOp::BitOr:
-			body.write_or(dest, op1, op2);
+			this->body.write_or(dest, op1, op2);
 			break;
 		case ir::BinaryOp::BitXor:
-			body.write_xor(dest, op1, op2);
+			this->body.write_xor(dest, op1, op2);
 			break;
 		case ir::BinaryOp::BitShl:
 			// the processor only looks at the lower bits of the shift amount, 6 bits when shifting a 64 bit value
 			// and 5 bits otherwise. using the 32 bit shifts on RV64 keeps that the same on every target
 			if (word_op)
-				body.write_sllw(dest, op1, op2);
+				this->body.write_sllw(dest, op1, op2);
 			else
-				body.write_sll(dest, op1, op2);
+				this->body.write_sll(dest, op1, op2);
 			break;
 		case ir::BinaryOp::BitShr:
 			// the bits shifted in come from the upper bits, so the value must be truncated
@@ -331,16 +325,16 @@ namespace codegen
 			if (word_op)
 			{
 				if (op_type.is_signed())
-					body.write_sraw(dest, op1, op2);
+					this->body.write_sraw(dest, op1, op2);
 				else
-					body.write_srlw(dest, op1, op2);
+					this->body.write_srlw(dest, op1, op2);
 			}
 			else
 			{
 				if (op_type.is_signed())
-					body.write_sra(dest, op1, op2);
+					this->body.write_sra(dest, op1, op2);
 				else
-					body.write_srl(dest, op1, op2);
+					this->body.write_srl(dest, op1, op2);
 			}
 			break;
 		case ir::BinaryOp::CmpEq:
@@ -348,26 +342,26 @@ namespace codegen
 			this->truncate_reg(op1_slot);
 			this->truncate_reg(op2_slot);
 			// compare the registers (always unsigned check, cus -123 is less than 1 but means not equal)
-			body.write_xor(dest, op1, op2);
-			body.write_sltiu(dest, dest, 1);
+			this->body.write_xor(dest, op1, op2);
+			this->body.write_sltiu(dest, dest, 1);
 			break;
 		case ir::BinaryOp::CmpNe:
 			// the xor below is only zero for equal values if both are truncated the same way
 			this->truncate_reg(op1_slot);
 			this->truncate_reg(op2_slot);
 			// compare the registers
-			body.write_xor(dest, op1, op2);
+			this->body.write_xor(dest, op1, op2);
 			// unequal exactly when the xor is nonzero, always an unsigned test (see CmpEq)
-			body.write_sltu(dest, Register::zero, dest);
+			this->body.write_sltu(dest, Register::zero, dest);
 			break;
 		case ir::BinaryOp::CmpGt:
 			// comparisons read the whole register, so both operands must be truncated first
 			this->truncate_reg(op1_slot);
 			this->truncate_reg(op2_slot);
 			if (op_type.is_signed())
-				body.write_slt(dest, op2, op1);
+				this->body.write_slt(dest, op2, op1);
 			else
-				body.write_sltu(dest, op2, op1);
+				this->body.write_sltu(dest, op2, op1);
 			break;
 		case ir::BinaryOp::CmpGte:
 			// comparisons read the whole register, so both operands must be truncated first
@@ -375,20 +369,20 @@ namespace codegen
 			this->truncate_reg(op2_slot);
 			// check if less than
 			if (op_type.is_signed())
-				body.write_slt(dest, op1, op2);
+				this->body.write_slt(dest, op1, op2);
 			else
-				body.write_sltu(dest, op1, op2);
+				this->body.write_sltu(dest, op1, op2);
 			// negate
-			body.write_xori(dest, dest, 1);
+			this->body.write_xori(dest, dest, 1);
 			break;
 		case ir::BinaryOp::CmpLt:
 			// comparisons read the whole register, so both operands must be truncated first
 			this->truncate_reg(op1_slot);
 			this->truncate_reg(op2_slot);
 			if (op_type.is_signed())
-				body.write_slt(dest, op1, op2);
+				this->body.write_slt(dest, op1, op2);
 			else
-				body.write_sltu(dest, op1, op2);
+				this->body.write_sltu(dest, op1, op2);
 			break;
 		case ir::BinaryOp::CmpLte:
 			// comparisons read the whole register, so both operands must be truncated first
@@ -396,11 +390,11 @@ namespace codegen
 			this->truncate_reg(op2_slot);
 			// check if greater than
 			if (op_type.is_signed())
-				body.write_slt(dest, op2, op1);
+				this->body.write_slt(dest, op2, op1);
 			else
-				body.write_sltu(dest, op2, op1);
+				this->body.write_sltu(dest, op2, op1);
 			// negate
-			body.write_xori(dest, dest, 1);
+			this->body.write_xori(dest, dest, 1);
 			break;
 		default:
 			throw CompilerError::internal("Uncaught BinaryOp variant");
@@ -409,15 +403,13 @@ namespace codegen
 
 	void RiscvCodeGenerator::lower_unary_instr(const ir::UnaryInstruction &instr)
 	{
-		Assembler &body = this->body;
-
 		switch (instr.op)
 		{
 		case ir::UnaryOp::Neg:
 		{
 			RegSlot *dest = this->regalloc.load_dest_vreg(instr.dest);
 			RegSlot *src = this->regalloc.load_src_vreg(instr.src);
-			body.write_sub(reg_of(dest), Register::zero, reg_of(src));
+			this->body.write_sub(reg_of(dest), Register::zero, reg_of(src));
 			break;
 		}
 		case ir::UnaryOp::BitNot:
@@ -425,7 +417,7 @@ namespace codegen
 			RegSlot *dest = this->regalloc.load_dest_vreg(instr.dest);
 			RegSlot *op1 = this->regalloc.load_src_vreg(instr.src);
 			// XORing with all ones to "flip bits" (the ones above the value's width don't matter)
-			body.write_xori(reg_of(dest), reg_of(op1), -1);
+			this->body.write_xori(reg_of(dest), reg_of(op1), -1);
 			break;
 		}
 		default:
@@ -453,8 +445,6 @@ namespace codegen
 
 	void RiscvCodeGenerator::lower_call(const ir::CallInstruction &instr)
 	{
-		Assembler &body = this->body;
-
 		// every allocatable register is caller saved, so everything live has to go to the stack first
 		this->regalloc.spill_all();
 
@@ -468,14 +458,14 @@ namespace codegen
 		for (size_t i = MAX_REGISTER_ARGS; i < instr.args.size(); ++i)
 		{
 			this->regalloc.load_spilled_vreg(PhysReg(Register::t0), instr.args[i]);
-			this->write_store(body, Register::sp, Register::t0, this->word_size * int64_t(i - MAX_REGISTER_ARGS), this->word_size);
+			this->write_store(this->body, Register::sp, Register::t0, this->word_size * int64_t(i - MAX_REGISTER_ARGS), this->word_size);
 		}
 		// now load
 		for (size_t i = 0; i < std::min(instr.args.size(), MAX_REGISTER_ARGS); ++i)
 			this->regalloc.load_spilled_vreg(PhysReg(uint8_t(Register::a0) + i), instr.args[i]);
 
 		// auipc + jalr reaches anywhere in the address space, offsets are filled in once every function is lowered
-		size_t pos = body.write_call_placeholder(Register::ra);
+		size_t pos = this->body.write_call_placeholder(Register::ra);
 		this->call_backpatch_list.push_back({pos, instr.callee});
 
 		if (instr.dest.has_value())
@@ -484,8 +474,6 @@ namespace codegen
 
 	void RiscvCodeGenerator::lower_return(std::optional<ir::VRegId> ret_reg)
 	{
-		Assembler &body = this->body;
-
 		if (ret_reg.has_value())
 		{
 			RegSlot *ret_value_slot = this->regalloc.load_src_vreg(ret_reg.value());
@@ -493,49 +481,48 @@ namespace codegen
 			if (this->xlen == 64 && this->cur_fn->vregs.at(ret_reg.value()).get_size() == 4)
 			{
 				// which on RV64 is sign extended for 32 bit values, even unsigned ones
-				body.write_addiw(Register::a0, reg_of(ret_value_slot), 0);
+				this->body.write_addiw(Register::a0, reg_of(ret_value_slot), 0);
 			}
 			else
 			{
 				this->truncate_reg(ret_value_slot);
-				body.write_addi(Register::a0, reg_of(ret_value_slot), 0);
+				this->body.write_addi(Register::a0, reg_of(ret_value_slot), 0);
 			}
 		}
 		else if (this->cur_fn->name == "main")
 		{
 			// main's return value becomes the exit code, so a void main must exit cleanly rather than with
 			// whatever was left in a0
-			body.write_addi(Register::a0, Register::zero, 0);
+			this->body.write_addi(Register::a0, Register::zero, 0);
 		}
 
 		// no need to spill anything, nothing in this function runs after a return
-		size_t pos = body.write_jal(Register::zero, 0);
+		size_t pos = this->body.write_jal(Register::zero, 0);
 		this->epilogue_backpatch_list.push_back(pos);
 	}
 
 	void RiscvCodeGenerator::finalize_function(const ir::Function &fn, std::vector<uint8_t> &code)
 	{
-		Assembler &prologue = this->prologue;
-		Assembler &body = this->body;
-		Assembler &epilogue = this->epilogue;
+		Assembler prologue = Assembler(this->xlen, this->enable_compression);
+		Assembler epilogue = Assembler(this->xlen, this->enable_compression);
 
 		// TEMP for debugging
-		body.write_nop();
-		body.write_nop();
-		body.write_nop();
-		body.write_nop();
-		body.write_nop();
-		body.write_nop();
+		this->body.write_nop();
+		this->body.write_nop();
+		this->body.write_nop();
+		this->body.write_nop();
+		this->body.write_nop();
+		this->body.write_nop();
 
 		// now go back and fill in the epilogue's offset for instructions that need it
 		log_vvvv("Backpatching offsets in body");
 
 		// the epilogue comes right after the body
-		size_t epilogue_offset = body.cur_offset();
+		size_t epilogue_offset = this->body.cur_offset();
 		for (size_t instr_pos : this->epilogue_backpatch_list)
 		{
-			int64_t rel_offset = int64_t(epilogue_offset - body.offset_of(instr_pos)); // always positive
-			body.backpatch_immediate(instr_pos, rel_offset);
+			int64_t rel_offset = int64_t(epilogue_offset - this->body.offset_of(instr_pos)); // always positive
+			this->body.backpatch_immediate(instr_pos, rel_offset);
 		}
 
 		log_vvvv("Building prologue and epilogue");
@@ -599,11 +586,11 @@ namespace codegen
 		// call sites are relative to the body, make them relative to the object
 		size_t body_start = code.size() + prologue.cur_offset();
 		for (const auto &[pos, callee] : this->call_backpatch_list)
-			this->add_call_fixup(body_start + body.offset_of(pos), callee);
+			this->add_call_fixup(body_start + this->body.offset_of(pos), callee);
 
 		// write to .text
 		prologue.dump_to_bytes(code);
-		body.dump_to_bytes(code);
+		this->body.dump_to_bytes(code);
 		epilogue.dump_to_bytes(code);
 	}
 

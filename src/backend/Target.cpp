@@ -28,8 +28,9 @@ std::unique_ptr<CodeGenerator> Target::get_code_generator() const
 	case Arch::X86:
 	case Arch::X86_64:
 		ret = std::make_unique<codegen::X86CodeGenerator>(*this);
+		break;
 	default:
-		throw CompilerError::internal("Uncaught architecture variant");
+		throw CompilerError::internal("Uncaught architecture variant (Target::get_code_generator())");
 	}
 	return ret;
 }
@@ -62,7 +63,7 @@ unsigned int Target::register_width() const
 	case Arch::X86_64:
 		return 64;
 	}
-	throw CompilerError::internal("Uncaught architecture variant");
+	throw CompilerError::internal("Uncaught architecture variant (Target::register_width())");
 }
 
 unsigned short Target::abi_float_precision() const

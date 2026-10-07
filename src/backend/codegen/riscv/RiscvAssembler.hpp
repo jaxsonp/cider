@@ -21,8 +21,8 @@ namespace codegen::riscv
 			Instruction instr;
 			/// Byte offset from the start of the buffer
 			size_t offset;
-			/// Whether this is emitted in its 16 bit compressed form
-			bool compressed;
+			/// Whether this is to be emitted in its 16 bit compressed form
+			bool will_compress;
 		};
 
 		std::vector<Entry> buf;

@@ -65,12 +65,9 @@ namespace codegen
 		/// Size in bytes of a register, and therefore of every stack slot
 		const int64_t word_size;
 
-		// a function is emitted as three separate chunks, since the prologue depends on things that are only
-		// known once the body is done (ie the size of the stack frame)
+		const bool enable_compression;
 
-		riscv::Assembler prologue;
 		riscv::Assembler body;
-		riscv::Assembler epilogue;
 
 		/// Register assignment states. Registers are in order of priority (heuristic = caller saved first (is this good? idk))
 		RegAllocator regalloc;

@@ -10,20 +10,20 @@ namespace codegen::riscv
 {
 	size_t Assembler::write(const Instruction &instr, bool fixed_size)
 	{
-		bool compressed = this->compress && !fixed_size && instr.try_compress(this->xlen).has_value();
+		bool can_compress = this->compress && !fixed_size && instr.try_compress(this->xlen).has_value();
 		this->buf.push_back(Entry{
 			.instr = instr,
 			.offset = this->byte_size,
-			.compressed = compressed,
+			.will_compress = can_compress,
 		});
-		this->byte_size += compressed ? 2 : 4;
+		this->byte_size += can_compress ? 2 : 4;
 		return this->buf.size() - 1;
 	}
 
 	void Assembler::backpatch_immediate(size_t pos, int64_t imm)
 	{
 		Entry &entry = this->buf.at(pos);
-		if (entry.compressed)
+		if (entry.will_compress)
 			throw CompilerError::internal("RISC-V codegen: cannot backpatch a compressed instruction");
 		if (entry.instr.format() == InstructionFormat::RType)
 			throw CompilerError::internal("RISC-V codegen: cannot backpatch R-type instruction");
@@ -37,7 +37,7 @@ namespace codegen::riscv
 		bytes.reserve(bytes.size() + this->byte_size);
 		for (const Entry &entry : this->buf)
 		{
-			if (entry.compressed)
+			if (entry.will_compress)
 			{
 				// can't fail, since this was already checked when the instruction was written
 				uint16_t encoded = entry.instr.try_compress(this->xlen).value();
