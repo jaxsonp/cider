@@ -83,13 +83,26 @@ namespace objwriter
 			if (target.has(Target::RiscvExt::C))
 				flags |= EF_RISCV_RVC;
 
-			if (target.abi == Target::ABI::ILP32 || target.abi == Target::ABI::LP64)
+			switch (target.abi_float_precision())
+			{
+			case 0:
 				flags |= EF_RISCV_FLOAT_ABI_SOFT;
-			else if (target.abi == Target::ABI::ILP32F || target.abi == Target::ABI::LP64F)
+				break;
+			case 1:
 				flags |= EF_RISCV_FLOAT_ABI_SINGLE;
-			else if (target.abi == Target::ABI::ILP32D || target.abi == Target::ABI::LP64D)
+				break;
+			case 2:
 				flags |= EF_RISCV_FLOAT_ABI_DOUBLE;
+				break;
+			default:
+				throw CompilerError::internal("Unexpected abi float precision");
+			}
 			break;
+		case Target::Arch::X86:
+		case Target::Arch::X86_64:
+			throw CompilerError::unimplemented("TODO x86 elf writing");
+		default:
+			throw CompilerError::internal("ELF object writer: Uncaught arch");
 		}
 		return flags;
 	}
@@ -129,9 +142,9 @@ namespace objwriter
 		ehdr.e_type = ET_EXEC; // TODO generalize
 		ehdr.e_machine = elf_machine(target);
 		ehdr.e_version = EV_CURRENT;
-		ehdr.e_entry = 0x10000u;	// enter at start of code section
+		ehdr.e_entry = 0x10000u;	 // enter at start of code section
 		ehdr.e_phoff = sizeof(Ehdr); // program headers follow immediately
-		ehdr.e_shoff = 0;			// no section headers for now
+		ehdr.e_shoff = 0;			 // no section headers for now
 		ehdr.e_ehsize = sizeof(Ehdr);
 		ehdr.e_phentsize = sizeof(Phdr);
 		ehdr.e_phnum = segments.size();

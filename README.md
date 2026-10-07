@@ -31,6 +31,8 @@ Options:
 | `linux-riscv32gc` | Linux | ELF32 | RV32GC | ILP32D |
 | `linux-riscv64g` | Linux | ELF64 | RV64G | LP64D |
 | `linux-riscv64gc` | Linux | ELF64 | RV64GC | LP64D |
+| `linux-x86` | Linux | ELF32 | IA-32 | SysV i386 |
+| `linux-x86_64` | Linux | ELF64 | x86_64 | SysV AMD64 |
 
 64 bit integers (`i64`, `u64`) are only supported on the 64 bit targets for now.
 

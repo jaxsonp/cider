@@ -22,6 +22,10 @@ public:
 		RISCV32,
 		/// RISC-V with 64 bit registers (RV64I base)
 		RISCV64,
+		/// x86
+		X86,
+		/// x86 64-bit (AKA AMD64)
+		X86_64,
 	};
 
 	/// @brief RISC-V ISA extensions, combined as bit flags in `Target::features`
@@ -45,17 +49,21 @@ public:
 	enum class ABI
 	{
 		/// RISC-V 32 bit non-float ABI
-		ILP32,
+		RISCV_ILP32,
 		/// RISC-V 32 bit single precision float ABI
-		ILP32F,
+		RISCV_ILP32F,
 		/// RISC-V 32 bit double precision float ABI
-		ILP32D,
+		RISCV_ILP32D,
 		/// RISC-V 64 bit non-float ABI
-		LP64,
+		RISCV_LP64,
 		/// RISC-V 64 bit single precision float ABI
-		LP64F,
+		RISCV_LP64F,
 		/// RISC-V 64 bit double precision float ABI
-		LP64D,
+		RISCV_LP64D,
+		/// x86 32 bit double precision float ABI
+		SYSV_I386,
+		/// x86 64 bit double precision float ABI
+		SYSV_AMD64,
 	};
 
 	enum class OS
@@ -83,10 +91,13 @@ public:
 	std::unique_ptr<ObjectWriter> get_object_writer() const;
 
 	/// @brief Width (in bits) of a general purpose register, which is also the width of an address
-	unsigned int register_bits() const;
+	unsigned int register_width() const;
 
 	/// @brief Whether every one of the given feature flags is enabled for this target
 	bool has(uint32_t feature_flags) const { return (this->features & feature_flags) == feature_flags; }
+
+	/// @brief 0 = no floats, 1 = single precision floats, 2 = double precision floats
+	unsigned short abi_float_precision() const;
 
 	Target() = delete;
 

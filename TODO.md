@@ -8,14 +8,16 @@ _For Jaxson's eyes only_
 	- Arbitrary-precision ints
 	- Memleaks
 	- define/enforce function name rules
-	- riscv type truncation on explicit casts (once it exists)
-	- integer literals wrapping around their range (2000i8 == -48i8), a few tests falsely lean on it, see binary_op/{addition,subtraction,bitwise_*}/i8_*.cdr
+	- integer literals wrapping around their range (2000i8 == -48i8), a few tests falsely lean on it, see binary_op/{addition,subtraction,bitwise_*}/i8_*.cdr (maybe not applicable anoymore?)
 	- Check code for stuff that doesn't need to be in headers
 	- Testing improvements:
 		- Overhaul how tests are ran (move away from qemu-user, maybe containers? maybe only native?)
 		- Test timeouts
 		- finish stdout/stderr checking
-	- Use callee saved registers for riscv register allocation
+	- Use callee saved registers for register allocation
+	- Improve riscv codegen
+		- Full support for riscv abi (double registers or whatever)
+		- riscv type truncation on explicit casts (once it exists)
 	- Fix: hex literals with letter digits don't parse (`0x1Fu8` is a type error, the lexer's digit scan stops at `F`). Probably belongs with "Non-decimal int literals" below
 	- Fix: deeply nested expressions (~2000 nested parens) segfault the compiler (parser recursion), should be a proper error
 - Before self-hosting:
@@ -39,12 +41,12 @@ _For Jaxson's eyes only_
 	- Non-G riscv ISAs without M: multiplication/division throw `unsupported` for now, needs runtime routines (soft floats too once there are floats). Target flags exist for M/A/F/D/C, only C changes codegen today
 	- Branch encoding (B-type) and jump relaxation for the C extension (jumps and calls are never compressed so offsets are final when emitted), once the IR has branches
 	- Better error messages (include code snippet)
-	- x86_64 backend (the codegen driver, register allocator and ELF writer are architecture independent now, see AGENTS.md)
 	- try doing UTF8
 	- labelled code blocks (for early breaks)
 	- Warnings:
 		- Double negation
 	- Investigate/reevaluate bitshift behavior
+	- x86 subtargets (i686, i386, etc)
 - Tests to write:
 	- overflowing int literal
 	- left/right associativity, and comparisions needing parens

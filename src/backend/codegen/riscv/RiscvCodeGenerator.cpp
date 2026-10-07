@@ -1,4 +1,4 @@
-#include "CodeGenerator_riscv.hpp"
+#include "RiscvCodeGenerator.hpp"
 
 #include <algorithm>
 #include <format>
@@ -40,36 +40,38 @@ namespace codegen
 		return value >= -2048 && value <= 2047;
 	}
 
-	CodeGenerator_riscv::CodeGenerator_riscv(const Target &target)
+	RiscvCodeGenerator::RiscvCodeGenerator(const Target &target)
 		: target(target),
-		  xlen(target.register_bits()),
-		  word_size(target.register_bits() / 8),
+		  xlen(target.register_width()),
+		  word_size(target.register_width() / 8),
 		  prologue(xlen, target.has(Target::RiscvExt::C)),
 		  body(xlen, target.has(Target::RiscvExt::C)),
 		  epilogue(xlen, target.has(Target::RiscvExt::C)),
 		  regalloc(*this, ALLOCATABLE_REGISTERS)
 	{
+		if (target.arch != Target::Arch::RISCV32 && target.arch != Target::Arch::RISCV64)
+			throw CompilerError::internal("Tried to initalize Riscv code generator with non riscv arch");
 	}
 
-	int64_t CodeGenerator_riscv::spill_fp_offset(size_t spill_index) const
+	int64_t RiscvCodeGenerator::spill_fp_offset(size_t spill_index) const
 	{
 		// spill N lives at fp - word * (N + 3), right below the saved ra (fp - word) and fp (fp - 2 * word)
 		return -this->word_size * int64_t(spill_index + 3);
 	}
 
-	bool CodeGenerator_riscv::is_word_op(ir::IrType type) const
+	bool RiscvCodeGenerator::is_word_op(ir::IrType type) const
 	{
 		return this->xlen == 64 && type.get_size() <= 4;
 	}
 
-	void CodeGenerator_riscv::require_m_extension(std::string_view operation) const
+	void RiscvCodeGenerator::require_m_extension(std::string_view operation) const
 	{
 		// TODO lower these to runtime routines instead, for targets without it
 		if (!this->target.has(Target::RiscvExt::M))
 			throw CompilerError::unsupported(std::format("RISC-V codegen: {} requires the M extension", operation));
 	}
 
-	riscv::Register CodeGenerator_riscv::reach_offset(Assembler &code, Register base, int64_t &offset, Register scratch)
+	riscv::Register RiscvCodeGenerator::reach_offset(Assembler &code, Register base, int64_t &offset, Register scratch)
 	{
 		if (fits_imm12(offset))
 			return base;
@@ -84,7 +86,7 @@ namespace codegen
 		return scratch;
 	}
 
-	void CodeGenerator_riscv::write_load(Assembler &code, Register dest, Register base, int64_t offset, unsigned int size, bool sign_extend)
+	void RiscvCodeGenerator::write_load(Assembler &code, Register dest, Register base, int64_t offset, unsigned int size, bool sign_extend)
 	{
 		// the destination is about to be overwritten anyway, so it can double as the scratch register
 		base = this->reach_offset(code, base, offset, dest);
@@ -116,7 +118,7 @@ namespace codegen
 		}
 	}
 
-	void CodeGenerator_riscv::write_store(Assembler &code, Register base, Register src, int64_t offset, unsigned int size)
+	void RiscvCodeGenerator::write_store(Assembler &code, Register base, Register src, int64_t offset, unsigned int size)
 	{
 		base = this->reach_offset(code, base, offset, SCRATCH);
 		switch (size)
@@ -138,7 +140,7 @@ namespace codegen
 		}
 	}
 
-	void CodeGenerator_riscv::load_spilled_vreg(PhysReg dest, ir::VRegId vreg, size_t spill_index)
+	void RiscvCodeGenerator::load_spilled_vreg(PhysReg dest, ir::VRegId vreg, size_t spill_index)
 	{
 		ir::IrType vreg_type = this->cur_fn->vregs.at(vreg);
 		// on RV64, 32 bit values are always loaded sign extended (even unsigned ones), which is the form
@@ -147,13 +149,13 @@ namespace codegen
 		this->write_load(this->body, Register(dest), Register::fp, this->spill_fp_offset(spill_index), vreg_type.get_size(), sign_extend);
 	}
 
-	void CodeGenerator_riscv::store_spilled_vreg(PhysReg src, ir::VRegId vreg, size_t spill_index)
+	void RiscvCodeGenerator::store_spilled_vreg(PhysReg src, ir::VRegId vreg, size_t spill_index)
 	{
 		ir::IrType vreg_type = this->cur_fn->vregs.at(vreg);
 		this->write_store(this->body, Register::fp, Register(src), this->spill_fp_offset(spill_index), vreg_type.get_size());
 	}
 
-	void CodeGenerator_riscv::truncate_reg(RegSlot *slot, unsigned int width)
+	void RiscvCodeGenerator::truncate_reg(RegSlot *slot, unsigned int width)
 	{
 		ir::IrType ir_type = this->cur_fn->vregs.at(slot->resident);
 		unsigned int type_bits = 8u * ir_type.get_size();
@@ -176,7 +178,7 @@ namespace codegen
 			this->body.write_srli(reg_of(slot), reg_of(slot), shift);
 	}
 
-	void CodeGenerator_riscv::begin_function(const ir::Function &fn)
+	void RiscvCodeGenerator::begin_function(const ir::Function &fn)
 	{
 		// values wider than a register would need to be split across two of them
 		// TODO implement, so that 64 bit integers work on RV32
@@ -200,19 +202,19 @@ namespace codegen
 		this->epilogue = Assembler(this->xlen, compress);
 	}
 
-	void CodeGenerator_riscv::begin_block(const ir::BasicBlock &bb)
+	void RiscvCodeGenerator::begin_block(const ir::BasicBlock &bb)
 	{
 		// clearing register allocator slots
 		this->regalloc.start_block();
 	}
 
-	void CodeGenerator_riscv::begin_instruction()
+	void RiscvCodeGenerator::begin_instruction()
 	{
 		// registers are only locked for the duration of one instruction
 		this->regalloc.start_instruction();
 	}
 
-	void CodeGenerator_riscv::lower_immediate_instr(const ir::ImmediateInstruction &instr)
+	void RiscvCodeGenerator::lower_immediate_instr(const ir::ImmediateInstruction &instr)
 	{
 		// load immmediate
 		RegSlot *dest = this->regalloc.load_dest_vreg(instr.dest);
@@ -223,7 +225,7 @@ namespace codegen
 		this->body.load_immediate(reg_of(dest), value);
 	}
 
-	void CodeGenerator_riscv::lower_binary_instr(const ir::BinaryInstruction &instr)
+	void RiscvCodeGenerator::lower_binary_instr(const ir::BinaryInstruction &instr)
 	{
 		Assembler &body = this->body;
 
@@ -405,7 +407,7 @@ namespace codegen
 		}
 	}
 
-	void CodeGenerator_riscv::lower_unary_instr(const ir::UnaryInstruction &instr)
+	void RiscvCodeGenerator::lower_unary_instr(const ir::UnaryInstruction &instr)
 	{
 		Assembler &body = this->body;
 
@@ -431,7 +433,7 @@ namespace codegen
 		}
 	}
 
-	void CodeGenerator_riscv::lower_load_arg_instr(const ir::LoadArgInstruction &instr)
+	void RiscvCodeGenerator::lower_load_arg_instr(const ir::LoadArgInstruction &instr)
 	{
 		if (instr.index >= MAX_REGISTER_ARGS)
 		{
@@ -449,7 +451,7 @@ namespace codegen
 		}
 	}
 
-	void CodeGenerator_riscv::lower_call(const ir::CallInstruction &instr)
+	void RiscvCodeGenerator::lower_call(const ir::CallInstruction &instr)
 	{
 		Assembler &body = this->body;
 
@@ -480,7 +482,7 @@ namespace codegen
 			this->regalloc.claim(PhysReg(Register::a0), instr.dest.value());
 	}
 
-	void CodeGenerator_riscv::lower_return(std::optional<ir::VRegId> ret_reg)
+	void RiscvCodeGenerator::lower_return(std::optional<ir::VRegId> ret_reg)
 	{
 		Assembler &body = this->body;
 
@@ -511,7 +513,7 @@ namespace codegen
 		this->epilogue_backpatch_list.push_back(pos);
 	}
 
-	void CodeGenerator_riscv::finalize_function(const ir::Function &fn, std::vector<uint8_t> &code)
+	void RiscvCodeGenerator::finalize_function(const ir::Function &fn, std::vector<uint8_t> &code)
 	{
 		Assembler &prologue = this->prologue;
 		Assembler &body = this->body;
@@ -605,12 +607,12 @@ namespace codegen
 		epilogue.dump_to_bytes(code);
 	}
 
-	void CodeGenerator_riscv::patch_call(std::vector<uint8_t> &code, size_t call_offset, size_t target_offset)
+	void RiscvCodeGenerator::patch_call(std::vector<uint8_t> &code, size_t call_offset, size_t target_offset)
 	{
 		Assembler::patch_call(code, call_offset, target_offset);
 	}
 
-	std::vector<uint8_t> CodeGenerator_riscv::build_runtime_code(uint64_t main_offset, Target t)
+	std::vector<uint8_t> RiscvCodeGenerator::build_runtime_code(uint64_t main_offset, Target t)
 	{
 		if (t.os == Target::OS::Linux)
 		{

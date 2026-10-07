@@ -21,7 +21,7 @@ namespace codegen
 	/// Stack layout:
 	/// ```
 	/// | outgoing stack args... | spilled vregs... | saved fp | saved ra | incoming stack args... |
-	/// ^ sp                                                             ^ fp
+	/// ^ sp                                                              ^ fp
 	/// <-- lower addresses                                      higher addresses -->
 	/// <-- stack grows this way
 	/// ```
@@ -44,7 +44,7 @@ namespace codegen
 	/// back in a0. Narrow integer arguments and return values are sign/zero extended to 32 bits, and on RV64 32 bit
 	/// values are then sign extended to 64 bits. Since every
 	/// allocatable register is caller saved, all live values are spilled to the stack before a call.
-	class CodeGenerator_riscv : public CodeGenerator, private SpillHandler
+	class RiscvCodeGenerator : public CodeGenerator, private SpillHandler
 	{
 		using Register = riscv::Register;
 		using RegSlot = RegAllocator::RegSlot;
@@ -141,7 +141,7 @@ namespace codegen
 		void patch_call(std::vector<uint8_t> &code, size_t call_offset, size_t target_offset) override;
 
 	public:
-		CodeGenerator_riscv(const Target &target);
+		RiscvCodeGenerator(const Target &target);
 
 		virtual std::vector<uint8_t> build_runtime_code(uint64_t main_offset, Target t) override;
 	};

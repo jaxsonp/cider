@@ -2,10 +2,12 @@
 
 #include <stdint.h>
 
+#include "backend/codegen/RegAllocator.hpp"
+
 namespace codegen::riscv
 {
 	/// @brief Integer registers, by their ABI names. The value of each is its register number (x0-x31)
-	enum class Register : uint8_t
+	enum class Register : PhysReg
 	{
 		zero = 0,
 		ra = 1,
