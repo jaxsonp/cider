@@ -53,14 +53,34 @@ namespace codegen
 			}
 		}
 
+		/// @brief Get the required register size to house a specific type (assumes low byte of word if size is 1 byte)
+		/// @param type IR type
+		/// @return Required register size
+		RegisterAccess reg_size_from_type(ir::IrType type)
+		{
+			switch (type.get_size())
+			{
+			case 1:
+				return RegisterAccess::LByte;
+			case 2:
+				return RegisterAccess::Word;
+			case 4:
+				return RegisterAccess::DWord;
+			case 8:
+				return RegisterAccess::QWord;
+			}
+			throw CompilerError::internal(std::format("Weird size in function reg_size_from_type(): {} bytes", type.get_size()));
+		}
 	}
 
 	X86CodeGenerator::X86CodeGenerator(const Target &target)
-		: target(target), regalloc(*this, x86::get_registers(target)), reg_width(target.arch == Target::Arch::X86 ? 4 : 8)
+		: target(target), regalloc(*this, x86::get_registers(target)),
+		  reg_width(target.arch == Target::Arch::X86_64 ? 8 : 4),
+		  is_x64(target.arch == Target::Arch::X86_64)
 	{
 		if (target.arch != Target::Arch::X86 && target.arch != Target::Arch::X86_64)
 			throw CompilerError::internal("Tried to initalize x86 code generator with non-x86 arch");
-		if (target.arch == Target::Arch::X86_64)
+		if (is_x64)
 			throw CompilerError::unimplemented("Have not implemented AMD64 yet");
 	}
 
@@ -76,8 +96,20 @@ namespace codegen
 
 	void X86CodeGenerator::begin_function(const ir::Function &fn)
 	{
+		// clear data
 		this->body.clear();
 
+		// calculate incoming stack-passed argument offsets
+		this->stack_args_bp_offsets.clear();
+		uint32_t cumulative_bp_offset = 2 * this->reg_width;
+		for (size_t i = 0; i < fn.argument_types.size(); i++)
+		{
+			this->stack_args_bp_offsets.push_back(cumulative_bp_offset);
+			cumulative_bp_offset += fn.argument_types[i].get_size();
+		}
+		this->stack_args_size = cumulative_bp_offset - (2 * this->reg_width);
+
+		// prepare register allocator
 		this->regalloc.start_function();
 	}
 
@@ -95,6 +127,11 @@ namespace codegen
 
 	void X86CodeGenerator::lower_immediate_instr(const ir::ImmediateInstruction &instr)
 	{
+		RegSlot *dest = this->regalloc.load_dest_vreg(instr.dest);
+		ir::IrType imm_type = this->cur_fn->vregs.at(instr.dest);
+		unsigned int imm_size = imm_type.get_size();
+
+		// TODO continue
 		throw CompilerError::unimplemented("TODO x86 lower imm instr");
 	}
 	void X86CodeGenerator::lower_binary_instr(const ir::BinaryInstruction &instr)
@@ -109,24 +146,31 @@ namespace codegen
 	void X86CodeGenerator::lower_load_arg_instr(const ir::LoadArgInstruction &instr)
 	{
 		RegSlot *dest = this->regalloc.load_dest_vreg(instr.dest);
-		ir::IrType type = this->cur_fn->vregs.at(instr.dest);
-		// every argument takes one word sized slot, so the offset only depends on the index. bp points at the
-		// saved bp, with the return address above it
-		int32_t bp_offset = int32_t(this->reg_width * (instr.index + 2));
-		// x86 is little endian, so a narrow argument is the first bytes of its slot
-		x86::MemoryOperand src{.size = type.get_size(), .base_reg = x86::Register::RBP, .offset = bp_offset};
+		ir::IrType arg_type = this->cur_fn->vregs.at(instr.dest);
+		unsigned int arg_size = arg_type.get_size();
+		x86::RegisterAccess dest_reg_size = x86::reg_size_from_type(arg_type);
 
-		// TODO 64 bit arguments, once x64 or two register values are supported
-		if (type.get_size() > 4)
-			throw CompilerError::unimplemented(
-				std::format("x86 codegen: arguments of type '{}' (in function \"{}\")", type.to_string(), this->cur_fn->name));
+		if (instr.index >= this->stack_args_bp_offsets.size())
+			throw CompilerError::internal(std::format("Load arg instruction has index {}, while precomputed stack_args_bp_offset has size {}", instr.index, this->stack_args_bp_offsets.size()));
+		uint32_t bp_offset = this->stack_args_bp_offsets[instr.index];
 
-		// narrow arguments are extended while loading, reading only the bytes that belong to them. so
-		// whatever the caller left in the rest of the slot doesn't matter
-		x86::Mnemonic mnemonic = x86::Mnemonic::MOV;
-		if (type.get_size() < 4)
-			mnemonic = type.is_signed() ? x86::Mnemonic::MOVSX : x86::Mnemonic::MOVZX;
-		this->body.write(x86::Instruction{mnemonic, {x86::RegisterOperand(dest->physical, x86::RegisterAccess::DWord), src}});
+		x86::MemoryOperand src{.size = arg_size, .base_reg = x86::Register::RBP, .offset = static_cast<int32_t>(bp_offset)};
+
+		if (!this->is_x64 && dest_reg_size == x86::RegisterAccess::LByte && (dest->physical == PhysReg(x86::Register::RDI) || dest->physical == PhysReg(x86::Register::RSI)))
+			// special case, without x64, rdi/rsi don't have singe byte accessors so use sign/zero extension
+			this->body.write(
+				x86::Instruction{
+					.mnemonic = arg_type.is_signed() ? x86::Mnemonic::MOVSX : x86::Mnemonic::MOVZX,
+					.operands = {
+						x86::RegisterOperand(dest->physical, x86::RegisterAccess::Word),
+						src}});
+		else
+			this->body.write(
+				x86::Instruction{
+					.mnemonic = x86::Mnemonic::MOV,
+					.operands = {
+						x86::RegisterOperand(dest->physical, dest_reg_size),
+						src}});
 	}
 
 	void X86CodeGenerator::lower_call(const ir::CallInstruction &instr)

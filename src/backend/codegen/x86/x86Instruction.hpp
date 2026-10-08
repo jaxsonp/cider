@@ -13,25 +13,9 @@ namespace codegen::x86
 	enum class Mnemonic : uint8_t
 	{
 		MOV,
-		/// Move with zero extension, from a narrower source
-		MOVZX,
-		/// Move with sign extension, from a narrower source
-		MOVSX,
-		LEA,
-		ADD,
-		SUB,
-		MUL,
-		IMUL,
-		DIV,
-		IDIV,
-		PUSH,
-		POP,
-		CALL,
-		RET,
-		JMP,
-		JE,
-		JNE,
-		// ... and plenty more, TODO
+		MOVSX, // Move with sign extension
+		MOVZX, // Move with zero extension
+			   // ... and plenty more, TODO
 	};
 
 	struct RegisterOperand

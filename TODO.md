@@ -17,6 +17,7 @@ _For Jaxson's eyes only_
 	- Use callee saved registers for register allocation
 	- Improve riscv codegen
 		- Full support for riscv abi (double registers or whatever)
+		- Investigate if stack-passed args are correct (eg should they be/are they all one word?)
 		- riscv type truncation on explicit casts (once it exists)
 		- Investigate if large immediates are broken in codegen
 	- Fix: hex literals with letter digits don't parse (`0x1Fu8` is a type error, the lexer's digit scan stops at `F`). Probably belongs with "Non-decimal int literals" below

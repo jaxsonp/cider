@@ -25,7 +25,6 @@ namespace codegen
 	/// - spilled vregs will be at fp - (word * (spill number + 3))
 	/// - outgoing stack args are the stack-passed arguments (9th onwards) of calls this function makes. The
 	///   area is sized for the largest such call, argument i goes at sp + word * (i - 8)
-	/// - incoming stack args: argument i is at bp + 2*reg_width + (i+2)*reg_width
 	///
 	/// Register allocation is done by `RegAllocator`. Currently only uses caller saved registers
 	///
@@ -49,15 +48,24 @@ namespace codegen
 		const Target target;
 
 		/// Register width 4 for 32bit, 8 for 64bit
-		const uint64_t reg_width;
+		const uint32_t reg_width;
 
-		/// @brief Register allocator state
+		/// Whether this arch is x86_64, for convenience
+		const bool is_x64;
+
+		/// Register allocator state
 		RegAllocator regalloc;
 
-		/// @brief Instruction buffer for function body (not prologue/epilogue)
+		/// Instruction buffer for function body (not prologue/epilogue)
 		x86::Assembler body;
 
-		void store_spilled_vreg(PhysReg src, ir::VRegId vreg, size_t spill_index) override;
+		/// Precomputed offset of incoming stack-passed args from the base pointer
+		std::vector<uint32_t> stack_args_bp_offsets;
+		/// Precomputed size of all arguments on the stack
+		uint64_t stack_args_size = 0;
+
+		void
+		store_spilled_vreg(PhysReg src, ir::VRegId vreg, size_t spill_index) override;
 
 		/// Sign/zero extends narrow types
 		void load_spilled_vreg(PhysReg dest, ir::VRegId vreg, size_t spill_index) override;
