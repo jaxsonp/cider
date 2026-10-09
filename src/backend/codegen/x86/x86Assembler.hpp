@@ -11,10 +11,16 @@ namespace codegen::x86
 	{
 		std::vector<uint8_t> buf;
 
+		bool is_x64;
+
 	public:
+		Assembler(bool is_x64);
+
 		/// @brief Reset buffer contents
 		void clear();
 
 		size_t write(Instruction inst);
+
+		void write_mov(Operand dest, Operand src, bool signed_type);
 	};
 }

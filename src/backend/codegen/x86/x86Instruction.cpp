@@ -6,41 +6,6 @@
 
 #include "utils/error.hpp"
 
-/******************************************************************************
-
-How an x86 instruction is laid out in machine code (everything in brackets is optional):
-
-  [prefixes] opcode [ModRM] [SIB] [displacement] [immediate]
-
-ModRM is the byte that says what the operands are. Its fields are:
-
-  MOD (2 bits) | reg (3 bits) | rm (3 bits)
-
-- MOD: Describes what the r/m operand of the instruction is. It's values can be:
-	- 00: memory access, at `[rm]`
-	- 01: memory access, at `[rm + offset]` where offset is 1 byte in [displacement]
-	- 10: memory access, at `[rm + offset]` where offset is 4 bytes in [displacement]
-	- 11: register, specified by `rm`
-  There is a special case, where if mod != 11 and rm == esp, this indicates the SIB byte is present
-  and it is used for memory accesses, rather than rm. Offset in [displacement] still applies
-- rm: See MOD notes
-- reg: is the other, not r/m operand, which is always a register. Instructions without
-  a second register (ie when it's an immediate instead) have no use for the field,
-  so it holds more opcode bits: the opcode extension, written "/digit" in the Intel
-  manual ("/r" is a normal ModRM, with a register in reg)
-
-SIB byte is the secondary indexing byte, used by some ops to describe non-static memory
-indexing/offsetting, eg `[base + index * scale]` (last offset is described in
-[displacement]). Fields are:
-
-  scale (2 bits) | index (3 bits) | base (3 bits)
-
-- scale: scaling factor (1, 2, 4, 8)
-- index: register holding index value
-- base: register holding the base address
-
-******************************************************************************/
-
 namespace codegen::x86
 {
 	/// @brief Where the operands of an instruction go in its machine code. Named after the "Op/En" column of
@@ -65,7 +30,7 @@ namespace codegen::x86
 		uint8_t opcode_byte;
 		/// Opcode when operating on 16 or 32 bits (they share one, 64 bit operands add a prefix)
 		uint8_t opcode;
-		/// Opcode extension, for the layouts that have one
+		/// Opcode extension (stored in reg of ModRM byte), for the layouts that have one
 		uint8_t extension = 0;
 	};
 
@@ -91,9 +56,6 @@ namespace codegen::x86
 							  {Layout::RM, 0x0, 0x0F, 0xB6},
 						  }}};
 
-	static bool is_reg(const Operand &op) { return std::holds_alternative<RegisterOperand>(op); }
-	static bool is_imm(const Operand &op) { return std::holds_alternative<ImmediateOperand>(op); }
-
 	/// @brief Whether a list of operands can be encoded with a layout
 	static bool fits(Layout layout, const std::vector<Operand> &ops)
 	{
@@ -101,13 +63,13 @@ namespace codegen::x86
 		switch (layout)
 		{
 		case Layout::MR:
-			return ops.size() == 2 && !is_imm(ops[0]) && is_reg(ops[1]);
+			return ops.size() == 2 && !ops[0].is_imm() && ops[1].is_reg();
 		case Layout::RM:
-			return ops.size() == 2 && is_reg(ops[0]) && !is_imm(ops[1]);
+			return ops.size() == 2 && ops[0].is_reg() && !ops[1].is_imm();
 		case Layout::MI:
-			return ops.size() == 2 && !is_imm(ops[0]) && is_imm(ops[1]);
+			return ops.size() == 2 && !ops[0].is_imm() && ops[1].is_imm();
 		case Layout::OI:
-			return ops.size() == 2 && is_reg(ops[0]) && is_imm(ops[1]);
+			return ops.size() == 2 && ops[0].is_reg() && ops[1].is_imm();
 		}
 		throw CompilerError::internal("Uncaught Layout variant");
 	}
@@ -162,10 +124,10 @@ namespace codegen::x86
 		for (const Operand &op : ops)
 		{
 			unsigned int op_size;
-			if (const RegisterOperand *reg = std::get_if<RegisterOperand>(&op))
-				op_size = size_of(reg->access);
-			else if (const MemoryOperand *mem = std::get_if<MemoryOperand>(&op))
-				op_size = mem->size;
+			if (op.is_reg())
+				op_size = size_of(op.reg().access);
+			else if (op.is_mem())
+				op_size = op.mem().size;
 			else
 				continue;
 
@@ -214,29 +176,31 @@ namespace codegen::x86
 	/// @param rm The r/m operand, a register or memory
 	static void encode_modrm(std::vector<uint8_t> &buf, uint8_t reg_field, const Operand &rm)
 	{
-		if (const RegisterOperand *reg = std::get_if<RegisterOperand>(&rm))
+		if (rm.is_reg())
 		{
 			// mod 11, the rm field is a register rather than memory
-			buf.push_back(uint8_t(0b11 << 6 | reg_field << 3 | encoding_of(*reg)));
+			buf.push_back(uint8_t(0b11 << 6 | reg_field << 3 | encoding_of(rm.reg())));
 			return;
 		}
-		else if (const MemoryOperand *mem = std::get_if<MemoryOperand>(&rm))
+		else if (rm.is_mem())
 		{
+			const MemoryOperand &mem_op = rm.mem();
+
 			// TODO indexed addressing
-			if (mem->index_reg.has_value())
+			if (mem_op.index_reg.has_value())
 				throw CompilerError::unimplemented("x86 encoding: indexed addressing");
 
 			// TODO absolute addressing
-			if (!mem->base_reg.has_value())
+			if (!mem_op.base_reg.has_value())
 				throw CompilerError::unimplemented("x86 encoding: absolute addressing");
-			uint8_t base_reg = encoding_of(mem->base_reg.value());
+			uint8_t base_reg = encoding_of(mem_op.base_reg.value());
 
 			// mod decides the displacement (aka offset) size
 			uint8_t mod;
-			if (mem->offset == 0 && mem->base_reg != Register::RBP)
+			if (mem_op.offset == 0 && mem_op.base_reg != Register::RBP)
 				// special case, mod=00 and r/m==BP means absolute addressing
 				mod = 0b00; // zero bytes, no offset
-			else if (mem->offset >= INT8_MIN && mem->offset <= INT8_MAX)
+			else if (mem_op.offset >= INT8_MIN && mem_op.offset <= INT8_MAX)
 				mod = 0b01; // one byte offset
 			else
 				mod = 0b10; // four byte offset
@@ -246,13 +210,13 @@ namespace codegen::x86
 
 			// sp's number in the rm field means that a SIB byte follows instead, so it has to be the base of one
 			// (with no index)
-			if (mem->base_reg == Register::RSP)
+			if (mem_op.base_reg == Register::RSP)
 				buf.push_back(0x24);
 
 			if (mod == 0b01)
-				encode_int(buf, uint64_t(mem->offset), 1);
+				encode_int(buf, uint64_t(mem_op.offset), 1);
 			else if (mod == 0b10)
-				encode_int(buf, uint64_t(mem->offset), 4);
+				encode_int(buf, uint64_t(mem_op.offset), 4);
 		}
 		else
 			throw CompilerError::internal("x86 codegen: encode_modrm() uncaught operand type");
@@ -285,20 +249,20 @@ namespace codegen::x86
 		{
 		case Layout::MR:
 			buf.push_back(opcode);
-			encode_modrm(buf, encoding_of(std::get<RegisterOperand>(this->operands[1])), this->operands[0]);
+			encode_modrm(buf, encoding_of(this->operands[1].reg().reg), this->operands[0]);
 			break;
 		case Layout::RM:
 			buf.push_back(opcode);
-			encode_modrm(buf, encoding_of(std::get<RegisterOperand>(this->operands[0])), this->operands[1]);
+			encode_modrm(buf, encoding_of(this->operands[0].reg().reg), this->operands[1]);
 			break;
 		case Layout::MI:
 			buf.push_back(opcode);
 			encode_modrm(buf, form->extension, this->operands[0]);
-			encode_imm(buf, std::get<ImmediateOperand>(this->operands[1]), size);
+			encode_imm(buf, this->operands[1].imm(), size);
 			break;
 		case Layout::OI:
-			buf.push_back(uint8_t(opcode + encoding_of(std::get<RegisterOperand>(this->operands[0]))));
-			encode_imm(buf, std::get<ImmediateOperand>(this->operands[1]), size);
+			buf.push_back(uint8_t(opcode + encoding_of(this->operands[0].reg().reg)));
+			encode_imm(buf, this->operands[1].imm(), size);
 			break;
 		}
 	}

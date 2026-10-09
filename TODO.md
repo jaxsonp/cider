@@ -5,6 +5,7 @@ _For Jaxson's eyes only_
 ## To implement
 
 - Soon:
+	- x86 
 	- Arbitrary-precision ints
 	- Memleaks
 	- define/enforce function name rules

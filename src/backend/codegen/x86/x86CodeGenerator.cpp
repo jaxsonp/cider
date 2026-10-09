@@ -76,7 +76,7 @@ namespace codegen
 	X86CodeGenerator::X86CodeGenerator(const Target &target)
 		: target(target), regalloc(*this, x86::get_registers(target)),
 		  reg_width(target.arch == Target::Arch::X86_64 ? 8 : 4),
-		  is_x64(target.arch == Target::Arch::X86_64)
+		  is_x64(target.arch == Target::Arch::X86_64), body(target.arch == Target::Arch::X86_64)
 	{
 		if (target.arch != Target::Arch::X86 && target.arch != Target::Arch::X86_64)
 			throw CompilerError::internal("Tried to initalize x86 code generator with non-x86 arch");
@@ -130,9 +130,13 @@ namespace codegen
 		RegSlot *dest = this->regalloc.load_dest_vreg(instr.dest);
 		ir::IrType imm_type = this->cur_fn->vregs.at(instr.dest);
 		unsigned int imm_size = imm_type.get_size();
+		x86::RegisterAccess dest_reg_size = x86::reg_size_from_type(imm_type);
 
-		// TODO continue
-		throw CompilerError::unimplemented("TODO x86 lower imm instr");
+		if (instr.value > UINT64_MAX)
+			x86::ImmediateOperand src_operand{.value = instr.value};
+		x86::RegisterOperand dest_operand{.reg = static_cast<x86::Register>(dest->physical), .access = dest_reg_size};
+
+		this->body.write_mov(dest_operand, src_operand, imm_type.is_signed());
 	}
 	void X86CodeGenerator::lower_binary_instr(const ir::BinaryInstruction &instr)
 	{
@@ -154,23 +158,10 @@ namespace codegen
 			throw CompilerError::internal(std::format("Load arg instruction has index {}, while precomputed stack_args_bp_offset has size {}", instr.index, this->stack_args_bp_offsets.size()));
 		uint32_t bp_offset = this->stack_args_bp_offsets[instr.index];
 
-		x86::MemoryOperand src{.size = arg_size, .base_reg = x86::Register::RBP, .offset = static_cast<int32_t>(bp_offset)};
+		x86::MemoryOperand src_operand{.size = arg_size, .base_reg = x86::Register::RBP, .offset = static_cast<int32_t>(bp_offset)};
+		x86::RegisterOperand dest_operand{.reg = static_cast<x86::Register>(dest->physical), .access = dest_reg_size};
 
-		if (!this->is_x64 && dest_reg_size == x86::RegisterAccess::LByte && (dest->physical == PhysReg(x86::Register::RDI) || dest->physical == PhysReg(x86::Register::RSI)))
-			// special case, without x64, rdi/rsi don't have singe byte accessors so use sign/zero extension
-			this->body.write(
-				x86::Instruction{
-					.mnemonic = arg_type.is_signed() ? x86::Mnemonic::MOVSX : x86::Mnemonic::MOVZX,
-					.operands = {
-						x86::RegisterOperand(dest->physical, x86::RegisterAccess::Word),
-						src}});
-		else
-			this->body.write(
-				x86::Instruction{
-					.mnemonic = x86::Mnemonic::MOV,
-					.operands = {
-						x86::RegisterOperand(dest->physical, dest_reg_size),
-						src}});
+		this->body.write_mov(dest_operand, src_operand, arg_type.is_signed());
 	}
 
 	void X86CodeGenerator::lower_call(const ir::CallInstruction &instr)
