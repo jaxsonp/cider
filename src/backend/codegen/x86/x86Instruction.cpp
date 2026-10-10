@@ -6,26 +6,35 @@
 
 #include "utils/error.hpp"
 
+/*
 namespace codegen::x86
 {
-	/// @brief Where the operands of an instruction go in its machine code. Named after the "Op/En" column of
-	/// the instruction tables in the Intel manual
-	enum class Layout
+	/// @brief Operator Encoding: where the operands of an instruction go in its machine code. From the "Op/En" column
+	/// of the instruction tables in the Intel manual
+	enum class OpEn
 	{
-		/// `op r/m, reg`: ModRM with operand 1 in rm and operand 2 in reg
+		/// ModRM byte has operand 1 in rm and operand 2 in reg
 		MR,
-		/// `op reg, r/m`: ModRM with operand 1 in reg and operand 2 in rm
+		/// ModRM byte has operand 2 in rm and operand 1 in reg
 		RM,
-		/// `op r/m, imm`: ModRM with operand 1 in rm and the opcode extension in reg, then the immediate
+		/// ModRM byte has operand 1 in rm and the opcode extension in reg, immediate byte(s) at end of instruction
 		MI,
-		/// `op reg, imm`: no ModRM, the register's number is added to the opcode ("+r"), then the immediate
-		OI,
+		/// No ModRM byte, the register's number is added to the opcode ("+r"), then the immediate
+		// OI,
+	};
+
+	enum class OpSize
+	{
+		Byte,
+		Word,
+		DWord,
+		QWord,
 	};
 
 	/// @brief One way of encoding an instruction, ie one row of its table in the Intel manual
 	struct InstrForm
 	{
-		Layout layout;
+		OpEn layout;
 		/// Opcode when operating on single bytes
 		uint8_t opcode_byte;
 		/// Opcode when operating on 16 or 32 bits (they share one, 64 bit operands add a prefix)
@@ -38,40 +47,41 @@ namespace codegen::x86
 	/// An instruction uses the first form its operands fit, so when two would work the shorter one goes first
 	static const std::unordered_map<Mnemonic, std::vector<InstrForm>> FORMS = {
 		{Mnemonic::MOV, {
+
 							// MOV r/m, r (88 /r, 89 /r)
-							{Layout::MR, 0x88, 0x89},
+							// {OpEn::MR, 0x88, 0x89},
 							// MOV r, r/m (8A /r, 8B /r)
-							{Layout::RM, 0x8A, 0x8B},
+							// {OpEn::RM, 0x8A, 0x8B},
 							// MOV r, imm (B0+r, B8+r)
-							{Layout::OI, 0xB0, 0xB8},
+							// {OpEn::OI, 0xB0, 0xB8},
 							// MOV r/m, imm (C6 /0, C7 /0)
-							{Layout::MI, 0xC6, 0xC7, 0},
+							// {OpEn::MI, 0xC6, 0xC7, 0},
 						}},
 		{Mnemonic::MOVSX, {
 							  // MOVSX r, r/m8 (0F BE /r)
-							  {Layout::RM, 0x0, 0x0F, 0xBE},
+							  // {OpEn::RM, 0x0, 0x0F, 0xBE},
 						  }},
 		{Mnemonic::MOVZX, {
 							  // MOVZX r, r/m8 (0F B6 /r)
-							  {Layout::RM, 0x0, 0x0F, 0xB6},
+							  // {OpEn::RM, 0x0, 0x0F, 0xB6},
 						  }}};
 
 	/// @brief Whether a list of operands can be encoded with a layout
-	static bool fits(Layout layout, const std::vector<Operand> &ops)
+	static bool fits(OpEn layout, const std::vector<Operand> &ops)
 	{
 		// an r/m operand is anything but an immediate
 		switch (layout)
 		{
-		case Layout::MR:
+		case OpEn::MR:
 			return ops.size() == 2 && !ops[0].is_imm() && ops[1].is_reg();
-		case Layout::RM:
+		case OpEn::RM:
 			return ops.size() == 2 && ops[0].is_reg() && !ops[1].is_imm();
-		case Layout::MI:
+		case OpEn::MI:
 			return ops.size() == 2 && !ops[0].is_imm() && ops[1].is_imm();
-		case Layout::OI:
+		case OpEn::OI:
 			return ops.size() == 2 && ops[0].is_reg() && ops[1].is_imm();
 		}
-		throw CompilerError::internal("Uncaught Layout variant");
+		throw CompilerError::internal("Uncaught OpEn variant");
 	}
 
 	/// @brief Number a register is encoded as
@@ -247,23 +257,27 @@ namespace codegen::x86
 
 		switch (form->layout)
 		{
-		case Layout::MR:
+		case OpEn::MR:
 			buf.push_back(opcode);
 			encode_modrm(buf, encoding_of(this->operands[1].reg().reg), this->operands[0]);
 			break;
-		case Layout::RM:
+		case OpEn::RM:
 			buf.push_back(opcode);
 			encode_modrm(buf, encoding_of(this->operands[0].reg().reg), this->operands[1]);
 			break;
-		case Layout::MI:
+		case OpEn::MI:
 			buf.push_back(opcode);
 			encode_modrm(buf, form->extension, this->operands[0]);
 			encode_imm(buf, this->operands[1].imm(), size);
 			break;
-		case Layout::OI:
+		case OpEn::OI:
 			buf.push_back(uint8_t(opcode + encoding_of(this->operands[0].reg().reg)));
 			encode_imm(buf, this->operands[1].imm(), size);
 			break;
 		}
 	}
+	void write_mov(std::vector<uint8_t> &buf, operands::rm8 dest, operands::r8 src)
+	{
+	}
 }
+*/

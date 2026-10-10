@@ -21,6 +21,6 @@ namespace codegen::x86
 
 		size_t write(Instruction inst);
 
-		void write_mov(Operand dest, Operand src, bool signed_type);
+		void write_mov(operands::rm8 dest, operands::r8 src);
 	};
 }

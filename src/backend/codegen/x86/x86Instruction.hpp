@@ -6,6 +6,7 @@
 #include <optional>
 
 #include "backend/codegen/x86/x86.hpp"
+#include "backend/codegen/x86/x86Operand.hpp"
 
 /******************************************************************************
 
@@ -15,9 +16,9 @@ How an x86 instruction is laid out in machine code (everything in brackets is op
 
 ModRM is the byte that says what the operands are. Its fields are:
 
-  MOD (2 bits) | reg (3 bits) | rm (3 bits)
+  mod (2 bits) | reg (3 bits) | rm (3 bits)
 
-- MOD: Describes what the r/m operand of the instruction is. It's values can be:
+- mod: Describes what the r/m operand of the instruction is. It's values can be:
 	- 00: memory access, at `[rm]`
 	- 01: memory access, at `[rm + offset]` where offset is 1 byte in [displacement]
 	- 10: memory access, at `[rm + offset]` where offset is 4 bytes in [displacement]
@@ -60,7 +61,9 @@ namespace codegen::x86
 
 	struct ImmediateOperand
 	{
-		int64_t value;
+		uint64_t value;
+		bool signed_int;
+		bool sign = false;
 	};
 
 	struct MemoryOperand
@@ -73,7 +76,7 @@ namespace codegen::x86
 		int32_t offset = 0;
 	};
 
-	class Operand
+	/*class Operand
 	{
 		/// @brief Operand variant
 		std::variant<RegisterOperand, ImmediateOperand, MemoryOperand> op;
@@ -109,13 +112,13 @@ namespace codegen::x86
 		RegisterOperand &reg() { return std::get<RegisterOperand>(this->op); }
 		/// @brief Returns the underlying register operand. CALLER MUST CHECK/KNOW THIS IS A REGISTER OPERAND
 		const RegisterOperand &reg() const { return std::get<RegisterOperand>(this->op); }
-	};
+	};*/
 
 	/// @brief A single machine instruction before it's encoded
 	struct Instruction
 	{
 		Mnemonic mnemonic;
-		std::vector<Operand> operands;
+		// std::vector<Operand> operands;
 
 		void encode(std::vector<uint8_t> &buf);
 	};

@@ -3,7 +3,7 @@
 #include <format>
 
 #include "backend/codegen/x86/x86.hpp"
-#include "backend/codegen/x86/x86Instruction.hpp"
+// #include "backend/codegen/x86/x86Instruction.hpp"
 #include "utils/error.hpp"
 
 namespace codegen
@@ -53,7 +53,7 @@ namespace codegen
 			}
 		}
 
-		/// @brief Get the required register size to house a specific type (assumes low byte of word if size is 1 byte)
+		/// @brief Get the required register size to house a specific type (returns low byte of word if size is 1 byte)
 		/// @param type IR type
 		/// @return Required register size
 		RegisterAccess reg_size_from_type(ir::IrType type)
@@ -127,16 +127,19 @@ namespace codegen
 
 	void X86CodeGenerator::lower_immediate_instr(const ir::ImmediateInstruction &instr)
 	{
-		RegSlot *dest = this->regalloc.load_dest_vreg(instr.dest);
-		ir::IrType imm_type = this->cur_fn->vregs.at(instr.dest);
-		unsigned int imm_size = imm_type.get_size();
-		x86::RegisterAccess dest_reg_size = x86::reg_size_from_type(imm_type);
+		throw CompilerError::unimplemented("TODO x86 lower imm instr");
+		// RegSlot *dest = this->regalloc.load_dest_vreg(instr.dest);
+		// ir::IrType imm_type = this->cur_fn->vregs.at(instr.dest);
+		// unsigned int imm_size = imm_type.get_size();
+		// x86::RegisterAccess dest_reg_size = x86::reg_size_from_type(imm_type);
 
-		if (instr.value > UINT64_MAX)
-			x86::ImmediateOperand src_operand{.value = instr.value};
-		x86::RegisterOperand dest_operand{.reg = static_cast<x86::Register>(dest->physical), .access = dest_reg_size};
+		// // if (instr.value > UINT64_MAX)
+		// x86::ImmediateOperand src_operand{
+		// 	.value = instr.value,
+		// };
+		// x86::RegisterOperand dest_operand{.reg = static_cast<x86::Register>(dest->physical), .access = dest_reg_size};
 
-		this->body.write_mov(dest_operand, src_operand, imm_type.is_signed());
+		// this->body.write_mov(dest_operand, src_operand, imm_type.is_signed());
 	}
 	void X86CodeGenerator::lower_binary_instr(const ir::BinaryInstruction &instr)
 	{
@@ -152,16 +155,25 @@ namespace codegen
 		RegSlot *dest = this->regalloc.load_dest_vreg(instr.dest);
 		ir::IrType arg_type = this->cur_fn->vregs.at(instr.dest);
 		unsigned int arg_size = arg_type.get_size();
-		x86::RegisterAccess dest_reg_size = x86::reg_size_from_type(arg_type);
 
 		if (instr.index >= this->stack_args_bp_offsets.size())
 			throw CompilerError::internal(std::format("Load arg instruction has index {}, while precomputed stack_args_bp_offset has size {}", instr.index, this->stack_args_bp_offsets.size()));
 		uint32_t bp_offset = this->stack_args_bp_offsets[instr.index];
 
-		x86::MemoryOperand src_operand{.size = arg_size, .base_reg = x86::Register::RBP, .offset = static_cast<int32_t>(bp_offset)};
-		x86::RegisterOperand dest_operand{.reg = static_cast<x86::Register>(dest->physical), .access = dest_reg_size};
+		switch (arg_size)
+		{
+		case 1:
+			this->body.write_mov(x86::operands::rm8());
+			break;
+		default:
+			break;
+		}
+		// x86::RegisterAccess dest_reg_size = x86::reg_size_from_type(arg_type);
 
-		this->body.write_mov(dest_operand, src_operand, arg_type.is_signed());
+		// x86::MemoryOperand src_operand{.size = arg_size, .base_reg = x86::Register::RBP, .offset = static_cast<int32_t>(bp_offset)};
+		// x86::RegisterOperand dest_operand{.reg = static_cast<x86::Register>(dest->physical), .access = dest_reg_size};
+
+		// this->body.write_mov(dest_operand, src_operand, arg_type.is_signed());
 	}
 
 	void X86CodeGenerator::lower_call(const ir::CallInstruction &instr)

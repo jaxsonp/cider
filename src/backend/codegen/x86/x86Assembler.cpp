@@ -18,7 +18,11 @@ namespace codegen::x86
 		return pos;
 	}
 
-	void Assembler::write_mov(Operand dest, Operand src, bool signed_type)
+	void Assembler::write_mov(operands::rm8 dest, operands::r8 src)
+	{
+	}
+
+	/*void Assembler::write_mov(Operand dest, Operand src, bool signed_type)
 	{
 		if (!this->is_x64 && dest.is_reg())
 		{
@@ -46,5 +50,5 @@ namespace codegen::x86
 			x86::Instruction{
 				.mnemonic = x86::Mnemonic::MOV,
 				.operands = {dest, src}});
-	}
+	}*/
 }
