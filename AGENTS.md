@@ -96,8 +96,10 @@ kind requested, so `--emit=ir` dumps IR without running codegen — useful when
 the backend is broken. Each kind defaults to a path derived from the input
 (`foo.cdr` → `foo.ast`/`foo.ir`/`foo.s`); append `=FILE` to redirect one, or
 `=stdout` to write it to standard output. `-o` names the executable only.
-`--emit=asm` is reserved but not implemented (no backend can emit text
-yet).
+`--emit=asm` writes GNU as syntax (Intel syntax on x86) laid out like the
+executable's code, `_start` first. On x86 it assembles (`as`, then
+`ld -e _start`) to byte-identical code, so it doubles as a check of the
+encoder.
 
 Other useful flags: `-v` (repeatable, increases verbosity), `-q` (quiet).
 Run `build/ciderc -h` for the full list — flags are defined in `src/main.cpp`

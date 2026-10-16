@@ -10,7 +10,7 @@ _For Jaxson's eyes only_
 	  wrap like on riscv), while riscv gives all ones for x/0 and x for x%0. Untested on purpose until decided
 	- Arbitrary-precision ints
 	- Memleaks
-	- define/enforce function name rules
+	- define/enforce function name rules (x86 can't be _start, maybe make it so they cant start with non-alpha chars?)
 	- integer literals wrapping around their range (2000i8 == -48i8), a few tests falsely lean on it, see binary_op/{addition,subtraction,bitwise_*}/i8_*.cdr (maybe not applicable anoymore?)
 	- Check code for stuff that doesn't need to be in headers
 	- Testing improvements:
@@ -50,7 +50,6 @@ _For Jaxson's eyes only_
 		- Red zone?
 		- Register classes in the allocator, so that esi/edi can be used on x86 (every value has to be usable as an 8 bit register, and they have no 8 bit form without REX), and so that division/shifts don't need to evict
 		- Immediate operands (`add eax, 5`) instead of loading every constant into a register
-		- `--emit=asm` for x86, the typed operands would make a printer easy
 		- Instruction simplification, eg division by a constant/power of two, `lea` for adds, `test` instead of `cmp 0`, etc
 	- try doing UTF8
 	- labelled code blocks (for early breaks)

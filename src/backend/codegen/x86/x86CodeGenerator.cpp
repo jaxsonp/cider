@@ -219,6 +219,7 @@ namespace codegen
 		this->stack_passed_args_size = 0;
 		this->call_backpatch_list.clear();
 		this->body.clear();
+		this->body.set_record_text(this->asm_enabled());
 
 		this->regalloc.start_function();
 	}
@@ -486,7 +487,7 @@ namespace codegen
 			this->regalloc.load_spilled_vreg(PhysReg(x86::X64_ARG_REGISTERS[i]), instr.args[i]);
 
 		// call rel32 reaches anywhere within 2GiB, offsets are filled in once every function is lowered
-		size_t pos = this->body.write_call_placeholder();
+		size_t pos = this->body.write_call_placeholder(asm_symbol(instr.callee));
 		this->call_backpatch_list.push_back({pos, instr.callee});
 
 		if (instr.dest.has_value())
@@ -539,7 +540,7 @@ namespace codegen
 
 	void X86CodeGenerator::finalize_function(const ir::Function &fn, std::vector<uint8_t> &code)
 	{
-		Assembler prologue = Assembler(this->is_x64);
+		Assembler prologue = Assembler(this->is_x64, this->asm_enabled());
 
 		// frame size -------------
 
@@ -585,6 +586,15 @@ namespace codegen
 		// write to .text
 		prologue.dump_to_bytes(code);
 		this->body.dump_to_bytes(code);
+
+		prologue.dump_asm(this->asm_out());
+		this->body.dump_asm(this->asm_out());
+	}
+
+	void X86CodeGenerator::write_asm_directives(std::ostream &out) const
+	{
+		out << "\t.intel_syntax noprefix\n";
+		out << (this->is_x64 ? "\t.code64\n" : "\t.code32\n");
 	}
 
 	void X86CodeGenerator::patch_call(std::vector<uint8_t> &code, size_t call_offset, size_t target_offset)
@@ -598,9 +608,9 @@ namespace codegen
 		{
 			// linux kernel guarantees 16-byte alignment on entry, so no need to align here
 
-			Assembler code(this->is_x64);
+			Assembler code(this->is_x64, this->asm_enabled());
 			// call main
-			size_t call_pos = code.write_call_placeholder();
+			size_t call_pos = code.write_call_placeholder(asm_symbol("main"));
 			// return value is in eax, call linux exit syscall with it
 			if (this->is_x64)
 			{
@@ -617,6 +627,7 @@ namespace codegen
 
 			std::vector<uint8_t> bytes;
 			code.dump_to_bytes(bytes);
+			code.dump_asm(this->runtime_asm_out());
 
 			// main will shift by the size of this code, since it gets prepended
 			this->patch_call(bytes, call_pos, bytes.size() + main_offset);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <string_view>
 
 #include "backend/codegen/RegAllocator.hpp"
 
@@ -51,6 +52,9 @@ namespace codegen::x86
 	/// @brief Width of a value of some size in bytes
 	Width width_of_size(unsigned int size);
 
+	/// @brief Name of (part of) a register in assembly, ie `eax` for RAX accessed with W32
+	std::string_view register_name(Register reg, Width width);
+
 	/// @brief Condition codes, for instructions that test the flags (setcc, jcc, cmovcc). The value is the number it's
 	/// encoded as. Below/above are unsigned comparisons, less/greater are signed ones
 	enum class Cond : uint8_t
@@ -88,4 +92,7 @@ namespace codegen::x86
 		/// Greater (signed >)
 		G,
 	};
+
+	/// @brief Suffix of a condition in mnemonics, ie `ge` in `setge`
+	std::string_view cond_suffix(Cond cond);
 }

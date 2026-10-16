@@ -1,10 +1,39 @@
 #include "RiscvInstruction.hpp"
 
+#include <format>
+
 #include "utils/common.hpp"
 #include "utils/error.hpp"
 
 namespace codegen::riscv
 {
+	std::string_view register_name(Register reg)
+	{
+		static constexpr std::string_view NAMES[] = {
+			"zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2", "fp", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
+			"a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6"};
+		return NAMES[uint8_t(reg) & 31];
+	}
+
+	/// @brief Name of a mnemonic in assembly
+	static std::string_view mnemonic_name(Mnemonic mnemonic)
+	{
+		// in the order of the Mnemonic enum
+		static constexpr std::string_view NAMES[] = {
+			// RV32I
+			"add", "sub", "xor", "or", "and", "sll", "srl", "sra", "slt", "sltu", "addi", "xori", "ori", "andi",
+			"slli", "srli", "srai", "slti", "sltiu", "lb", "lh", "lw", "lbu", "lhu", "sb", "sh", "sw", "jal", "jalr",
+			"lui", "auipc", "ecall", "ebreak",
+			// RV64I
+			"addw", "subw", "sllw", "srlw", "sraw", "addiw", "slliw", "srliw", "sraiw", "ld", "lwu", "sd",
+			// M extension
+			"mul", "mulh", "mulhsu", "mulhu", "div", "divu", "rem", "remu",
+			// M extension, RV64
+			"mulw", "divw", "divuw", "remw", "remuw"};
+		static_assert(std::size(NAMES) == size_t(Mnemonic::REMUW) + 1, "every mnemonic needs a name");
+		return NAMES[size_t(mnemonic)];
+	}
+
 	/// @brief The fixed bits of an instruction's encoding
 	struct EncodingInfo
 	{
@@ -335,6 +364,49 @@ namespace codegen::riscv
 			return encode_j_type(info.opcode, this->rd, imm);
 		}
 		throw CompilerError::internal("Uncaught RISC-V instruction format variant");
+	}
+
+	std::string Instruction::to_string() const
+	{
+		std::string_view name = mnemonic_name(this->mnemonic);
+		switch (this->mnemonic)
+		{
+		case Mnemonic::LB:
+		case Mnemonic::LH:
+		case Mnemonic::LW:
+		case Mnemonic::LBU:
+		case Mnemonic::LHU:
+		case Mnemonic::LD:
+		case Mnemonic::LWU:
+		case Mnemonic::JALR:
+			return std::format("{} {}, {}({})", name, register_name(this->rd), this->imm, register_name(this->rs1));
+		case Mnemonic::SB:
+		case Mnemonic::SH:
+		case Mnemonic::SW:
+		case Mnemonic::SD:
+			return std::format("{} {}, {}({})", name, register_name(this->rs2), this->imm, register_name(this->rs1));
+		case Mnemonic::JAL:
+			return std::format("{} {}, .{:+}", name, register_name(this->rd), this->imm);
+		case Mnemonic::LUI:
+		case Mnemonic::AUIPC:
+			// the assembler takes the upper 20 bits on their own
+			return std::format("{} {}, {:#x}", name, register_name(this->rd), (uint64_t(this->imm) >> 12) & 0xFFFFF);
+		case Mnemonic::ECALL:
+		case Mnemonic::EBREAK:
+			return std::string(name);
+		default:
+			break;
+		}
+
+		switch (this->format())
+		{
+		case InstructionFormat::RType:
+			return std::format("{} {}, {}, {}", name, register_name(this->rd), register_name(this->rs1), register_name(this->rs2));
+		case InstructionFormat::IType:
+			return std::format("{} {}, {}, {}", name, register_name(this->rd), register_name(this->rs1), this->imm);
+		default:
+			throw CompilerError::internal(std::format("RISC-V codegen: no textual form for instruction {}", name));
+		}
 	}
 
 	// compressed instructions =========================

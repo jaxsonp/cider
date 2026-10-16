@@ -91,6 +91,8 @@ void compile(const std::string &filename, const CompileSettings &settings)
 
 	log_v("Lowering IR to machine code");
 	auto code_generator = settings.target.get_code_generator();
+	if (settings.wants(EmitKind::Asm))
+		code_generator->enable_asm_output();
 	Object obj(code_generator->lower_ir(ir));
 
 	log_v("Building executable runtime");
@@ -110,6 +112,12 @@ void compile(const std::string &filename, const CompileSettings &settings)
 	std::vector<uint8_t> runtime_code = code_generator->build_runtime_code(main_offset, settings.target);
 	obj.code.reserve(runtime_code.size());
 	obj.code.insert(obj.code.begin(), runtime_code.begin(), runtime_code.end()); // is this slow? (eh runtime code isnt big)
+
+	if (settings.wants(EmitKind::Asm))
+	{
+		log_vv("Writing assembly");
+		code_generator->write_asm(outputs.get(EmitKind::Asm));
+	}
 
 	if (!settings.wants(EmitKind::Exe))
 		return;

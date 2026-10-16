@@ -2,6 +2,9 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <ostream>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include "backend/codegen/riscv/Riscv.hpp"
@@ -23,6 +26,9 @@ namespace codegen::riscv
 			size_t offset;
 			/// Whether this is to be emitted in its 16 bit compressed form
 			bool will_compress;
+			/// Symbol being called, if this is the first instruction of a call placeholder (its textual assembly
+			/// is a single `call`, covering both instructions)
+			std::string call_target = "";
 		};
 
 		std::vector<Entry> buf;
@@ -57,6 +63,12 @@ namespace codegen::riscv
 
 		/// Copy the contents of this buffer as bytes into a byte vector
 		void dump_to_bytes(std::vector<uint8_t> &bytes) const;
+
+		/// @brief Writes the textual assembly (GNU as syntax) of the contents of this buffer, one indented instruction
+		/// per line. Instructions are written in their standard form, and the assembler compresses them by itself
+		/// when the C extension is enabled (`.option rvc`). It's disabled around instructions that aren't compressed
+		/// here, so that the assembled code is the same
+		void dump_asm(std::ostream &out) const;
 
 		/// @brief Push a new instruction, return its position
 		/// @param fixed_size Never compress this instruction. Required if it will be backpatched (compressed
@@ -253,8 +265,9 @@ namespace codegen::riscv
 		/// @brief Push a call (auipc + jalr pair, which reaches anywhere in the address space) to an address
 		/// that isn't known yet. Has to be pointed at its target with `patch_call` once it's been copied out
 		/// @param link Register to put the return address in
+		/// @param target Symbol being called, for the textual assembly
 		/// @return Position of the call
-		size_t write_call_placeholder(Register link);
+		size_t write_call_placeholder(Register link, std::string_view target);
 
 		/// @brief Size in bytes of the call written by `write_call_placeholder`
 		static constexpr size_t CALL_SIZE = 8;

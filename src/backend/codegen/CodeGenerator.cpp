@@ -24,19 +24,40 @@ public:
 	BlackHoleStream() : std::ostream(&buf) {}
 };
 
-std::ostream &CodeGenerator::asm_out()
+static std::ostream &black_hole()
 {
 	static BlackHoleStream null_out = BlackHoleStream();
-
-	if (this->asm_out_ptr != nullptr)
-		return *this->asm_out_ptr;
-	else
-		return null_out;
+	return null_out;
 }
 
-void CodeGenerator::enable_asm_output(std::unique_ptr<std::ostream> out)
+std::ostream &CodeGenerator::asm_out()
 {
-	this->asm_out_ptr = std::move(out);
+	if (this->emit_asm)
+		return this->function_asm;
+	else
+		return black_hole();
+}
+
+std::ostream &CodeGenerator::runtime_asm_out()
+{
+	if (this->emit_asm)
+		return this->runtime_asm;
+	else
+		return black_hole();
+}
+
+void CodeGenerator::write_asm(std::ostream &out) const
+{
+	if (!this->emit_asm)
+		throw CompilerError::internal("Codegen: assembly output was not enabled before lowering");
+
+	this->write_asm_directives(out);
+	out << "\t.text\n";
+	out << "\t.globl _start\n";
+	out << "_start:\n";
+	out << this->runtime_asm.str();
+	out << this->function_asm.str();
+	out.flush();
 }
 
 void CodeGenerator::add_call_fixup(size_t code_offset, const std::string &callee)
@@ -107,6 +128,8 @@ void CodeGenerator::lower_function(const ir::Function &fn, Object &obj)
 	});
 
 	// write to .text
+	this->asm_out() << "\n"
+					<< asm_symbol(fn.name) << ":\n";
 	this->finalize_function(fn, obj.code);
 
 	this->cur_fn = nullptr;

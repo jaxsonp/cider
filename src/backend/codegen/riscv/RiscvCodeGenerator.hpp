@@ -138,6 +138,7 @@ namespace codegen
 		void lower_return(std::optional<ir::VRegId> ret_reg) override;
 		void finalize_function(const ir::Function &fn, std::vector<uint8_t> &code) override;
 		void patch_call(std::vector<uint8_t> &code, size_t call_offset, size_t target_offset) override;
+		void write_asm_directives(std::ostream &out) const override;
 
 	public:
 		RiscvCodeGenerator(const Target &target);

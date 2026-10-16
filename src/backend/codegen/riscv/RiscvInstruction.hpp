@@ -2,11 +2,16 @@
 
 #include <stdint.h>
 #include <optional>
+#include <string>
+#include <string_view>
 
 #include "backend/codegen/riscv/Riscv.hpp"
 
 namespace codegen::riscv
 {
+	/// @brief ABI name of a register, as used in assembly
+	std::string_view register_name(Register reg);
+
 	enum class InstructionFormat : uint8_t
 	{
 		/// register-register operations
@@ -112,6 +117,10 @@ namespace codegen::riscv
 
 		/// @brief Builds the standard 32 bit encoding
 		uint32_t encode() const;
+
+		/// @brief Textual assembly (GNU as syntax) of the standard form. Jumps are written relative to the
+		/// instruction itself (`.+offset`)
+		std::string to_string() const;
 
 		/// @brief Builds the 16 bit encoding from the C extension, for instructions and operands that have one
 		/// @param xlen Register width (32 or 64), since a few encodings mean different things in RV32 and RV64

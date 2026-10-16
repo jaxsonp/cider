@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <ostream>
+#include <sstream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -20,7 +21,12 @@ class Target;
 /// everything it emitted for the function (plus prologue and epilogue) into the object's code
 class CodeGenerator
 {
-	std::unique_ptr<std::ostream> asm_out_ptr = nullptr;
+	/// Whether textual assembly is being collected
+	bool emit_asm = false;
+	/// Textual assembly of every function lowered so far
+	std::ostringstream function_asm;
+	/// Textual assembly of the runtime code
+	std::ostringstream runtime_asm;
 
 	/// @brief A call site whose target offset isn't known until every function has been lowered
 	struct CallFixup
@@ -37,8 +43,24 @@ class CodeGenerator
 	void lower_function(const ir::Function &fn, Object &obj);
 
 protected:
-	/// @brief Access the assembly output stream. Returns a black hole if asm output is not enabled
+	/// @brief Whether textual assembly is being collected, for backends to skip building it otherwise
+	bool asm_enabled() const { return this->emit_asm; }
+
+	/// @brief Stream for the textual assembly of the function being lowered, meant to be written to from
+	/// `finalize_function` (the function's label is already written). Returns a black hole if asm output is not
+	/// enabled
 	std::ostream &asm_out();
+
+	/// @brief Stream for the textual assembly of the runtime code, meant to be written to from `build_runtime_code`.
+	/// Returns a black hole if asm output is not enabled
+	std::ostream &runtime_asm_out();
+
+	/// @brief Writes the assembler directives that go at the top of the textual assembly (ie syntax, ISA options)
+	virtual void write_asm_directives(std::ostream &out) const = 0;
+
+	/// @brief How a function's name appears in textual assembly. Always quoted, so that a function named like a
+	/// register or a keyword of the assembler's syntax is still a symbol
+	static std::string asm_symbol(const std::string &name) { return "\"" + name + "\""; }
 
 	/// Function currently being lowered, for looking up vreg types (spill width, div/rem signedness, etc.)
 	const ir::Function *cur_fn = nullptr;
@@ -92,6 +114,10 @@ public:
 	/// @return Runtime code in a byte vector
 	virtual std::vector<uint8_t> build_runtime_code(uint64_t main_offset, Target t) = 0;
 
-	/// @brief Enables dumping assembly to an output stream. ostream object must live as long as this object.
-	virtual void enable_asm_output(std::unique_ptr<std::ostream> out);
+	/// @brief Enables collecting textual assembly while lowering, written out with `write_asm`
+	void enable_asm_output() { this->emit_asm = true; }
+
+	/// @brief Writes the textual assembly (GNU as syntax) of everything lowered, laid out like the executable's code:
+	/// the runtime code (at `_start`) first, then every function. Requires `enable_asm_output` before lowering
+	void write_asm(std::ostream &out) const;
 };

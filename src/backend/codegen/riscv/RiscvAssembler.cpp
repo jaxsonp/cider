@@ -58,6 +58,39 @@ namespace codegen::riscv
 		}
 	}
 
+	void Assembler::dump_asm(std::ostream &out) const
+	{
+		// the assembler compresses every instruction it can when rvc is enabled, so it's switched off for the
+		// instructions this buffer keeps full size (ie the ones that get backpatched), keeping every offset the same
+		bool rvc = this->compress;
+		auto set_rvc = [&](bool enabled)
+		{
+			if (enabled != rvc)
+				out << (enabled ? "\t.option rvc\n" : "\t.option norvc\n");
+			rvc = enabled;
+		};
+
+		for (size_t i = 0; i < this->buf.size(); ++i)
+		{
+			const Entry &entry = this->buf[i];
+			set_rvc(entry.will_compress);
+
+			if (!entry.call_target.empty())
+			{
+				// the call pseudo instruction is the same auipc + jalr pair, so it covers the next instruction too
+				if (entry.instr.rd == Register::ra)
+					out << "\tcall " << entry.call_target << "\n";
+				else
+					out << "\tcall " << register_name(entry.instr.rd) << ", " << entry.call_target << "\n";
+				++i;
+				continue;
+			}
+
+			out << "\t" << entry.instr.to_string() << "\n";
+		}
+		set_rvc(this->compress);
+	}
+
 	void Assembler::load_immediate(Register dest, int64_t value)
 	{
 		// on RV32 only the lower 32 bits exist, so 0xFFFFFFFF and -1 are the same thing
@@ -107,11 +140,12 @@ namespace codegen::riscv
 			this->write_addi(dest, dest, lower);
 	}
 
-	size_t Assembler::write_call_placeholder(Register link)
+	size_t Assembler::write_call_placeholder(Register link, std::string_view target)
 	{
 		// both are fixed size, since the offsets they'll be patched with could be anything
 		size_t pos = this->write({Mnemonic::AUIPC, link, Register::zero, Register::zero, 0}, true);
 		this->write({Mnemonic::JALR, link, link, Register::zero, 0}, true);
+		this->buf.at(pos).call_target = target;
 		return pos;
 	}
 

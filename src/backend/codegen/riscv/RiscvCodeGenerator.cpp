@@ -486,7 +486,7 @@ namespace codegen
 			this->regalloc.load_spilled_vreg(PhysReg(uint8_t(Register::a0) + i), instr.args[i]);
 
 		// auipc + jalr reaches anywhere in the address space, offsets are filled in once every function is lowered
-		size_t pos = this->body.write_call_placeholder(Register::ra);
+		size_t pos = this->body.write_call_placeholder(Register::ra, asm_symbol(instr.callee));
 		this->call_backpatch_list.push_back({pos, instr.callee});
 
 		if (instr.dest.has_value())
@@ -613,6 +613,21 @@ namespace codegen
 		prologue.dump_to_bytes(code);
 		this->body.dump_to_bytes(code);
 		epilogue.dump_to_bytes(code);
+
+		if (this->asm_enabled())
+		{
+			prologue.dump_asm(this->asm_out());
+			this->body.dump_asm(this->asm_out());
+			epilogue.dump_asm(this->asm_out());
+		}
+	}
+
+	void RiscvCodeGenerator::write_asm_directives(std::ostream &out) const
+	{
+		// calls are resolved by the assembler rather than left for linker relaxation, so they stay the same
+		// auipc + jalr pair as in the executable
+		out << "\t.option norelax\n";
+		out << (this->enable_compression ? "\t.option rvc\n" : "\t.option norvc\n");
 	}
 
 	void RiscvCodeGenerator::patch_call(std::vector<uint8_t> &code, size_t call_offset, size_t target_offset)
@@ -628,7 +643,7 @@ namespace codegen
 
 			Assembler code(this->xlen, t.has(Target::RiscvExt::C));
 			// call main
-			size_t call_pos = code.write_call_placeholder(Register::ra);
+			size_t call_pos = code.write_call_placeholder(Register::ra, asm_symbol("main"));
 			// return value still in a0, will leave it there
 			// call linux exit syscall
 			code.write_addi(Register::a7, Register::zero, 93);
@@ -636,6 +651,8 @@ namespace codegen
 
 			std::vector<uint8_t> bytes;
 			code.dump_to_bytes(bytes);
+			if (this->asm_enabled())
+				code.dump_asm(this->runtime_asm_out());
 
 			// main will shift by the size of this code, since it gets prepended
 			this->patch_call(bytes, code.offset_of(call_pos), bytes.size() + main_offset);
