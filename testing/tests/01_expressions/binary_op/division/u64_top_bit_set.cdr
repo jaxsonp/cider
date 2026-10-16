@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// as a signed number the dividend is -1, which would give 0
+fn main() -> bool {
+	return 18446744073709551615u64 / 2u64 == 9223372036854775807u64;
+}

@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+
+// negating the most negative value wraps back to itself
+fn main() -> bool {
+	return -(-2147483647i32 - 1i32) < 0i32;
+}

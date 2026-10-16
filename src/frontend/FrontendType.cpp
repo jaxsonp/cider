@@ -12,9 +12,11 @@ bool FrontendType::is_integer() const
 	case Variant::I8:
 	case Variant::I16:
 	case Variant::I32:
+	case Variant::I64:
 	case Variant::U8:
 	case Variant::U16:
 	case Variant::U32:
+	case Variant::U64:
 	case Variant::UNRESOLVED_INT:
 		return true;
 	default:
@@ -29,6 +31,7 @@ bool FrontendType::is_signed_integer() const
 	case Variant::I8:
 	case Variant::I16:
 	case Variant::I32:
+	case Variant::I64:
 	case Variant::UNRESOLVED_INT:
 		return true;
 	default:
@@ -43,6 +46,7 @@ bool FrontendType::is_unsigned_integer() const
 	case Variant::U8:
 	case Variant::U16:
 	case Variant::U32:
+	case Variant::U64:
 	case Variant::UNRESOLVED_INT:
 		return true;
 	default:
@@ -68,9 +72,11 @@ bool FrontendType::is_numeric() const
 	case Variant::I8:
 	case Variant::I16:
 	case Variant::I32:
+	case Variant::I64:
 	case Variant::U8:
 	case Variant::U16:
 	case Variant::U32:
+	case Variant::U64:
 	case Variant::UNRESOLVED_INT:
 	case Variant::UNRESOLVED_FLOAT:
 		return true;
@@ -125,12 +131,16 @@ std::string FrontendType::to_string() const
 		return "i16";
 	case Variant::I32:
 		return "i32";
+	case Variant::I64:
+		return "i64";
 	case Variant::U8:
 		return "u8";
 	case Variant::U16:
 		return "u16";
 	case Variant::U32:
 		return "u32";
+	case Variant::U64:
+		return "u64";
 	case Variant::FUNCTION:
 	{
 		std::string result = "fn(";
@@ -162,12 +172,16 @@ FrontendType FrontendType::from_string(std::string_view s)
 		return FrontendType::u16();
 	else if (s == "u32")
 		return FrontendType::u32();
+	else if (s == "u64")
+		return FrontendType::u64();
 	else if (s == "i8")
 		return FrontendType::i8();
 	else if (s == "i16")
 		return FrontendType::i16();
 	else if (s == "i32")
 		return FrontendType::i32();
+	else if (s == "i64")
+		return FrontendType::i64();
 	else
 		return FrontendType::unknown();
 }
@@ -184,12 +198,16 @@ ir::IrType FrontendType::resolveType() const
 		return ir::IrType::i16();
 	case FrontendType::Variant::I32:
 		return ir::IrType::i32();
+	case FrontendType::Variant::I64:
+		return ir::IrType::i64();
 	case FrontendType::Variant::U8:
 		return ir::IrType::u8();
 	case FrontendType::Variant::U16:
 		return ir::IrType::u16();
 	case FrontendType::Variant::U32:
 		return ir::IrType::u32();
+	case FrontendType::Variant::U64:
+		return ir::IrType::u64();
 	case FrontendType::Variant::VOID:
 	case FrontendType::Variant::UNRESOLVED:
 	case FrontendType::Variant::UNRESOLVED_INT:

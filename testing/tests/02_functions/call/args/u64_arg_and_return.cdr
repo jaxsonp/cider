@@ -1,0 +1,11 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+fn next(x: u64) -> u64 {
+	x + 1u64
+}
+
+// the argument and the return value both need more than 32 bits
+fn main() -> bool {
+	return next(4294967295u64) == 4294967296u64;
+}

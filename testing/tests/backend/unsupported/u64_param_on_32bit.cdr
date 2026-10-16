@@ -1,0 +1,8 @@
+//! BUILD_EXIT_CODE=16
+//! REQUIRES=32bit
+
+fn f(x: u64) {}
+
+fn main() -> i32 {
+	0i32
+}

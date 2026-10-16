@@ -1,0 +1,10 @@
+//! EXIT_CODE=24
+
+// many values live across shifts, whose shift amount needs a specific register. the result is 163096
+fn f(a: u32, b: u8, c: u32, d: u8) -> u32 {
+	(a << b) + (c >> d) + (a >> d) * (c << b) + a + c
+}
+
+fn main() -> u32 {
+	return f(1000u32, 3u8, 77u32, 2u8);
+}

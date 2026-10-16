@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// 3.6e19 doesn't fit in 64 bits, so this wraps
+fn main() -> bool {
+	return 6000000000u64 * 6000000000u64 == 17553255926290448384u64;
+}

@@ -1,0 +1,6 @@
+//! EXIT_CODE=252
+//! REQUIRES=64bit
+
+fn main() -> u64 {
+	return 240u64 | 12u64;
+}

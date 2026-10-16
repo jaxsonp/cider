@@ -1,0 +1,5 @@
+//! BUILD_EXIT_CODE=3
+
+fn main() -> bool {
+	return 21i64 <= 3u64;
+}

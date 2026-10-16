@@ -619,9 +619,17 @@ namespace parse
 		if (!type_annotation.is_integer())
 			throw CompilerError::type_error("Invalid type annotation on integer literal, must be an integer type", tok.loc);
 
-		long long value_ll = std::stoll(value_str, nullptr, base);
+		uint64_t value;
+		try
+		{
+			value = std::stoull(value_str, nullptr, base);
+		}
+		catch (const std::out_of_range &)
+		{
+			throw CompilerError::semantic_error("Integer literal is too large to fit in any integer type", tok.loc);
+		}
 
-		return std::make_unique<ast::IntegerLiteralExpression>(tok.loc, uint32_t(value_ll), type_annotation);
+		return std::make_unique<ast::IntegerLiteralExpression>(tok.loc, value, type_annotation);
 	}
 
 	std::optional<std::unique_ptr<ast::BooleanLiteralExpression>> try_parse_boolean_literal(Lexer &lexer)

@@ -1,0 +1,11 @@
+//! EXIT_CODE=32
+
+// on x86-64 the third and fourth arguments arrive in rdx and rcx. the shift amount has to be in cl, so a value
+// sitting in ecx has to make room for it, and both arguments are still used afterwards
+fn f(a: u32, b: u32, c: u32, d: u32) -> u32 {
+	(d << c) + (c << d) + (c >> b) + d + a
+}
+
+fn main() -> u32 {
+	return f(0u32, 1u32, 2u32, 3u32);
+}

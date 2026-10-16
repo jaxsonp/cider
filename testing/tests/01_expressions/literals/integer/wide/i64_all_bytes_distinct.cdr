@@ -1,0 +1,6 @@
+//! EXIT_CODE=240
+//! REQUIRES=64bit
+
+fn main() -> i64 {
+	return 1311768467463790320i64;
+}

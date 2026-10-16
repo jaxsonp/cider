@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// only the lower 6 bits of the shift amount are used when shifting a 64 bit value, so 64 is the same as 0
+fn main() -> bool {
+	return 1u64 << 64u8 == 1u64;
+}

@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+
+// right at the edge of what a compressed instruction's immediate can hold (matters for the targets with the C extension)
+fn main() -> bool {
+	return (4294967263u32 >> 3u8 == 536870907u32) == (4294967263u32 % 1000u32 == 263u32);
+}

@@ -1,0 +1,11 @@
+//! EXIT_CODE=25
+
+// the same value as both operands of instructions with fixed registers: the dividend is overwritten by the
+// division while it's also the divisor, and the shifted value is also the shift amount (in cl)
+fn f(x: u32) -> u32 {
+	x / x + x % x + (x << x)
+}
+
+fn main() -> u32 {
+	return f(3u32);
+}

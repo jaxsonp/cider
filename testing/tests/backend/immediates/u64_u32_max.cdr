@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// must not come out sign extended
+fn main() -> bool {
+	return 4294967295u64 == ((0u64 << 48u8) | (0u64 << 32u8) | (65535u64 << 16u8) | 65535u64);
+}

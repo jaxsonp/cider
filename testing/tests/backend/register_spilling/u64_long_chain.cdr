@@ -1,0 +1,6 @@
+//! EXIT_CODE=12
+//! REQUIRES=64bit
+
+fn main() -> u64 {
+	return 5u64 + 7u64 * 1u64 * 1u64 * 1u64 * 1u64 * 1u64 * 1u64 * 1u64 * 1u64 * 1u64 * 1u64 * 1u64 * 1u64;
+}

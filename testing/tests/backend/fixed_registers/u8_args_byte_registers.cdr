@@ -1,0 +1,10 @@
+//! EXIT_CODE=130
+
+// on x86-64 the first two arguments arrive in rdi and rsi, whose low bytes (dil, sil) need a REX prefix
+fn f(a: u8, b: u8, c: u8, d: u8) -> u8 {
+	((a + b) * (c - d)) ^ ((a & d) | (b >> 1u8))
+}
+
+fn main() -> u8 {
+	return f(200u8, 100u8, 7u8, 3u8);
+}

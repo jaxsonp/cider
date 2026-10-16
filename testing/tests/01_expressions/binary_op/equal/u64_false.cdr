@@ -1,0 +1,6 @@
+//! EXIT_CODE=0
+//! REQUIRES=64bit
+
+fn main() -> bool {
+	return 5000000000u64 == 5000000001u64;
+}

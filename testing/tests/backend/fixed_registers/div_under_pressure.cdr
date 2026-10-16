@@ -1,0 +1,10 @@
+//! EXIT_CODE=112
+
+// many values live across divisions, which need two specific registers (x86 only has three to allocate from)
+fn f(a: u32, b: u32, c: u32, d: u32, e: u32, g: u32) -> u32 {
+	(a / b) + (c % d) * (e / g) + (a % c) + (b / g) + (a + b + c + d + e + g) / (d % e + 1u32)
+}
+
+fn main() -> u32 {
+	return f(100u32, 7u32, 30u32, 11u32, 5u32, 3u32);
+}

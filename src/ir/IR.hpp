@@ -129,7 +129,7 @@ namespace ir
 	struct Function
 	{
 		std::string name = "";
-		std::vector<IrType> param_types;
+		std::vector<IrType> argument_types;
 		/// nullopt if the function returns void
 		std::optional<IrType> return_type;
 		BasicBlock *entry = nullptr;

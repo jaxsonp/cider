@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// both operands fit in 32 bits, the result doesn't
+fn main() -> bool {
+	return 100000i64 * 100000i64 == 10000000000i64;
+}
