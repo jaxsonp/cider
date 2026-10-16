@@ -1,0 +1,8 @@
+//! EXIT_CODE=1
+
+// on x86-64 the arguments arrive in rdi and rsi, so this compares dil and sil (which need a REX prefix)
+fn lt(a: i8, b: i8) -> bool { a < b }
+
+fn main() -> bool {
+	return lt(-5i8, 3i8);
+}

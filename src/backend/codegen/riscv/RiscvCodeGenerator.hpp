@@ -115,6 +115,8 @@ namespace codegen
 		/// Sign/zero extends narrow types
 		void load_spilled_vreg(PhysReg dest, ir::VRegId vreg, size_t spill_index) override;
 
+		void move_reg(PhysReg dest, PhysReg src, ir::VRegId vreg) override;
+
 		/// @brief Truncates the value in a register to its proper size. Must be called before instructions like
 		/// division, where lower bits are affected by upper bits, which may be junk from, say, an add or shift left
 		/// @param width How many of the lower bits of the register the instruction reads, values at least this

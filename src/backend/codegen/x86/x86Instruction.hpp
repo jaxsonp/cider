@@ -1,125 +1,70 @@
 #pragma once
 
 #include <stdint.h>
-#include <vector>
-#include <variant>
+#include <array>
 #include <optional>
+#include <variant>
+#include <vector>
 
 #include "backend/codegen/x86/x86.hpp"
-#include "backend/codegen/x86/x86Operand.hpp"
 
-/******************************************************************************
-
-How an x86 instruction is laid out in machine code (everything in brackets is optional):
-
-  [prefixes] opcode [ModRM] [SIB] [displacement] [immediate]
-
-ModRM is the byte that says what the operands are. Its fields are:
-
-  mod (2 bits) | reg (3 bits) | rm (3 bits)
-
-- mod: Describes what the r/m operand of the instruction is. It's values can be:
-	- 00: memory access, at `[rm]`
-	- 01: memory access, at `[rm + offset]` where offset is 1 byte in [displacement]
-	- 10: memory access, at `[rm + offset]` where offset is 4 bytes in [displacement]
-	- 11: register, specified by `rm`
-  There is a special case, where if mod != 11 and rm == esp, this indicates the SIB byte is present
-  and it is used for memory accesses, rather than rm. Offset in [displacement] still applies
-- rm: See MOD notes
-- reg: is the other, not r/m operand, which is always a register. Instructions without
-  a second register (ie when it's an immediate instead) have no use for the field,
-  so it holds more opcode bits: the opcode extension, written "/digit" in the Intel
-  manual ("/r" is a normal ModRM, with a register in reg)
-
-SIB byte is the secondary indexing byte, used by some ops to describe non-static memory
-indexing/offsetting, eg `[base + index * scale]` (last offset is described in
-[displacement]). Fields are:
-
-  scale (2 bits) | index (3 bits) | base (3 bits)
-
-- scale: scaling factor (1, 2, 4, 8)
-- index: register holding index value
-- base: register holding the base address
-
-******************************************************************************/
-namespace codegen::x86
+/// Untyped instruction encoding, used by the `Assembler` to turn its typed `write_*` functions into bytes. Nothing
+/// here checks that an instruction makes sense, that's the job of the `Assembler`'s signatures. What is checked
+/// here is what depends on the mode: everything that needs a REX prefix is rejected in 32 bit mode
+namespace codegen::x86::detail
 {
-
-	enum class Mnemonic : uint8_t
+	/// @brief A register in an encoding
+	struct RegNum
 	{
-		MOV,
-		MOVSX, // Move with sign extension
-		MOVZX, // Move with zero extension
-			   // ... and plenty more, TODO
+		/// Hardware number, 0-15
+		uint8_t num;
+		/// Whether this is an 8 bit access, where 4-7 mean SPL/BPL/SIL/DIL (which need a REX prefix, without one
+		/// they'd mean AH/CH/DH/BH)
+		bool is_byte;
 	};
 
-	struct RegisterOperand
+	/// @brief A memory operand in an encoding
+	struct MemRef
 	{
-		Register reg;
-		RegisterAccess access;
+		uint8_t base;
+		std::optional<uint8_t> index;
+		/// Scale encoded as its log2 (0-3)
+		uint8_t scale_bits;
+		int32_t disp;
 	};
 
-	struct ImmediateOperand
+	/// @brief The operand that goes in the rm field (and SIB byte) of ModRM
+	using RmOperand = std::variant<RegNum, MemRef>;
+
+	/// @brief One encoded instruction, laid out like the machine code it becomes:
+	/// `[0x66] [REX] opcode [ModRM [SIB] [disp]] [imm]`
+	struct Encoding
 	{
-		uint64_t value;
-		bool signed_int;
-		bool sign = false;
-	};
+		/// Operand size prefix (0x66), for 16 bit operands
+		bool operand_size_prefix = false;
+		/// REX.W, for 64 bit operands
+		bool rex_w = false;
 
-	struct MemoryOperand
-	{
-		/// Size (in bytes) of the value in memory
-		unsigned int size;
-		std::optional<Register> base_reg = std::nullopt;
-		std::optional<Register> index_reg = std::nullopt;
-		uint32_t index_scale = 0; // TODO investigate can this type be smaller?
-		int32_t offset = 0;
-	};
+		std::array<uint8_t, 3> opcode = {};
+		uint8_t opcode_len = 0;
 
-	/*class Operand
-	{
-		/// @brief Operand variant
-		std::variant<RegisterOperand, ImmediateOperand, MemoryOperand> op;
+		/// Register added to the last opcode byte ("+r" in the Intel manual)
+		std::optional<RegNum> opcode_reg;
 
-	public:
-		Operand(ImmediateOperand imm_op) : op(imm_op) {}
-		Operand(MemoryOperand mem_op) : op(mem_op) {}
-		Operand(RegisterOperand reg_op) : op(reg_op) {}
+		/// Whether there is a ModRM byte
+		bool has_modrm = false;
+		/// Value of the reg field: a register, or the opcode extension ("/digit")
+		RegNum reg_field = {0, false};
+		/// Operand in the rm field
+		RmOperand rm = RegNum{0, false};
 
-		/// @brief Checks if this operand is an immediate operand
-		bool is_imm() const { return std::holds_alternative<ImmediateOperand>(this->op); }
-		/// @brief Checks if this operand is a memory access operand
-		bool is_mem() const { return std::holds_alternative<MemoryOperand>(this->op); }
-		/// @brief Checks if this operand is a register operand
-		bool is_reg() const { return std::holds_alternative<RegisterOperand>(this->op); }
+		/// Immediate, stored little endian in its lower `imm_size` bytes
+		int64_t imm = 0;
+		uint8_t imm_size = 0;
 
-		/// @brief Checks if this operand is an immediate operand, returning a pointer to it if so
-		std::optional<ImmediateOperand *> get_imm() { return this->is_reg() ? std::make_optional(std::get_if<ImmediateOperand>(&this->op)) : std::nullopt; }
-		/// @brief Checks if this operand is a memory access operand, returning a pointer to it if so
-		std::optional<MemoryOperand *> get_mem() { return this->is_reg() ? std::make_optional(std::get_if<MemoryOperand>(&this->op)) : std::nullopt; }
-		/// @brief Checks if this operand is a register operand, returning a pointer to it if so
-		std::optional<RegisterOperand *> get_reg() { return this->is_reg() ? std::make_optional(std::get_if<RegisterOperand>(&this->op)) : std::nullopt; }
-
-		/// @brief Returns the underlying immediate operand. CALLER MUST CHECK/KNOW THIS IS AN IMMEDIATE OPERAND
-		ImmediateOperand &imm() { return std::get<ImmediateOperand>(this->op); }
-		/// @brief Returns the underlying immediate operand. CALLER MUST CHECK/KNOW THIS IS AN IMMEDIATE OPERAND
-		const ImmediateOperand &imm() const { return std::get<ImmediateOperand>(this->op); }
-		/// @brief Returns the underlying memory operand. CALLER MUST CHECK/KNOW THIS IS A MEMORY ACCESS OPERAND
-		MemoryOperand &mem() { return std::get<MemoryOperand>(this->op); }
-		/// @brief Returns the underlying memory operand. CALLER MUST CHECK/KNOW THIS IS A MEMORY ACCESS OPERAND
-		const MemoryOperand &mem() const { return std::get<MemoryOperand>(this->op); }
-		/// @brief Returns the underlying register operand. CALLER MUST CHECK/KNOW THIS IS A REGISTER OPERAND
-		RegisterOperand &reg() { return std::get<RegisterOperand>(this->op); }
-		/// @brief Returns the underlying register operand. CALLER MUST CHECK/KNOW THIS IS A REGISTER OPERAND
-		const RegisterOperand &reg() const { return std::get<RegisterOperand>(this->op); }
-	};*/
-
-	/// @brief A single machine instruction before it's encoded
-	struct Instruction
-	{
-		Mnemonic mnemonic;
-		// std::vector<Operand> operands;
-
-		void encode(std::vector<uint8_t> &buf);
+		/// @brief Appends the encoded bytes to a buffer
+		/// @param is_x64 Whether this is assembled for 64 bit mode. In 32 bit mode, an instruction needing a REX
+		/// prefix (64 bit operands, r8-r15, SPL/BPL/SIL/DIL) is an internal error
+		void encode(std::vector<uint8_t> &buf, bool is_x64) const;
 	};
 }

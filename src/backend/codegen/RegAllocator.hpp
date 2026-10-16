@@ -30,6 +30,12 @@ namespace codegen
 		/// @param vreg Virtual register being loaded (for looking up its type)
 		/// @param spill_index Index of the spill slot, counting from 0 in the order slots were first needed
 		virtual void load_spilled_vreg(PhysReg dest, ir::VRegId vreg, size_t spill_index) = 0;
+
+		/// @brief Emits code copying a register into another
+		/// @param dest Register to copy into
+		/// @param src Register holding the value
+		/// @param vreg Virtual register being moved (for looking up its type)
+		virtual void move_reg(PhysReg dest, PhysReg src, ir::VRegId vreg) = 0;
 	};
 
 	/// @brief Architecture independent register allocator
@@ -39,6 +45,10 @@ namespace codegen
 	///
 	/// Only decides *where* values live. Emitting the loads and stores this requires is left to the backend,
 	/// through `SpillHandler`
+	///
+	/// Instructions that need operands in specific registers (ie x86 division) use `evict` and
+	/// `load_src_vreg_into`. Those have to come before any other load of the same instruction, since they can't
+	/// move or overwrite a register that's already locked
 	class RegAllocator
 	{
 	public:
@@ -105,6 +115,20 @@ namespace codegen
 		/// @param vreg ID of vreg being written to
 		/// @return The destination register slot
 		RegSlot *load_dest_vreg(ir::VRegId vreg);
+
+		/// @brief Empties a specific register for an instruction that needs it (ie one that overwrites it), spilling
+		/// what's there if needed. The register stays locked (and empty) until the next instruction, so nothing else
+		/// is allocated there, and the result of the instruction can be `claim`ed into it
+		void evict(PhysReg reg);
+
+		/// @brief Gets the value of a virtual register into a specific register, for instructions with fixed
+		/// operands. Whatever was in that register is spilled if needed, and the register is locked
+		/// @param vreg ID of vreg to put into the register
+		/// @param reg Register to put it in
+		/// @param clobbered Whether the instruction overwrites the register. If so the vreg is made safe elsewhere
+		/// first (spilled if it's dirty), and the register is left empty, like `evict`, so the result of the
+		/// instruction can be `claim`ed into it
+		void load_src_vreg_into(ir::VRegId vreg, PhysReg reg, bool clobbered);
 
 		/// @brief Returns an unoccupied register slot by either finding already unoccupied slots, overwriting
 		/// non-dirty occupied slots, or spilling dirty slots in a round robin fashion (TODO improve this)

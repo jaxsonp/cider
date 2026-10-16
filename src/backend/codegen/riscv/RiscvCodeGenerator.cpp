@@ -169,6 +169,12 @@ namespace codegen
 		this->write_store(this->body, Register::fp, Register(src), this->spill_fp_offset(spill_index), vreg_type.get_size());
 	}
 
+	void RiscvCodeGenerator::move_reg(PhysReg dest, PhysReg src, ir::VRegId vreg)
+	{
+		// aka mv
+		this->body.write_addi(Register(dest), Register(src), 0);
+	}
+
 	void RiscvCodeGenerator::truncate_reg(RegSlot *slot, unsigned int width)
 	{
 		ir::IrType ir_type = this->cur_fn->vregs.at(slot->resident);

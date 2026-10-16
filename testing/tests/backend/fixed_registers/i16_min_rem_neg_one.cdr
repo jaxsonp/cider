@@ -1,0 +1,9 @@
+//! EXIT_CODE=1
+
+// the quotient (32768) doesn't fit in an i16. on x86 a 16 bit division would trap instead, so narrow divisions
+// are done on 32 bits
+fn rem(a: i16, b: i16) -> i16 { a % b }
+
+fn main() -> bool {
+	return rem(-32767i16 - 1i16, -1i16) == 0i16;
+}

@@ -68,6 +68,10 @@ namespace objwriter
 		case Target::Arch::RISCV32:
 		case Target::Arch::RISCV64:
 			return EM_RISCV;
+		case Target::Arch::X86:
+			return EM_386;
+		case Target::Arch::X86_64:
+			return EM_X86_64;
 		}
 		throw CompilerError::internal("Uncaught architecture variant");
 	}
@@ -100,7 +104,8 @@ namespace objwriter
 			break;
 		case Target::Arch::X86:
 		case Target::Arch::X86_64:
-			throw CompilerError::unimplemented("TODO x86 elf writing");
+			// no flags defined for x86
+			break;
 		default:
 			throw CompilerError::internal("ELF object writer: Uncaught arch");
 		}

@@ -5,7 +5,9 @@ _For Jaxson's eyes only_
 ## To implement
 
 - Soon:
-	- x86 
+	- Decide what division by zero (and MIN / -1, which overflows) does. Right now it's target dependent: x86 traps
+	  (SIGFPE) for x/0, and for MIN / -1 on 32 and 64 bit values (8/16 bit ones are divided as 32 bit values, so they
+	  wrap like on riscv), while riscv gives all ones for x/0 and x for x%0. Untested on purpose until decided
 	- Arbitrary-precision ints
 	- Memleaks
 	- define/enforce function name rules
@@ -46,6 +48,10 @@ _For Jaxson's eyes only_
 	- Better error messages (include code snippet)
 	- Improve x86 codegen
 		- Red zone?
+		- Register classes in the allocator, so that esi/edi can be used on x86 (every value has to be usable as an 8 bit register, and they have no 8 bit form without REX), and so that division/shifts don't need to evict
+		- Immediate operands (`add eax, 5`) instead of loading every constant into a register
+		- `--emit=asm` for x86, the typed operands would make a printer easy
+		- Instruction simplification, eg division by a constant/power of two, `lea` for adds, `test` instead of `cmp 0`, etc
 	- try doing UTF8
 	- labelled code blocks (for early breaks)
 	- Warnings:

@@ -134,12 +134,85 @@ namespace codegen
 		slot.dirty = true;
 	}
 
-	RegAllocator::RegSlot *RegAllocator::get_empty_slot()
+	void RegAllocator::evict(PhysReg reg)
 	{
-		// first check for non-occupied registers
+		RegSlot &slot = this->slot_for(reg);
+		if (slot.locked)
+			throw CompilerError::internal("Codegen: tried to evict a register already in use by the current instruction");
+		if (slot.occupied && slot.dirty)
+			this->spill_slot(slot);
+		slot.occupied = false;
+		slot.locked = true;
+	}
+
+	void RegAllocator::load_src_vreg_into(ir::VRegId vreg, PhysReg reg, bool clobbered)
+	{
+		RegSlot &target = this->slot_for(reg);
+		if (target.locked)
+			throw CompilerError::internal("Codegen: tried to load into a register already in use by the current instruction");
+
+		// check if this vreg is already loaded somewhere
+		RegSlot *current = nullptr;
 		for (RegSlot &slot : this->registers)
 		{
-			if (!slot.occupied)
+			if (slot.occupied && slot.resident == vreg)
+				current = &slot;
+		}
+
+		if (current == &target)
+		{
+			// already in place, but if it's about to be overwritten it has to be saved
+			if (clobbered)
+			{
+				if (target.dirty)
+					this->spill_slot(target);
+				target.occupied = false;
+			}
+			target.locked = true;
+			return;
+		}
+
+		// make room
+		if (target.occupied && target.dirty)
+			this->spill_slot(target);
+		target.occupied = false;
+
+		if (current != nullptr)
+		{
+			if (current->locked)
+				throw CompilerError::internal("Codegen: tried to move a register already in use by the current instruction");
+			this->spill_handler.move_reg(reg, current->physical, vreg);
+
+			// if the copy is about to be overwritten the original stays where it is, otherwise the value moves
+			if (!clobbered)
+			{
+				target.resident = vreg;
+				target.occupied = true;
+				target.dirty = current->dirty;
+				current->occupied = false;
+				current->dirty = false;
+			}
+		}
+		else
+		{
+			// load it from stack, where it stays safe even if the register is overwritten
+			this->load_spilled_vreg(reg, vreg);
+			if (!clobbered)
+			{
+				target.resident = vreg;
+				target.occupied = true;
+				target.dirty = false;
+			}
+		}
+		target.locked = true;
+	}
+
+	RegAllocator::RegSlot *RegAllocator::get_empty_slot()
+	{
+		// first check for non-occupied registers (locked ones are empty because an instruction needs them)
+		for (RegSlot &slot : this->registers)
+		{
+			if (!slot.occupied && !slot.locked)
 				return &slot;
 		}
 
@@ -157,8 +230,11 @@ namespace codegen
 
 		// choose a victim >:)
 		RegSlot *victim;
+		size_t tries = 0;
 		do
 		{
+			if (tries++ == this->registers.size())
+				throw CompilerError::internal("Codegen: every register is in use by the current instruction");
 			victim = &this->registers.at(this->next_to_spill);
 			this->next_to_spill = (this->next_to_spill + 1) % this->registers.size();
 		} while (victim->locked);

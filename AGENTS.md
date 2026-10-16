@@ -35,12 +35,20 @@ applies to Cider-the-language and anything written in it.
     IR and calls a backend's `lower_*` hooks, then points calls at their
     targets. `codegen/RegAllocator.*` is the (also architecture independent)
     local register allocator backends allocate through.
-  - `codegen/riscv/` — the only backend right now, covering RV32 and RV64
-    with or without the C extension (targets `linux-riscv32g`,
-    `linux-riscv32gc`, `linux-riscv64g`, `linux-riscv64gc`).
-    `RiscvInstruction.*` encodes (and compresses) single instructions,
-    `RiscvAssembler.*` is the buffer instructions are written to, and
-    `CodeGenerator_riscv.*` implements the lowering hooks.
+  - `codegen/riscv/` — RISC-V backend, covering RV32 and RV64 with or
+    without the C extension (targets `linux-riscv32g`, `linux-riscv32gc`,
+    `linux-riscv64g`, `linux-riscv64gc`). `RiscvInstruction.*` encodes (and
+    compresses) single instructions, `RiscvAssembler.*` is the buffer
+    instructions are written to, and `RiscvCodeGenerator.*` implements the
+    lowering hooks.
+  - `codegen/x86/` — x86 backend, covering 32 bit x86 and x86-64 (targets
+    `linux-x86`, `linux-x86_64`). `x86Operand.hpp` has the typed operands
+    (`Reg<W>`, `Mem<W>`, `Imm<W>`), `x86Assembler.*` the `write_*` functions,
+    whose signatures only accept operand kinds/widths that the instruction
+    has an encoding for (invalid instructions don't compile), and
+    `x86Instruction.*` the untyped encoder, which rejects anything needing a
+    REX prefix in 32 bit mode. `x86CodeGenerator.*` implements the lowering
+    hooks.
   - `objwriter/elf/` writes ELF output (ELF32 and ELF64 from one template).
 - `src/utils/` — `CliParser` (custom argv parser), `error.hpp`
   (`CompilerError` with typed constructors: syntax/name/type/semantic/
@@ -88,8 +96,8 @@ kind requested, so `--emit=ir` dumps IR without running codegen — useful when
 the backend is broken. Each kind defaults to a path derived from the input
 (`foo.cdr` → `foo.ast`/`foo.ir`/`foo.s`); append `=FILE` to redirect one, or
 `=stdout` to write it to standard output. `-o` names the executable only.
-`--emit=asm` is reserved but not implemented (the RV32 backend can't emit
-text yet).
+`--emit=asm` is reserved but not implemented (no backend can emit text
+yet).
 
 Other useful flags: `-v` (repeatable, increases verbosity), `-q` (quiet).
 Run `build/ciderc -h` for the full list — flags are defined in `src/main.cpp`
@@ -112,10 +120,11 @@ Run the whole suite with:
 python3 testing/run_tests.py build/ciderc
 ```
 
-Requires Python >= 3.12 and `qemu-user-static` (tests run compiled RISC-V
-binaries under `qemu-riscv32-static` and `qemu-riscv64-static`) since there's
-no native backend yet. Targets without the C extension are emulated on a CPU
-without it, so a stray compressed instruction fails the test.
+Requires Python >= 3.12 and `qemu-user-static` (tests run compiled binaries
+under `qemu-riscv32-static`, `qemu-riscv64-static`, `qemu-i386-static` and
+`qemu-x86_64-static`, even the x86 ones, so every target runs the same way).
+RISC-V targets without the C extension are emulated on a CPU without it, so a
+stray compressed instruction fails the test.
 
 When adding a language feature, add `.cdr` test cases alongside it in the
 matching (or a new) numbered subdirectory rather than only relying on

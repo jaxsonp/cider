@@ -1,10 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <array>
-#include <span>
 
-#include "backend/Target.hpp"
 #include "backend/codegen/RegAllocator.hpp"
 
 namespace codegen::x86
@@ -33,18 +30,62 @@ namespace codegen::x86
 		R15,
 	};
 
-	/// @brief How a register can be accessed, for example: RAX vs EAX vs AX vs AH vs AL.
-	enum class RegisterAccess : uint8_t
+	/// @brief Size of an operand (and so of the part of a register accessed, ie RAX vs EAX vs AX vs AL). The value
+	/// is the size in bytes, so comparing widths compares sizes
+	///
+	/// The high bytes (AH, CH, DH, BH) are deliberately not representable: nothing needs them, and they can't be
+	/// encoded in any instruction that has a REX prefix. Leaving them out means an 8 bit register is always the
+	/// low byte, and the low bytes of SP, BP, SI and DI (SPL, BPL, SIL, DIL) simply need a REX prefix
+	enum class Width : uint8_t
 	{
-		/// @brief Low 8 bits
-		LByte,
-		/// @brief High 8 bits (of lower word)
-		HByte,
-		/// @brief 16-bit
-		Word,
-		/// @brief 32-bit
-		DWord,
-		/// @brief 64-bit
-		QWord,
+		/// @brief Byte
+		W8 = 1,
+		/// @brief Word
+		W16 = 2,
+		/// @brief Double word
+		W32 = 4,
+		/// @brief Quad word (x64 only)
+		W64 = 8,
+	};
+
+	/// @brief Width of a value of some size in bytes
+	Width width_of_size(unsigned int size);
+
+	/// @brief Condition codes, for instructions that test the flags (setcc, jcc, cmovcc). The value is the number it's
+	/// encoded as. Below/above are unsigned comparisons, less/greater are signed ones
+	enum class Cond : uint8_t
+	{
+		/// Overflow
+		O,
+		/// Not overflow
+		NO,
+		/// Below (unsigned <), aka carry
+		B,
+		/// Above or equal (unsigned >=), aka not carry
+		AE,
+		/// Equal, aka zero
+		E,
+		/// Not equal, aka not zero
+		NE,
+		/// Below or equal (unsigned <=)
+		BE,
+		/// Above (unsigned >)
+		A,
+		/// Sign
+		S,
+		/// Not sign
+		NS,
+		/// Parity even
+		P,
+		/// Parity odd
+		NP,
+		/// Less (signed <)
+		L,
+		/// Greater or equal (signed >=)
+		GE,
+		/// Less or equal (signed <=)
+		LE,
+		/// Greater (signed >)
+		G,
 	};
 }

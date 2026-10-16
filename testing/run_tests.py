@@ -41,7 +41,7 @@ PLATFORM_EMULATORS: dict[str, Callable[[str], list[str]]] = {
     ],
     "linux-riscv64gc": lambda file: ["qemu-riscv64-static", file],
     "linux-x86": lambda file: ["qemu-i386-static", file],
-    "linux-x86_64": lambda file: ["qemu-amd64-static", file],
+    "linux-x86_64": lambda file: ["qemu-x86_64-static", file],
 }
 
 # Features of each platform that a test can ask for with the REQUIRES key
