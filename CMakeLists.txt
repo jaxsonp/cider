@@ -19,8 +19,15 @@ add_library(ciderc_lib STATIC
 	src/ir/IrWriter.cpp
 	src/backend/Target.cpp
 	src/backend/codegen/CodeGenerator.cpp
-	src/backend/codegen/riscv/CodeGenerator_riscv32.cpp
-	src/backend/objwriter/elf/ObjectWriter_ELF32.cpp
+	src/backend/codegen/RegAllocator.cpp
+	src/backend/codegen/riscv/RiscvAssembler.cpp
+	src/backend/codegen/riscv/RiscvCodeGenerator.cpp
+	src/backend/codegen/riscv/RiscvInstruction.cpp
+	src/backend/codegen/x86/x86.cpp
+	src/backend/codegen/x86/x86Assembler.cpp
+	src/backend/codegen/x86/x86CodeGenerator.cpp
+	src/backend/codegen/x86/x86Instruction.cpp
+	src/backend/objwriter/elf/ObjectWriter_ELF.cpp
 	src/utils/CliParser.cpp
 	src/utils/common.cpp
 	src/utils/error.cpp

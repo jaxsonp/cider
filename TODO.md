@@ -3,8 +3,11 @@
 _For Jaxson's eyes only_
 
 ## To implement
-
+- WIP:
+	- e2e tests
+	- convert many existing tests to more appropriately be unit tests
 - Soon:
+	- Unignore .vscode dir
 	- Decide what division by zero (and MIN / -1, which overflows) does. Right now it's target dependent: x86 traps
 	  (SIGFPE) for x/0, and for MIN / -1 on 32 and 64 bit values (8/16 bit ones are divided as 32 bit values, so they
 	  wrap like on riscv), while riscv gives all ones for x/0 and x for x%0. Untested on purpose until decided
