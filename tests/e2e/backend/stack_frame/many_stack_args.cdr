@@ -1,0 +1,10 @@
+//! EXIT_CODE=12
+
+// 32 of the 40 arguments are passed on the stack, in the caller's outgoing argument area
+fn sum(a0: u32, a1: u32, a2: u32, a3: u32, a4: u32, a5: u32, a6: u32, a7: u32, a8: u32, a9: u32, a10: u32, a11: u32, a12: u32, a13: u32, a14: u32, a15: u32, a16: u32, a17: u32, a18: u32, a19: u32, a20: u32, a21: u32, a22: u32, a23: u32, a24: u32, a25: u32, a26: u32, a27: u32, a28: u32, a29: u32, a30: u32, a31: u32, a32: u32, a33: u32, a34: u32, a35: u32, a36: u32, a37: u32, a38: u32, a39: u32) -> u32 {
+	a0 + a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12 + a13 + a14 + a15 + a16 + a17 + a18 + a19 + a20 + a21 + a22 + a23 + a24 + a25 + a26 + a27 + a28 + a29 + a30 + a31 + a32 + a33 + a34 + a35 + a36 + a37 + a38 + a39
+}
+
+fn main() -> u32 {
+	return sum(0u32, 1u32, 2u32, 3u32, 4u32, 5u32, 6u32, 7u32, 8u32, 9u32, 10u32, 11u32, 12u32, 13u32, 14u32, 15u32, 16u32, 17u32, 18u32, 19u32, 20u32, 21u32, 22u32, 23u32, 24u32, 25u32, 26u32, 27u32, 28u32, 29u32, 30u32, 31u32, 32u32, 33u32, 34u32, 35u32, 36u32, 37u32, 38u32, 39u32);
+}

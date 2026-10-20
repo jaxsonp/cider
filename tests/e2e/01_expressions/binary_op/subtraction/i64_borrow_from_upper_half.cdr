@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// the borrow has to come out of bit 32
+fn main() -> bool {
+	return 4294967296i64 - 1i64 == 4294967295i64;
+}

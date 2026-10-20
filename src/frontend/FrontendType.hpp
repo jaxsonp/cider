@@ -19,9 +19,11 @@ struct FrontendType
 		U8,
 		U16,
 		U32,
+		U64,
 		I8,
 		I16,
 		I32,
+		I64,
 		UNRESOLVED,
 		UNRESOLVED_INT,
 		UNRESOLVED_FLOAT,
@@ -44,9 +46,11 @@ struct FrontendType
 	static FrontendType i8() { return FrontendType(Variant::I8); }
 	static FrontendType i16() { return FrontendType(Variant::I16); }
 	static FrontendType i32() { return FrontendType(Variant::I32); }
+	static FrontendType i64() { return FrontendType(Variant::I64); }
 	static FrontendType u8() { return FrontendType(Variant::U8); }
 	static FrontendType u16() { return FrontendType(Variant::U16); }
 	static FrontendType u32() { return FrontendType(Variant::U32); }
+	static FrontendType u64() { return FrontendType(Variant::U64); }
 	static FrontendType boolean() { return FrontendType(Variant::BOOL); }
 	static FrontendType unresolved() { return FrontendType(Variant::UNRESOLVED); }
 	static FrontendType unresolved_int() { return FrontendType(Variant::UNRESOLVED_INT); }

@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+fn main() -> bool {
+	return 1u64 << 63u8 == 9223372036854775808u64;
+}

@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// 2^63 has its top bit set, which must not be mistaken for a sign
+fn main() -> bool {
+	return 9223372036854775808u64 > 9223372036854775807u64;
+}

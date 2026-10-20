@@ -23,8 +23,35 @@ PROGRESS_BAR_WIDTH = 80
 TEST_DEFINITION_PAT = r"^//!\s*([^=]+)=(.*)"
 
 # All supported platforms to test. Map of target names to lambdas that create a cmd from a file
+# Targets without the C extension are emulated on a cpu without it too, so that a compressed instruction
+# sneaking into their output is an illegal instruction rather than silently working
 PLATFORM_EMULATORS: dict[str, Callable[[str], list[str]]] = {
-    "linux-riscv32g": lambda file: ["qemu-riscv32-static", file],
+    "linux-riscv32g": lambda file: [
+        "qemu-riscv32-static",
+        "-cpu",
+        "rv32,c=false",
+        file,
+    ],
+    "linux-riscv32gc": lambda file: ["qemu-riscv32-static", file],
+    "linux-riscv64g": lambda file: [
+        "qemu-riscv64-static",
+        "-cpu",
+        "rv64,c=false",
+        file,
+    ],
+    "linux-riscv64gc": lambda file: ["qemu-riscv64-static", file],
+    "linux-x86": lambda file: ["qemu-i386-static", file],
+    "linux-x86_64": lambda file: ["qemu-x86_64-static", file],
+}
+
+# Features of each platform that a test can ask for with the REQUIRES key
+PLATFORM_FEATURES: dict[str, set[str]] = {
+    "linux-riscv32g": {"32bit"},
+    "linux-riscv32gc": {"32bit"},
+    "linux-riscv64g": {"64bit"},
+    "linux-riscv64gc": {"64bit"},
+    "linux-x86": {"32bit"},
+    "linux-x86_64": {"64bit"},
 }
 
 
@@ -140,14 +167,16 @@ class TestRunner:
                 print(f"{self.style_fg_green}All tests passing{self.style_reset}")
                 return True
             else:
-                print(f"{self.style_fg_red}{tests_failed} tests failed ({fail_percent:.2f}%){self.style_reset}")
+                print(
+                    f"{self.style_fg_red}{tests_failed} tests failed ({fail_percent:.2f}%){self.style_reset}"
+                )
                 return False
         except asyncio.CancelledError:
             print("\nTesting cancelled")
             raise
-        except Exception as e:
-            print(f"\nException thrown during testing: {e}")
-            traceback.format_exc()
+        except Exception:
+            print("\nException thrown during testing")
+            traceback.print_exc()
 
     async def progress_bar_task(self):
         """
@@ -173,11 +202,17 @@ class TestRunner:
     async def print_progress(self):
         progress = float(self.tests_ran) / float(self.total_test_count)
         progress_percent = 100.0 * progress
-        success_rate = (100.0 * float(self.tests_passed) / float(self.tests_ran)) if self.tests_ran != 0 else 100.0
+        success_rate = (
+            (100.0 * float(self.tests_passed) / float(self.tests_ran))
+            if self.tests_ran != 0
+            else 100.0
+        )
 
         async with self._print_lock:
             # move up, clear line, write progress stats
-            sys.stdout.write(f"\x1b[2A\x1b[2K | {progress_percent:.1f}% complete, {success_rate:.1f}% passed\n | ")
+            sys.stdout.write(
+                f"\x1b[2A\x1b[2K | {progress_percent:.1f}% complete, {success_rate:.1f}% passed\n | "
+            )
 
             # then write progress bar
             for column in range(PROGRESS_BAR_WIDTH):
@@ -218,7 +253,11 @@ class TestRunner:
             sys.stdout.write("- ")
             sys.stdout.write(test.name)
             sys.stdout.write(" => ")
-            sys.stdout.write(f"{self.style_fg_green}passed" if success else f"{self.style_fg_red}failed")
+            sys.stdout.write(
+                f"{self.style_fg_green}passed"
+                if success
+                else f"{self.style_fg_red}failed"
+            )
             if message:
                 sys.stdout.write(f" ({message})")
             sys.stdout.write(self.style_reset)
@@ -265,10 +304,12 @@ class TestRunner:
                     open(build_stdout_path, "w") as build_stdout_f,
                     open(build_stderr_path, "w") as build_stderr_f,
                 ):
-                    build_subprocess: asyncio.subprocess.Process = await asyncio.create_subprocess_exec(
-                        *build_cmd,
-                        stdout=build_stdout_f,
-                        stderr=build_stderr_f,
+                    build_subprocess: asyncio.subprocess.Process = (
+                        await asyncio.create_subprocess_exec(
+                            *build_cmd,
+                            stdout=build_stdout_f,
+                            stderr=build_stderr_f,
+                        )
                     )
                     build_return_code = await build_subprocess.wait()
 
@@ -316,7 +357,9 @@ class TestRunner:
                     continue
                 elif test.expected_stdout != "" or test.expected_stderr != "":
                     # TODO
-                    await self.record_test_result(test, False, f"stdout/stderr checking is unimplemented")
+                    await self.record_test_result(
+                        test, False, f"stdout/stderr checking is unimplemented"
+                    )
                     self._test_queue.task_done()
                     continue
 
@@ -325,8 +368,9 @@ class TestRunner:
 
         except asyncio.CancelledError:
             return
-        except Exception as e:
-            print(f"Exception in worker: {e}")
+        except Exception:
+            print("\nException in worker:")
+            traceback.print_exc()
 
 
 def create_tests_from_file(rel_path: Path) -> list[Test]:
@@ -353,19 +397,27 @@ def create_tests_from_file(rel_path: Path) -> list[Test]:
                 break
             key = match.group(1)
             val = match.group(2)
-            match key:
-                case "BUILD_EXIT_CODE":
+            match key.casefold():
+                case "build_exit_code":
                     for t in new_tests:
                         t.expected_build_exit_code = int(val)
-                case "EXIT_CODE":
+                case "exit_code":
                     for t in new_tests:
                         t.expected_exit_code = int(val)
-                case "STDOUT":
+                case "stdout":
                     for t in new_tests:
                         t.expected_stdout = val
-                case "STDERR":
+                case "stderr":
                     for t in new_tests:
                         t.expected_stderr = val
+                case "requires":
+                    # only keep the platforms that have every feature asked for
+                    required = {feature.strip() for feature in val.split(",")}
+                    new_tests = [
+                        t
+                        for t in new_tests
+                        if required <= PLATFORM_FEATURES[t.platform]
+                    ]
     return new_tests
 
 
@@ -416,7 +468,12 @@ if __name__ == "__main__":
     is_tty = sys.stdout.isatty()
 
     use_color = (
-        args.color is None and (is_tty if "FORCE_COLOR" not in os.environ else (os.environ["FORCE_COLOR"] != "0"))
+        args.color is None
+        and (
+            is_tty
+            if "FORCE_COLOR" not in os.environ
+            else (os.environ["FORCE_COLOR"] != "0")
+        )
     ) or args.color
     show_progress = (args.progress is None and is_tty) or args.progress
     show_passed = args.show_results == "all"

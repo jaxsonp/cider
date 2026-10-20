@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+fn main() -> bool {
+	return 5000000000u64 * 3000000000u64 == 15000000000000000000u64;
+}

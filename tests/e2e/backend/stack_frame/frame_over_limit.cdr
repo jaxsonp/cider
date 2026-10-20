@@ -1,7 +1,7 @@
-//! BUILD_EXIT_CODE=253
+//! EXIT_CODE=8
 
-// same as frame_near_limit but with enough spill slots to need a 2048 byte frame, which the prologue's
-// `addi fp, sp, size` can't encode yet. this must fail to build rather than silently miscompile
+// same as frame_under_2KiB but with enough spill slots to need a frame over 2KiB (with 4 byte slots, 64 bit
+// targets are well past it either way), so the last slots are further from fp than a load/store offset can reach
 fn id(x: u32) -> u32 { x }
 
 fn main() -> u32 {

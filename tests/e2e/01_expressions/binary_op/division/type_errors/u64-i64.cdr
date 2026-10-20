@@ -1,0 +1,5 @@
+//! BUILD_EXIT_CODE=3
+
+fn main() -> u64 {
+	return 51u64 / 5i64;
+}

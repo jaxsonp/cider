@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+
+// the sum overflows 32 bits. on 64 bit targets the true sum is still sitting in the register
+fn main() -> bool {
+	return (2000000000i32 + 2000000000i32) >> 2u8 == -73741824i32;
+}

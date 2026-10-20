@@ -1,0 +1,6 @@
+//! EXIT_CODE=15
+//! REQUIRES=64bit
+
+fn main() -> u64 {
+	return 255u64 % 16u64;
+}

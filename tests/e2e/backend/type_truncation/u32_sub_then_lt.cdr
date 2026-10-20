@@ -1,0 +1,6 @@
+//! EXIT_CODE=0
+
+// wraps to the largest u32, which is not less than 5
+fn main() -> bool {
+	return (0u32 - 1u32) < 5u32;
+}

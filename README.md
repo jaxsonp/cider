@@ -28,6 +28,13 @@ Options:
 | Target | OS | Object format | ISA | ABI |
 | --- | --- | --- | --- | --- |
 | `linux-riscv32g` | Linux | ELF32 | RV32G | ILP32D |
+| `linux-riscv32gc` | Linux | ELF32 | RV32GC | ILP32D |
+| `linux-riscv64g` | Linux | ELF64 | RV64G | LP64D |
+| `linux-riscv64gc` | Linux | ELF64 | RV64GC | LP64D |
+| `linux-x86` | Linux | ELF32 | IA-32 | SysV i386 |
+| `linux-x86_64` | Linux | ELF64 | x86_64 | SysV AMD64 |
+
+64 bit integers (`i64`, `u64`) are only supported on the 64 bit targets for now.
 
 ## Tests
 
@@ -36,8 +43,8 @@ Options:
 #### Requirements:
 
 - Linux (probably)
-- Python >= 3.14
-- Qemu (specifically qemu-user-static, for binaries like `qemu-riscv32-static`, etc.)
+- Python >= 3.12 (older versions probably work)
+- Qemu (specifically qemu-user-static, for binaries like `qemu-riscv32-static`, `qemu-riscv64-static`, etc.)
 
 ### To run:
 
@@ -74,3 +81,16 @@ Tests are defined in the `tests/` subdirectory. Each test consists of a `.cdr` s
 | `EXIT_CODE` | int | `0` | Expected return value of the program |
 | `STDOUT` | string | `""` | Expected output to stdout |
 | `STDERR` | string | `""` | Expected output to stderr |
+| `REQUIRES` | list | `""` | Comma separated features a target needs to run this test (`32bit`, `64bit`). The test is skipped on targets without them |
+
+Every test is ran once for each supported target.
+
+## Reference material
+
+Relevant specs, manuals and documents that I'm bookmarking here:
+
+- ELF spec: [https://refspecs.linuxfoundation.org/elf/elf.pdf](https://refspecs.linuxfoundation.org/elf/elf.pdf)
+- Risc-V calling conventions/ABIs: [https://riscv.org/wp-content/uploads/2024/12/riscv-calling.pdf](https://riscv.org/wp-content/uploads/2024/12/riscv-calling.pdf)
+- Risc-V instruction set manual (unpriv): [https://docs.riscv.org/reference/isa/v20260120/unpriv/unpriv-index.html](https://docs.riscv.org/reference/isa/v20260120/unpriv/unpriv-index.html)
+- System V AMD64 ABI spec: [https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf](https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf)
+- System V i386 ABI spec: [https://refspecs.linuxbase.org/elf/abi386-4.pdf](https://refspecs.linuxbase.org/elf/abi386-4.pdf)

@@ -172,16 +172,16 @@ namespace ast
 
 	void FunctionDefinition::emit_ir(IrWriter &writer) const
 	{
-		std::vector<ir::IrType> param_types;
-		param_types.reserve(this->args.size());
+		std::vector<ir::IrType> argument_types;
+		argument_types.reserve(this->args.size());
 		for (const ArgDefinition &arg : this->args)
-			param_types.push_back(arg.type.resolveType());
+			argument_types.push_back(arg.type.resolveType());
 
 		std::optional<ir::IrType> ir_return_type;
 		if (this->return_type.variant != FrontendType::Variant::VOID)
 			ir_return_type = this->return_type.resolveType();
 
-		IrFunctionWriter fn_writer = writer.start_function(this->name, std::move(param_types), ir_return_type);
+		IrFunctionWriter fn_writer = writer.start_function(this->name, std::move(argument_types), ir_return_type);
 
 		// args
 		uint64_t arg_index = 0;

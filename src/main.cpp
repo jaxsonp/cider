@@ -159,9 +159,6 @@ int main(int argc, char **argv)
 		if (auto exe = settings.emits.find(EmitKind::Exe); exe != settings.emits.end() && !exe->second.to_stdout)
 			exe->second.path = output_filename_arg.value();
 
-		if (settings.wants(EmitKind::Asm))
-			throw CompilerError::unimplemented("Textual assembly output is not implemented yet");
-
 		for (const auto &[kind, target] : settings.emits)
 			log_vv("emitting {} to {}", emit_kind_name(kind), target.to_stdout ? STDOUT_SPECIFIER : target.path);
 

@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// the product only has bits above bit 31
+fn main() -> bool {
+	return 4294967296u64 * 4294967295u64 == 18446744069414584320u64;
+}

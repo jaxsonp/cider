@@ -1,0 +1,6 @@
+//! EXIT_CODE=188
+//! REQUIRES=64bit
+
+fn main() -> i64 {
+	return 19i64 + 169i64;
+}

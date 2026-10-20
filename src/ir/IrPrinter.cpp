@@ -168,8 +168,8 @@ namespace ir
 		void print_function(const Function &fn, std::ostream &out)
 		{
 			out << std::format("fn {}(", fn.name);
-			for (std::size_t i = 0; i < fn.param_types.size(); ++i)
-				out << (i == 0 ? "" : ", ") << fn.param_types[i].to_string();
+			for (std::size_t i = 0; i < fn.argument_types.size(); ++i)
+				out << (i == 0 ? "" : ", ") << fn.argument_types[i].to_string();
 			out << ')';
 			if (fn.return_type.has_value())
 				out << std::format(" -> {}", fn.return_type->to_string());

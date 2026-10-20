@@ -1,6 +1,7 @@
 //! EXIT_CODE=254
 
-// every literal and partial sum here gets its own spill slot, giving a frame of 2016 bytes, just under 2KiB
+// every literal and partial sum here gets its own spill slot, giving a frame of 2016 bytes (with 4 byte slots),
+// just under 2KiB, the furthest that a load/store offset can reach from fp
 fn id(x: u32) -> u32 { x }
 
 fn main() -> u32 {

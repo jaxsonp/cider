@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// as a signed number the left side is -1, which would order the other way
+fn main() -> bool {
+	return 18446744073709551615u64 >= 1u64;
+}

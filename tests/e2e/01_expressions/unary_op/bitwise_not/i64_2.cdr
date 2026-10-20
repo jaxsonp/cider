@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+fn main() -> bool {
+	return ~1311768467463790320i64 == -1311768467463790321i64;
+}

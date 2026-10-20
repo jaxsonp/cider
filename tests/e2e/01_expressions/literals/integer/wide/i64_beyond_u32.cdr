@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+//! REQUIRES=64bit
+
+// 2^32 has nothing but zeroes in its lower 32 bits, so this only holds if the upper half made it through
+fn main() -> bool {
+	return 4294967296i64 > 4294967295i64;
+}

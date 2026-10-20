@@ -70,7 +70,7 @@ constexpr T lower_bitmask(size_t n)
 	static_assert(std::is_integral_v<T>, "Template type must be an integral type.");
 	if (n == 0)
 		return 0;
-	else if (n >= 32)
+	else if (n >= sizeof(T) * 8)
 		return ~T{0}; // all bits set
 	else
 		return (T{1} << n) - 1;
