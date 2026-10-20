@@ -3,17 +3,17 @@
 
 #include <iostream>
 
-TEST(poopy)
+TEST(poopygood)
 {
 	std::cout << "beep boop doing lexer tests" << std::endl;
 }
 
-TEST(poopy2)
-{
-	ASSERT_EQ(3, 1 + 2);
-}
-
-TEST(poopy3)
+TEST(poopybad)
 {
 	ASSERT_THROWS(std::cout << "This doesnt throw teehee" << std::endl, std::exception);
+}
+
+TEST(poopygood2)
+{
+	ASSERT_EQ(3, 1 + 2);
 }

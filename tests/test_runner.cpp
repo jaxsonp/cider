@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 	if (list_arg)
 	{
 		for (const Test *test : selected_tests)
-			std::cout << std::format("[{}] {}\n", to_string(test->category), test->full_name());
+			std::cout << std::format("[{}] {}\n", to_string(test->category), test->name);
 		return 0;
 	}
 
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
 	for (const Test *test : selected_tests)
 	{
 		Result result = run_test(*test);
-		std::string label = std::format("[{}] {}", to_string(test->category), test->full_name());
+		std::string label = std::format("[{}] {}", to_string(test->category), test->name);
 		switch (result.outcome)
 		{
 		case Outcome::Pass:

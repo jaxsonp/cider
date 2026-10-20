@@ -18,14 +18,12 @@ std::string_view to_string(TestCategory category);
 
 struct Test
 {
-	/// Grouping for reporting, e.g. the source file's stem for unit tests or the
-	/// fixture's directory for e2e tests. Full name is "<group>/<name>"
-	std::string group;
-	std::string name;
-	TestCategory category;
-	std::function<void()> fn;
+	// Test name, with the categories prepended and delimited by '/'
+	const std::string name;
+	const TestCategory category;
+	const std::function<void()> fn;
 
-	[[nodiscard]] std::string full_name() const { return this->group + "/" + this->name; }
+	Test(std::string_view name, TestCategory category, std::function<void()> fn);
 };
 
 /// Every test known to the runner. Statically defined tests (TEST) add themselves
@@ -35,9 +33,9 @@ std::vector<Test> &get_test_registry();
 /// Registers a test, returns a dummy so it can initialize a static
 bool register_test(Test test);
 
-/// Group name for a statically defined test: the name of the file it's defined in, minus
-/// the ".tests.cpp"
-std::string group_from_file(std::string_view file);
+/// Creates the name of a unit test from the file its defined in and its name.
+/// File_path must be in `src`
+std::string make_test_name(std::string_view file_path, std::string_view test_name);
 
 /// Thrown by a failing check
 struct TestFailure : std::runtime_error
@@ -52,13 +50,13 @@ struct TestSkipped : std::runtime_error
 };
 
 /// Macro for defining an in-source unit test
-#define TEST(name)                                                               \
-	static void test_fn_##name();                                                \
-	static const bool test_reg_##name = register_test(                           \
-		{group_from_file(__FILE__), #name, TestCategory::Unit, test_fn_##name}); \
+#define TEST(name)                                                                  \
+	static void test_fn_##name();                                                   \
+	static const bool test_reg_##name = register_test(                              \
+		Test(make_test_name(__FILE__, #name), TestCategory::Unit, test_fn_##name)); \
 	static void test_fn_##name()
 
-// assertions
+// assertions -------------
 
 namespace testing_detail
 {
