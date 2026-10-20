@@ -17,12 +17,6 @@ _For Jaxson's eyes only_
 		- Overhaul how tests are ran (move away from qemu-user, maybe containers? maybe only native?)
 		- Test timeouts
 		- finish stdout/stderr checking
-	- Use callee saved registers for register allocation
-	- Improve riscv codegen
-		- Full support for riscv abi (double registers or whatever)
-		- Investigate if stack-passed args are correct (eg should they be/are they all one word?)
-		- riscv type truncation on explicit casts (once it exists)
-		- Investigate if large immediates are broken in codegen
 	- Fix: hex literals with letter digits don't parse (`0x1Fu8` is a type error, the lexer's digit scan stops at `F`). Probably belongs with "Non-decimal int literals" below
 	- Fix: deeply nested expressions (~2000 nested parens) segfault the compiler (parser recursion), should be a proper error
 - Before self-hosting:
@@ -41,16 +35,23 @@ _For Jaxson's eyes only_
 	- traits
 	- stdlib
 	- executable or library
+	- Use callee saved registers for register allocation
+	- Improve riscv codegen
+		- Full support for riscv abi (double registers or whatever)
+		- Investigate if stack-passed args are correct (eg should they be/are they all one word?)
+		- riscv type truncation on explicit casts (once it exists)
+		- Investigate if large immediates are broken in codegen
+	- Improve x86 codegen
+		- Register classes in the allocator, so that esi/edi can be used on x86 (every value has to be usable as an 8 bit register, and they have no 8 bit form without REX), and so that division/shifts don't need to evict
+		- Basic instruction minimization/compaction
+			- Immediate operands (`add eax, 5`) instead of loading every constant into a register
+			- Instruction simplification, eg division by a constant/power of two, `lea` for adds, `test` instead of `cmp 0`, etc
+		- Red zone?
 - At some point:
 	- Basic type inference for int literals
 	- Non-G riscv ISAs without M: multiplication/division throw `unsupported` for now, needs runtime routines (soft floats too once there are floats). Target flags exist for M/A/F/D/C, only C changes codegen today
 	- Branch encoding (B-type) and jump relaxation for the C extension (jumps and calls are never compressed so offsets are final when emitted), once the IR has branches
 	- Better error messages (include code snippet)
-	- Improve x86 codegen
-		- Red zone?
-		- Register classes in the allocator, so that esi/edi can be used on x86 (every value has to be usable as an 8 bit register, and they have no 8 bit form without REX), and so that division/shifts don't need to evict
-		- Immediate operands (`add eax, 5`) instead of loading every constant into a register
-		- Instruction simplification, eg division by a constant/power of two, `lea` for adds, `test` instead of `cmp 0`, etc
 	- try doing UTF8
 	- labelled code blocks (for early breaks)
 	- Warnings:
