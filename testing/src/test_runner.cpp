@@ -3,49 +3,11 @@
 #include <iostream>
 
 #include "testing.hpp"
+#include "e2e_testing.hpp"
+#include "unit_testing.hpp"
 #include "utils/CliParser.hpp"
 
-namespace
-{
-	enum class Outcome
-	{
-		Pass,
-		Fail,
-		Skip,
-	};
-
-	struct Result
-	{
-		Outcome outcome;
-		/// Failure message or skip reason
-		std::string message;
-	};
-
-	Result run_test(const Test &test)
-	{
-		try
-		{
-			test.fn();
-			return {Outcome::Pass, ""};
-		}
-		catch (const TestFailure &e)
-		{
-			return {Outcome::Fail, e.what()};
-		}
-		catch (const TestSkipped &e)
-		{
-			return {Outcome::Skip, e.what()};
-		}
-		catch (const std::exception &e)
-		{
-			return {Outcome::Fail, std::format("uncaught exception: {}", e.what())};
-		}
-		catch (...)
-		{
-			return {Outcome::Fail, "uncaught non-std exception"};
-		}
-	}
-}
+using namespace testing;
 
 int main(int argc, char **argv)
 {
@@ -71,14 +33,25 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
-	std::vector<const Test *> selected_tests;
-	for (const Test &test : get_test_registry())
+	bool do_unit_tests = unit_arg.present();
+	bool do_e2e_tests = e2e_arg.present();
+	if (!(do_unit_tests || do_e2e_tests))
 	{
-		if ((!unit_arg.present() && !e2e_arg.present()) ||
-			test.category == TestCategory::Unit && unit_arg.present() ||
-			test.category == TestCategory::End2End && e2e_arg.present())
-			selected_tests.push_back(&test);
+		do_unit_tests = true;
+		do_e2e_tests = true;
 	}
+
+	std::vector<const Test *> selected_tests;
+
+	if (do_unit_tests)
+		for (const unit::UnitTest &test : unit::get_unit_test_registry())
+			selected_tests.push_back(&test);
+
+	if (do_e2e_tests)
+		for (const e2e::E2eTest &test : e2e::e2e_tests)
+			selected_tests.push_back(&test);
+
+	// if (do_e2e_tests)
 
 	if (list_arg)
 	{
@@ -92,7 +65,7 @@ int main(int argc, char **argv)
 	auto start = std::chrono::steady_clock::now();
 	for (const Test *test : selected_tests)
 	{
-		Result result = run_test(*test);
+		Result result = test->run();
 		std::string label = std::format("[{}] {}", to_string(test->category), test->name);
 		switch (result.outcome)
 		{
