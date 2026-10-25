@@ -61,6 +61,7 @@ _For Jaxson's eyes only_
 		- Double negation
 	- Investigate/reevaluate bitshift behavior
 	- x86 subtargets (i686, i386, etc)
+	- Clean up/standardize logging decisions
 - Tests to write:
 	- overflowing int literal
 	- left/right associativity, and comparisions needing parens

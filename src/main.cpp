@@ -2,6 +2,7 @@
 #include <iostream>
 #include <format>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -11,6 +12,7 @@
 #include "utils/error.hpp"
 
 #include "compile.hpp"
+#include "backend/Target.hpp"
 
 namespace
 {
@@ -84,6 +86,8 @@ namespace
 	}
 }
 
+static const std::string host_target = Target::detect_host_target();
+
 int main(int argc, char **argv)
 {
 	CliParser cli("ciderc", "Compiler for the Cider programming language");
@@ -93,7 +97,9 @@ int main(int argc, char **argv)
 									.short_name('o')
 									.metavar("FILE")
 									.default_value("a.out");
-	auto &target_arg = cli.add_flag_arg("target", "Target platform").short_name('t').metavar("TARGET").required();
+	auto &target_arg = cli.add_flag_arg("target", std::format("Target platform (defaults to the host's target, {})", host_target))
+						   .short_name('t')
+						   .metavar("TARGET");
 	auto &emit_arg = cli.add_flag_arg(
 							"emit",
 							std::format("Artifacts to produce: {}. Append \"=PATH\" to write to file, or \"={}\" for standard output", emit_kind_list(), STDOUT_SPECIFIER))
@@ -136,14 +142,21 @@ int main(int argc, char **argv)
 
 	try
 	{
-		auto found_target = Target::supported_targets.find(target_arg.value());
+		std::optional<std::string> target_name = target_arg.maybe_value();
+		if (!target_name.has_value())
+		{
+			target_name = host_target;
+			log_vv("no target given, using host target {:s}", *target_name);
+		}
+
+		auto found_target = Target::supported_targets.find(*target_name);
 		if (found_target == Target::supported_targets.end())
 		{
 			std::string supported;
 			for (const auto &[name, target] : Target::supported_targets)
 				supported += std::format("{}{}", supported.empty() ? "" : ", ", name);
 			throw CompilerError::unsupported(
-				std::format("Unknown target \"{}\" (supported targets: {})", target_arg.value(), supported));
+				std::format("Unknown target \"{}\" (supported targets: {})", *target_name, supported));
 		}
 		log_vv("target: {:s}", found_target->first);
 

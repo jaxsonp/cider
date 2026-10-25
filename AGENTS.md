@@ -88,7 +88,9 @@ build/ciderc <file.cdr> -t linux-riscv32g -o out
 ```
 
 Targets are named `<os>-<isa>`, see `Target::supported_targets` (or pass a
-bogus `-t` to have them listed).
+bogus `-t` to have them listed). Without `-t` the compiler targets the
+platform it was itself built for (`Target::host_target()`, detected from the
+host C++ compiler's predefined macros), erroring if that isn't supported.
 
 `--emit=<kind>[,...]` selects which artifacts to produce: `ast`, `ir`,
 `asm`, or `exe` (the default). The compiler runs only as far as the furthest
