@@ -1,5 +1,7 @@
 #include "Target.hpp"
 
+#include <format>
+
 #include "utils/error.hpp"
 
 #include "codegen/riscv/RiscvCodeGenerator.hpp"
@@ -15,6 +17,63 @@ const std::unordered_map<std::string, Target> Target::supported_targets = {
 	{"linux-x86", Target(Arch::X86, 0u, ABI::SYSV_I386, OS::Linux, ObjectFormat::ELF32)},
 	{"linux-x86_64", Target(Arch::X86_64, 0u, ABI::SYSV_AMD64, OS::Linux, ObjectFormat::ELF64)},
 };
+
+std::string Target::detect_host_target()
+{
+#if defined(__linux__)
+	std::string os = "linux";
+#elif defined(__APPLE__) && defined(__MACH__)
+	std::string os = "macos";
+#elif defined(_WIN32)
+	std::string os = "windows";
+#elif defined(__FreeBSD__)
+	std::string os = "freebsd";
+#elif defined(__OpenBSD__)
+	std::string os = "openbsd";
+#elif defined(__NetBSD__)
+	std::string os = "netbsd";
+#else
+	std::string os = "unknown";
+#endif
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
+	std::string isa = "x86_64";
+#elif defined(__i386__) || defined(_M_IX86)
+	std::string isa = "x86";
+#elif defined(__riscv)
+	std::string isa = std::format("riscv{}", __riscv_xlen);
+	// G (IMAFD) when the host has all of it, otherwise list the extensions individually so the name won't
+	// match a supported target (TODO maybe fix this? idk)
+#if defined(__riscv_mul) && defined(__riscv_atomic) && defined(__riscv_flen) && __riscv_flen >= 64
+	isa += "g";
+#else
+	isa += "i";
+#if defined(__riscv_mul)
+	isa += "m";
+#endif
+#if defined(__riscv_atomic)
+	isa += "a";
+#endif
+#if defined(__riscv_flen) && __riscv_flen >= 32
+	isa += "f";
+#endif
+#if defined(__riscv_flen) && __riscv_flen >= 64
+	isa += "d";
+#endif
+#endif
+#if defined(__riscv_compressed)
+	isa += "c";
+#endif
+#elif defined(__aarch64__) || defined(_M_ARM64)
+	std::string isa = "aarch64";
+#elif defined(__arm__) || defined(_M_ARM)
+	std::string isa = "arm";
+#else
+	std::string isa = "unknown";
+#endif
+
+	return std::format("{}-{}", os, isa);
+}
 
 std::unique_ptr<CodeGenerator> Target::get_code_generator() const
 {

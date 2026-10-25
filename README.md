@@ -19,7 +19,7 @@ Flags:
 
 Options:
   -o, --out <FILE>       Output file path for the executable, if "--emit exe" [default: a.out]
-  -t, --target <TARGET>  Target platform (required)
+  -t, --target <TARGET>  Target platform (defaults to the host's platform)
       --emit <KIND>      Artifacts to produce: ast, ir, asm, exe. Append "=PATH" to write to file, or "=stdout" for standard output (repeatable) [default: exe]
 ```
 

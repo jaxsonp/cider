@@ -87,6 +87,11 @@ public:
 	/// Map of all supported targets
 	static const std::unordered_map<std::string, Target> supported_targets;
 
+	/// @brief Name of the platform the compiler itself was built for, in the same `<os>-<isa>` form as
+	/// `supported_targets`' keys. Detected from the host compiler's predefined macros, so it may name a
+	/// platform that isn't supported (e.g. "macos-aarch64")
+	static std::string detect_host_target();
+
 	std::unique_ptr<CodeGenerator> get_code_generator() const;
 	std::unique_ptr<ObjectWriter> get_object_writer() const;
 
