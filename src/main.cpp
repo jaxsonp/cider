@@ -111,6 +111,7 @@ int main(int argc, char **argv)
 	auto &verbosity_flag = cli.add_flag("verbose", "Increase compiler verbosity").short_name('v').allow_multi();
 	auto &quiet_flag = cli.add_flag("quiet", "Silence compiler output").short_name('q');
 	cli.add_help_flag();
+	cli.add_version_flag();
 
 	try
 	{
@@ -119,6 +120,11 @@ int main(int argc, char **argv)
 	catch (const CliHelpRequested &)
 	{
 		cli.print_help();
+		return exit_code_as_int(ExitCode::Success);
+	}
+	catch (const CliVersionRequested &)
+	{
+		std::cout << "Cider Compiler " << cider_version << std::endl;
 		return exit_code_as_int(ExitCode::Success);
 	}
 	catch (const CliError &ex)

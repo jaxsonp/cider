@@ -109,6 +109,9 @@ public:
 	/// Register a '--help'/'-h' flag. parse() throws CliHelpRequested when it is passed
 	void add_help_flag();
 
+	/// Register a '--version'/'-V' flag. parse() throws CliVersionRequested when it is passed
+	void add_version_flag();
+
 	/// Parse an (argc, argv) pair from main(). argv[0] (program name) is automatically skipped.
 	/// Throws CliHelpRequested if the help flag was passed, or CliError with a
 	/// human-readable message on any error
@@ -137,6 +140,7 @@ private:
 	/// Owned via unique_ptr so the references handed out by add_* stay valid as the vector grows
 	std::vector<std::unique_ptr<Arg>> args;
 	Arg *help_arg = nullptr;
+	Arg *version_arg = nullptr;
 };
 
 /// Wrapper around runtime error for CLI-specific errors
@@ -148,5 +152,10 @@ public:
 
 /// Thrown by CliParser::parse() when the help flag is passed
 class CliHelpRequested
+{
+};
+
+/// Thrown by CliParser::parse() when the version flag is passed
+class CliVersionRequested
 {
 };
