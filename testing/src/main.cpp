@@ -1,6 +1,7 @@
 #include <chrono>
 #include <format>
 #include <iostream>
+#include <filesystem>
 
 #include "testing.hpp"
 #include "e2e_testing.hpp"
@@ -11,11 +12,12 @@ using namespace testing;
 
 int main(int argc, char **argv)
 {
-	CliParser cli("test_runner", "Runs Cider's unit and e2e tests");
+	CliParser cli("ciderc_test_runner", "Runs Cider's unit and e2e tests");
 	auto &unit_arg = cli.add_flag("unit", "Run unit tests (if no category is given, all are run)");
 	auto &e2e_arg = cli.add_flag("e2e", "Run end to end tests");
 	auto &list_arg = cli.add_flag("list", "List the selected tests instead of running them").short_name('l');
 	auto &verbose_arg = cli.add_flag("verbose", "Print every test, not just failures").short_name('v');
+	auto &ciderc_arg = cli.add_flag_arg("ciderc", "Path to ciderc executable used for e2e tests (defaults to './ciderc' if it exists, else 'ciderc')").short_name('C');
 	cli.add_help_flag();
 
 	try
@@ -48,8 +50,21 @@ int main(int argc, char **argv)
 			selected_tests.push_back(&test);
 
 	if (do_e2e_tests)
+	{
 		for (const e2e::E2eTest &test : e2e::e2e_tests)
 			selected_tests.push_back(&test);
+
+		// set ciderc executable path
+		if (ciderc_arg.maybe_value().has_value())
+			e2e::E2eTest::set_ciderc_path(ciderc_arg.value());
+		else
+		{
+			// no ciderc path provided, use "./ciderc" if it exists
+			std::filesystem::path default_path = std::filesystem::current_path() / "ciderc";
+			if (std::filesystem::exists(default_path))
+				e2e::E2eTest::set_ciderc_path(default_path);
+		}
+	}
 
 	if (list_arg)
 	{

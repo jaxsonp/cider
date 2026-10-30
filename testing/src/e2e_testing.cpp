@@ -3,20 +3,23 @@
 #include <stdexcept>
 #include <regex>
 #include <chrono>
-#include <filesystem>
-#include <fstream>
+#include <string>
 #include <iostream>
 
 #include "cpp-subprocess/subprocess.hpp"
 
 #include "utils/logging.hpp"
+#include "compile.hpp"
 
 namespace testing::e2e
 {
+	std::string E2eTest::ciderc_executable = "ciderc";
+
 	std::filesystem::path &ensure_test_dir()
 	{
 		static auto init_time = std::chrono::system_clock::now();
-		static std::filesystem::path test_dir = std::filesystem::temp_directory_path() / "cider-testing" / std::format("{:%Y%m%d%H%M%S}", init_time);
+		static std::string init_timestamp = std::format("{:%Y%m%d%H%M%S}", init_time);
+		static std::filesystem::path test_dir = std::filesystem::temp_directory_path() / "cider-testing" / init_timestamp;
 		// we don't care if it created or not, only that it now exists
 		bool _ = std::filesystem::create_directories(test_dir);
 		return test_dir;
@@ -49,17 +52,24 @@ namespace testing::e2e
 		std::filesystem::path run_stdout_path = output_dir / "stdout.txt";
 		std::filesystem::path run_stderr_path = output_dir / "stderr.txt";
 
-		// compilation settings
-		Target target(Target::detect_host_target());
-		CompileSettings settings(target);
-		settings.emits.insert({EmitKind::Exe, EmitTarget(bin_path.string())});
+		std::vector<std::string> build_cmd{E2eTest::ciderc_executable};
 
-		// save to restore later
-		std::streambuf *original_cout = std::cout.rdbuf();
-		std::streambuf *original_cerr = std::cerr.rdbuf();
-
-		auto proc = subprocess::Popen();
+		auto proc = subprocess::Popen(
+			build_cmd,
+			subprocess::output{"cat_fredirect.txt"},
+			subprocess::error{"cat_fredirect.txt"});
 
 		return Result(Outcome::Pass, "todo");
+	}
+
+	void E2eTest::set_ciderc_path(std::filesystem::path path)
+	{
+		if (!std::filesystem::exists(path))
+			throw std::runtime_error(std::format("ciderc path \"{}\" does not exist", path.string()));
+
+		E2eTest::ciderc_executable = path.string();
+		std::cout << "Ciderc executable: " << E2eTest::ciderc_executable << std::endl;
+
+		// TODO get version/test executable
 	}
 }

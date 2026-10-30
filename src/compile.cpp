@@ -11,8 +11,7 @@
 #include "backend/codegen/CodeGenerator.hpp"
 #include "backend/objwriter/ObjectWriter.hpp"
 
-CompileSettings::CompileSettings(Target target)
-	: target(target) {}
+CompileSettings::CompileSettings(Target target) : target(target) {}
 
 EmitKind CompileSettings::furthest() const
 {

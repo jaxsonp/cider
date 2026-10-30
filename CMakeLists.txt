@@ -40,5 +40,12 @@ target_include_directories(ciderc_lib SYSTEM PUBLIC src/)
 add_executable(ciderc src/main.cpp)
 target_link_libraries(ciderc PRIVATE ciderc_lib)
 
+# Copy ciderc into root (for convenience/test runner)
+add_custom_command(TARGET ciderc POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+            $<TARGET_FILE:ciderc>
+            ${CMAKE_SOURCE_DIR}/
+)
+
 # Testing
 add_subdirectory(testing)

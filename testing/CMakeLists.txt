@@ -4,6 +4,8 @@ project(cider-compiler-tests CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(TEST_RUNNER_TARGET "ciderc_test_runner")
+
 # Embed the integration test files' content into the runner. Re-globbed every build
 set(E2E_DIR ${PROJECT_SOURCE_DIR}/e2e_tests)
 set(E2E_EMBED_SCRIPT ${PROJECT_SOURCE_DIR}/embed_e2e_tests.cmake)
@@ -17,7 +19,7 @@ add_custom_command(
 	VERBATIM
 )
 
-add_executable(test_runner
+add_executable(${TEST_RUNNER_TARGET}
 	${PROJECT_SOURCE_DIR}/src/main.cpp
 	${PROJECT_SOURCE_DIR}/src/testing.cpp
 	${PROJECT_SOURCE_DIR}/src/unit_testing.cpp
@@ -27,11 +29,11 @@ add_executable(test_runner
 	# tests
 	${CMAKE_SOURCE_DIR}/src/frontend/Lexer.tests.cpp
 )
-target_include_directories(test_runner SYSTEM PRIVATE
+target_include_directories(${TEST_RUNNER_TARGET} SYSTEM PRIVATE
 	${PROJECT_SOURCE_DIR}/src
 	${CMAKE_SOURCE_DIR}/src
 )
-target_link_libraries(test_runner PRIVATE ciderc_lib)
+target_link_libraries(${TEST_RUNNER_TARGET} PRIVATE ciderc_lib)
 
 # 3rd party dep for subprocesses
 include(FetchContent)
@@ -41,9 +43,9 @@ FetchContent_Declare(
     GIT_TAG        v2.5
 )
 FetchContent_MakeAvailable(cpp-subprocess)
-target_link_libraries(test_runner PRIVATE cpp-subprocess::subprocess)
+target_link_libraries(${TEST_RUNNER_TARGET} PRIVATE cpp-subprocess::subprocess)
 
 # required for parsing in-source unit tests
-target_compile_definitions(test_runner
+target_compile_definitions(${TEST_RUNNER_TARGET}
     PRIVATE CIDER_SRC_DIR="${CMAKE_SOURCE_DIR}/src/"
 )
