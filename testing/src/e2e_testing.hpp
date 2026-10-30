@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "testing.hpp"
+#include "compile.hpp"
 
 namespace testing::e2e
 {

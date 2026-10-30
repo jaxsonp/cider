@@ -30,7 +30,7 @@ struct CompileSettings
 	/// Artifacts to produce, keyed by kind (so lookups and "furthest stage" stay cheap)
 	std::map<EmitKind, EmitTarget> emits;
 
-	explicit CompileSettings(Target target) : target(target) {}
+	explicit CompileSettings(Target target);
 
 	/// @brief Whether the given artifact was requested
 	bool wants(EmitKind kind) const { return this->emits.contains(kind); }
@@ -39,4 +39,4 @@ struct CompileSettings
 	EmitKind furthest() const;
 };
 
-void compile(const std::string &, const CompileSettings &);
+void compile(const std::string &filename, const CompileSettings &settings);

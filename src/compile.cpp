@@ -11,6 +11,9 @@
 #include "backend/codegen/CodeGenerator.hpp"
 #include "backend/objwriter/ObjectWriter.hpp"
 
+CompileSettings::CompileSettings(Target target)
+	: target(target) {}
+
 EmitKind CompileSettings::furthest() const
 {
 	if (this->emits.empty())
@@ -52,6 +55,8 @@ namespace
 		}
 	};
 }
+
+extern const std::string host_target_name = Target::detect_host_target();
 
 void compile(const std::string &filename, const CompileSettings &settings)
 {

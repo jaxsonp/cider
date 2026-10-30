@@ -12,11 +12,11 @@ using namespace testing;
 int main(int argc, char **argv)
 {
 	CliParser cli("test_runner", "Runs Cider's unit and e2e tests");
-	cli.add_help_flag();
 	auto &unit_arg = cli.add_flag("unit", "Run unit tests (if no category is given, all are run)");
 	auto &e2e_arg = cli.add_flag("e2e", "Run end to end tests");
 	auto &list_arg = cli.add_flag("list", "List the selected tests instead of running them").short_name('l');
 	auto &verbose_arg = cli.add_flag("verbose", "Print every test, not just failures").short_name('v');
+	cli.add_help_flag();
 
 	try
 	{
@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 	}
 	catch (const CliError &e)
 	{
-		std::cerr << "Error: " << e.what() << "\n";
+		std::cerr << "CLI Error: " << e.what() << "\n";
 		return 2;
 	}
 
@@ -50,8 +50,6 @@ int main(int argc, char **argv)
 	if (do_e2e_tests)
 		for (const e2e::E2eTest &test : e2e::e2e_tests)
 			selected_tests.push_back(&test);
-
-	// if (do_e2e_tests)
 
 	if (list_arg)
 	{

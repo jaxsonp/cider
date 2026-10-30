@@ -18,8 +18,8 @@ add_custom_command(
 )
 
 add_executable(test_runner
+	${PROJECT_SOURCE_DIR}/src/main.cpp
 	${PROJECT_SOURCE_DIR}/src/testing.cpp
-	${PROJECT_SOURCE_DIR}/src/test_runner.cpp
 	${PROJECT_SOURCE_DIR}/src/unit_testing.cpp
 	${PROJECT_SOURCE_DIR}/src/e2e_testing.cpp
 	${E2E_EMBED_OUTPUT}
@@ -32,6 +32,16 @@ target_include_directories(test_runner SYSTEM PRIVATE
 	${CMAKE_SOURCE_DIR}/src
 )
 target_link_libraries(test_runner PRIVATE ciderc_lib)
+
+# 3rd party dep for subprocesses
+include(FetchContent)
+FetchContent_Declare(
+    cpp-subprocess
+    GIT_REPOSITORY https://github.com/arun11299/cpp-subprocess.git
+    GIT_TAG        v2.5
+)
+FetchContent_MakeAvailable(cpp-subprocess)
+target_link_libraries(test_runner PRIVATE cpp-subprocess::subprocess)
 
 # required for parsing in-source unit tests
 target_compile_definitions(test_runner

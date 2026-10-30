@@ -86,8 +86,6 @@ namespace
 	}
 }
 
-static const std::string host_target = Target::detect_host_target();
-
 int main(int argc, char **argv)
 {
 	CliParser cli("ciderc", "Compiler for the Cider programming language");
@@ -97,7 +95,7 @@ int main(int argc, char **argv)
 									.short_name('o')
 									.metavar("FILE")
 									.default_value("a.out");
-	auto &target_arg = cli.add_flag_arg("target", std::format("Target platform (defaults to the host's target, {})", host_target))
+	auto &target_arg = cli.add_flag_arg("target", std::format("Target platform (defaults to the host's target, {})", Target::detect_host_target()))
 						   .short_name('t')
 						   .metavar("TARGET");
 	auto &emit_arg = cli.add_flag_arg(
@@ -142,25 +140,17 @@ int main(int argc, char **argv)
 
 	try
 	{
-		std::optional<std::string> target_name = target_arg.maybe_value();
-		if (!target_name.has_value())
+		std::string target_name = target_arg.value();
+		if (target_name.empty())
 		{
-			target_name = host_target;
-			log_vv("no target given, using host target {:s}", *target_name);
+			target_name = Target::detect_host_target();
+			log_vv("no target given, using host target {:s}", target_name);
 		}
 
-		auto found_target = Target::supported_targets.find(*target_name);
-		if (found_target == Target::supported_targets.end())
-		{
-			std::string supported;
-			for (const auto &[name, target] : Target::supported_targets)
-				supported += std::format("{}{}", supported.empty() ? "" : ", ", name);
-			throw CompilerError::unsupported(
-				std::format("Unknown target \"{}\" (supported targets: {})", *target_name, supported));
-		}
-		log_vv("target: {:s}", found_target->first);
+		Target target(target_name);
+		log_vv("target: {:s}", target_name);
 
-		CompileSettings settings(found_target->second);
+		CompileSettings settings(target);
 
 		for (const std::string &value : emit_arg.values())
 			settings.emits.insert(parse_emit(value, filename));

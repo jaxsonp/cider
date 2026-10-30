@@ -41,4 +41,4 @@ add_executable(ciderc src/main.cpp)
 target_link_libraries(ciderc PRIVATE ciderc_lib)
 
 # Testing
-add_subdirectory(tests)
+add_subdirectory(testing)
