@@ -18,7 +18,22 @@ namespace testing::e2e
 		NEEDS_64_BIT,
 	};
 
-	/// An e2e test fixture, embedded into the runner at build time
+	/// @brief An e2e test fixture, embedded into the runner at build time
+	///
+	/// Every `.cdr` file under `testing/e2e_tests/` is one test, named after its path relative to that directory
+	/// (without the extension). The test compiles the file for the host, then runs the produced program natively.
+	///
+	/// Expected results are declared by `//! KEY=VALUE` lines at the very top of the file, parsing stops at the first
+	/// line that isn't one. Keys are case sensitive and there can't be whitespace before the `=`. An unrecognized key
+	/// throws when the runner starts. Omitted keys take the defaults below:
+	///
+	///  - `BUILD_EXIT_CODE`: Expected compiler exit code. If nonzero, the test passes (default: `0`)
+	///  - `EXIT_CODE`: Expected program exit code (default: `0`)
+	///  - `STDOUT`: Expected program stdout, compared exactly (default : `""`)
+	///  - `STDERR`: Expected program stderr, compared exactly (default : `""`)
+	///  - `REQUIRES`: TODO
+	///
+	/// `STDOUT` and `STDERR` values are taken verbatim and can't contain a newline.
 	class E2eTest : public Test
 	{
 		/// @brief Stores ciderc executable. Defaults to 'ciderc' for OS path resolution

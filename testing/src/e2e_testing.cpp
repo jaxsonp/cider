@@ -65,6 +65,7 @@ namespace testing::e2e
 				this->expected_stderr = value;
 			else if (key == "REQUIRES")
 			{
+				// TODO: bit_requirement is stored, but run() doesn't check it yet
 				if (value == "32bit")
 					this->bit_requirement = BitRequirement::NEEDS_32_BIT;
 				else if (value == "64bit")

@@ -20,6 +20,7 @@ _For Jaxson's eyes only_
 		- Test timeouts
 		- Capture output of unit tests
 		- Verify stdout/stderr checking works
+		- Implement e2e `REQUIRES` (it's parsed, but `E2eTest::run` ignores it, so nothing gets skipped)
 		- Prettify (eg colors, progress)
 	- Fix: hex literals with letter digits don't parse (`0x1Fu8` is a type error, the lexer's digit scan stops at `F`). Probably belongs with "Non-decimal int literals" below
 	- Fix: deeply nested expressions (~2000 nested parens) segfault the compiler (parser recursion), should be a proper error

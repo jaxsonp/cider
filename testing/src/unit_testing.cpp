@@ -61,7 +61,7 @@ namespace testing::unit
 		if (test_file.ends_with(expected_ext))
 			test_file = test_file.substr(0, test_file.size() - expected_ext.size());
 		else
-			throw std::logic_error("Unit tests must be defined in a file ending with \".test.cpp\"");
+			throw std::logic_error("Unit tests must be defined in a file ending with \".tests.cpp\"");
 
 		// get source file path relative to `src` directory
 		std::filesystem::path relative_path = std::filesystem::relative(std::filesystem::path(test_file), cider_src_dir);

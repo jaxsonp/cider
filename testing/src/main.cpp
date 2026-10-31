@@ -183,7 +183,7 @@ int main(int argc, char **argv)
 		std::filesystem::remove_all(artifacts_dir);
 	}
 
-	float pass_rate = ((float)passed) / (float)(passed + failed);
+	float pass_rate = (passed + failed > 0) ? ((float)passed) / (float)(passed + failed) : 1.0f;
 	std::cout << std::format("\n{} passed, {} failed, {} skipped ({:.1f}%)\n", passed, failed, skipped, pass_rate * 100.0f);
 	std::cout.flush();
 	return failed == 0 ? 0 : 1;
