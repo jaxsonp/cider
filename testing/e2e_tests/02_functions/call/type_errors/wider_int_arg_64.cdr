@@ -1,9 +1,0 @@
-//! BUILD_EXIT_CODE=3
-
-fn narrow(x: u32) -> u32 {
-	x
-}
-
-fn main() -> u32 {
-	narrow(1u64)
-}

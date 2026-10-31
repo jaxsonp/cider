@@ -24,10 +24,30 @@ add_executable(${TEST_RUNNER_TARGET}
 	${PROJECT_SOURCE_DIR}/src/testing.cpp
 	${PROJECT_SOURCE_DIR}/src/unit_testing.cpp
 	${PROJECT_SOURCE_DIR}/src/e2e_testing.cpp
+	${PROJECT_SOURCE_DIR}/src/source_testing.cpp
 	${E2E_EMBED_OUTPUT}
 
 	# tests
+	${CMAKE_SOURCE_DIR}/src/compile.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/Target.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/codegen/CodeGenerator.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/codegen/RegAllocator.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/codegen/riscv/RiscvAssembler.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/codegen/riscv/RiscvInstruction.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/codegen/x86/x86.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/codegen/x86/x86Assembler.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/objwriter/elf/ObjectWriter_ELF.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/frontend/AST_emitIr.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/frontend/AST_semantics.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/frontend/FrontendType.tests.cpp
 	${CMAKE_SOURCE_DIR}/src/frontend/Lexer.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/frontend/Parser.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/ir/IrPrinter.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/ir/IrType.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/ir/IrWriter.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/utils/CliParser.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/utils/common.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/utils/error.tests.cpp
 )
 target_include_directories(${TEST_RUNNER_TARGET} SYSTEM PRIVATE
 	${PROJECT_SOURCE_DIR}/src

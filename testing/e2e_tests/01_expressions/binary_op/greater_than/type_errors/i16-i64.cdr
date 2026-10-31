@@ -1,5 +1,0 @@
-//! BUILD_EXIT_CODE=3
-
-fn main() -> bool {
-	return 73i16 > 5i64;
-}

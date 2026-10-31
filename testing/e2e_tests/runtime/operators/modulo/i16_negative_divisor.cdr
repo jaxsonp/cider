@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+
+// the remainder takes the sign of the dividend
+fn main() -> bool {
+	return 7000i16 % -2i16 == 0i16;
+}

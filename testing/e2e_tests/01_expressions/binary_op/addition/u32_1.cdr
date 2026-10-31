@@ -1,5 +1,0 @@
-//! EXIT_CODE=214
-
-fn main() -> u32 {
-	return 78u32 + 136u32;
-}

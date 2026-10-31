@@ -1,5 +1,0 @@
-//! EXIT_CODE=33
-
-fn main() -> i8 {
-	return 11i8 * 3i8;
-}

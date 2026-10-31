@@ -139,9 +139,17 @@ source, compiled `program`, and captured output (`build_stdout.txt`,
 ### End to end tests
 
 Each `.cdr` file under `testing/e2e_tests/` is a test, named after its
-relative path without the extension. Subdirectories group tests by feature
-area (e.g. `00_main`, `01_expressions`, `backend`). Files are embedded into
-the runner at build time, so rebuild it after adding or changing one.
+relative path without the extension. Files are embedded into the runner at
+build time, so rebuild it after adding or changing one. Subdirectories group
+tests by what they prove:
+
+- `basics/`, `expressions/`, `functions/` — the broad tests, a
+  representative case or two for each feature.
+- `errors/` — one test per kind of failure, grouped by error.
+- `runtime/` — what can only be proven by running the code:
+  `operators/<op>/` (each integer type, wrapping, signedness, shift masking),
+  `literals/`, `type_truncation/`, `calling_convention/`,
+  `register_spilling/`, `stack_frame/` and `startup/`.
 
 A test compiles the file for the host target, without passing `-t`, then runs
 the program natively. There is no per-target loop or QEMU anymore, so other
@@ -192,12 +200,45 @@ file's path relative to `src/`, e.g. `frontend/Lexer/some_test`. Throw
 fails it. Tests run in parallel on the runner's worker threads and can use
 anything in `ciderc_lib`.
 
+`source_testing.hpp` has helpers for feeding Cider source to the frontend in
+memory: `ASSERT_SOURCE(source, ExitCode::TypeError)` checks what the frontend
+does with a program, `testing::unit::source_to_ir` gives its textual IR.
+
+Every test file is linked into one executable, so helper types have to go in
+an anonymous namespace (functions and variables `static`). Two global
+`struct Fixture`s with different layouts silently share a constructor and
+corrupt each other at runtime.
+
+Expected values of an encoder test have to come from outside of it. x86
+vectors are what GNU `as` gives for the instruction's text, RISC-V ones come
+from the tables in the spec (there's no RISC-V assembler to check against).
+
 ### What to add
 
-When adding a language feature, add `.cdr` test cases alongside it in the
-matching (or a new) subdirectory of `testing/e2e_tests/` rather than only
-relying on manual testing. Prefer unit tests for behavior of a single
-component that doesn't need a full compile.
+e2e tests are broad and cover what only shows up at runtime, unit tests are
+fine toothed and never leave the process:
+
+- **e2e tests** do two jobs:
+  - Prove features work through the whole pipeline. Cover each kind of
+    expression/statement/feature and how they interact, but there's no need
+    to test every combination of every thing in every way. One or two
+    representative cases per feature is usually enough, and likewise for
+    failures: one test that each kind of error makes it out of the compiler
+    with the right exit code, not one per type combination.
+  - Pin down runtime specific behavior, anything that can only be proven by
+    executing the generated code (wrapping, truncation, shift masking,
+    signedness, calling convention, spilling, stack frames). These do go
+    through the types and boundary values that matter, in `runtime/`.
+- **Unit tests** are the nitty gritty. Exhaustive type combinations, edge
+  cases, boundary values and every failure mode belong here, as close to the
+  component responsible for them as possible. They must not spawn
+  subprocesses or execute generated code, a compile-time failure or an
+  instruction's exact encoding is a unit test, what the code does when run is
+  an e2e test.
+
+So when adding a language feature, add a few `.cdr` test cases in the matching
+(or a new) subdirectory of `testing/e2e_tests/`, then cover its details with
+unit tests next to the code that implements it.
 
 ## Language notes worth knowing before editing the frontend
 
@@ -207,7 +248,7 @@ component that doesn't need a full compile.
   require explicit parens when chained.
 - Type names start with a letter; a leading digit means it's a numeric
   literal (integer literals carry an explicit type suffix, e.g. `1u32`,
-  `100i32` — see `testing/e2e_tests/00_main/*.cdr` for examples).
+  `100i32` — see `testing/e2e_tests/basics/*.cdr` for examples).
 - `grammar.ebnf` is the source of truth for syntax — if a parser change
   alters accepted syntax, update the grammar file in the same change.
 - Language semantics must not depend on the target. Operations on types of
@@ -225,7 +266,7 @@ component that doesn't need a full compile.
 - New `CompilerError`s should use the existing typed factory functions
   (`syntax_error`, `type_error`, `semantic_error`, etc.) rather than a
   generic message, so exit codes stay meaningful — see
-  `testing/e2e_tests/00_main/incorrect_ret_type_1.cdr` for how tests assert on
+  `testing/e2e_tests/errors/type/return_type_mismatch.cdr` for how tests assert on
   `BUILD_EXIT_CODE`.
 - This is a solo/early-stage project — prefer small, direct changes over
   speculative abstraction. Don't add functionality beyond what's needed for

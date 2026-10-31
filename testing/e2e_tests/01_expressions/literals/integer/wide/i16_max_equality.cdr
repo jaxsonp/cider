@@ -1,5 +1,0 @@
-//! EXIT_CODE=1
-
-fn main() -> bool {
-	return 32767i16 == 32767i16;
-}

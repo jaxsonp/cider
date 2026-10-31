@@ -1,9 +1,0 @@
-//! BUILD_EXIT_CODE=3
-
-fn widen(x: i16) -> i16 {
-	x
-}
-
-fn main() -> i16 {
-	widen(1i8)
-}

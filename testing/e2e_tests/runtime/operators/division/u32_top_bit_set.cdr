@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+
+// as a signed number the left side is negative
+fn main() -> bool {
+	return 4000000000u32 / 3u32 == 1333333333u32;
+}

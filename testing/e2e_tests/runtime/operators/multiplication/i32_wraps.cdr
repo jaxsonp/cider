@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+
+// overflow wraps around
+fn main() -> bool {
+	return 100000i32 * 100000i32 == 1410065408i32;
+}

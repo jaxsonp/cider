@@ -1,0 +1,5 @@
+//! BUILD_EXIT_CODE=253
+
+fn main() -> bool {
+	return true || false;
+}

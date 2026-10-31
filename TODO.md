@@ -5,7 +5,6 @@ _For Jaxson's eyes only_
 ## To implement
 - WIP:
 	- e2e tests
-	- convert many existing tests to more appropriately be unit tests
 - Soon:
 	- Unignore .vscode dir
 	- Decide what division by zero (and MIN / -1, which overflows) does. Right now it's target dependent: x86 traps
@@ -14,16 +13,23 @@ _For Jaxson's eyes only_
 	- Arbitrary-precision ints
 	- Memleaks
 	- define/enforce function name rules (x86 can't be _start, maybe make it so they cant start with non-alpha chars?)
-	- integer literals wrapping around their range (2000i8 == -48i8), a few tests falsely lean on it, see binary_op/{addition,subtraction,bitwise_*}/i8_*.cdr (maybe not applicable anoymore?)
+	- integer literals wrapping around their range (2000i8 == -48i8). Decide if this should be an error, no test pins it for now
 	- Check code for stuff that doesn't need to be in headers
 	- Testing improvements:
 		- Test timeouts
+		- Crashing test kills the test runner
+		- Fix: renaming or deleting e2e tests does not re-embed them (no newer timestamp), the runner silently runs the old set until `build/testing/e2e_test_files.cpp` is deleted
 		- Capture output of unit tests
 		- Verify stdout/stderr checking works
 		- Implement e2e `REQUIRES` (it's parsed, but `E2eTest::run` ignores it, so nothing gets skipped)
 		- Prettify (eg colors, progress)
 	- Fix: hex literals with letter digits don't parse (`0x1Fu8` is a type error, the lexer's digit scan stops at `F`). Probably belongs with "Non-decimal int literals" below
 	- Fix: deeply nested expressions (~2000 nested parens) segfault the compiler (parser recursion), should be a proper error
+	- Fix: `//` comment at EOF without a trailing newline hangs the compiler (lexer loops on EOF forever)
+	- Fix: `true`/`false` token where another is expected exits 253, not a syntax error (`to_string(TokenType)` has no case for them)
+	- Fix: comparing two void calls (`f() == f()`) crashes with exit 255
+	- Fix: malformed int literals (`0xi32`, `0b2i32`) crash with exit 255 (uncaught `std::invalid_argument` from `stoull`)
+	- Fix: `a << b << c` and `a || b || c` / `a && b && c` are syntax errors, but the grammar says they chain
 - Before self-hosting:
 	- 64 bit types in 32bit archs (needs register pairs, carries, and a software 64 bit divide)
 	- Platform detection
@@ -66,7 +72,6 @@ _For Jaxson's eyes only_
 	- Clean up/standardize logging decisions
 - Tests to write:
 	- overflowing int literal
-	- left/right associativity, and comparisions needing parens
 	- long chain tests even longer
 - Future optimizations:
 	- Codegen:

@@ -1,5 +1,0 @@
-//! BUILD_EXIT_CODE=3
-
-fn main() -> i16 {
-	return 97i16 / 43u32;
-}

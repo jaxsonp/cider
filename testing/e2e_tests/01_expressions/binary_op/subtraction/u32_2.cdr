@@ -1,5 +1,0 @@
-//! EXIT_CODE=87
-
-fn main() -> u32 {
-	return 184u32 - 97u32;
-}

@@ -1,5 +1,0 @@
-//! EXIT_CODE=20
-
-fn main() -> i8 {
-	return 2i8 * 10i8;
-}

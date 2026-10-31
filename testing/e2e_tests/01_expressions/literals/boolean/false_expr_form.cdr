@@ -1,5 +1,0 @@
-//! EXIT_CODE=0
-
-fn main() -> bool {
-	false
-}

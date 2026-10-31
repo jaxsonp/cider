@@ -1,5 +1,0 @@
-//! EXIT_CODE=104
-
-fn main() -> i16 {
-	return 13i16 * 8i16;
-}

@@ -1,9 +1,0 @@
-//! BUILD_EXIT_CODE=3
-
-fn five() -> i32 {
-	5i32
-}
-
-fn main() -> bool {
-	five == five()
-}
