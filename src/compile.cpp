@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <filesystem>
 
 #include "utils/logging.hpp"
 #include "utils/error.hpp"
@@ -137,4 +138,12 @@ void compile(const std::string &filename, const CompileSettings &settings)
 	auto obj_writer = settings.target.get_object_writer();
 	obj_writer->emit(obj, settings.target, out_file);
 	out_file.close();
+
+	log_v("Making file executable");
+	// basically chmod u+x
+	// I think this is a noop on windows...
+	std::filesystem::permissions(
+		out_path,
+		std::filesystem::perms::owner_exec,
+		std::filesystem::perm_options::add);
 }
