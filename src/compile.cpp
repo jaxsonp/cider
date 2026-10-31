@@ -11,7 +11,13 @@
 #include "backend/codegen/CodeGenerator.hpp"
 #include "backend/objwriter/ObjectWriter.hpp"
 
-CompileSettings::CompileSettings(Target target) : target(target) {}
+const unsigned int cider_version_major = CIDER_VERSION_MAJOR;
+const unsigned int cider_version_minor = CIDER_VERSION_MINOR;
+const unsigned int cider_version_patch = CIDER_VERSION_PATCH;
+const char *cider_version = CIDER_VERSION;
+
+CompileSettings::CompileSettings(Target target)
+	: target(target) {}
 
 EmitKind CompileSettings::furthest() const
 {

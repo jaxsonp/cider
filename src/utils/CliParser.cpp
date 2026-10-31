@@ -119,6 +119,11 @@ void CliParser::add_help_flag()
 	this->help_arg = &this->add_flag("help", "Show this help text").short_name('h');
 }
 
+void CliParser::add_version_flag()
+{
+	this->version_arg = &this->add_flag("version", "Print the program's version and exit").short_name('V');
+}
+
 CliParser::Arg *CliParser::find_long(std::string_view name, Arg::Kind kind)
 {
 	for (const auto &arg : this->args)
@@ -246,6 +251,8 @@ void CliParser::parse(const std::vector<std::string_view> &tokens)
 				// report help immediately, before any validation can reject the command line
 				if (flag == this->help_arg)
 					throw CliHelpRequested();
+				else if (flag == this->version_arg)
+					throw CliVersionRequested();
 				continue;
 			}
 
@@ -276,6 +283,8 @@ void CliParser::parse(const std::vector<std::string_view> &tokens)
 
 				if (flag == this->help_arg)
 					throw CliHelpRequested();
+				else if (flag == this->version_arg)
+					throw CliVersionRequested();
 				continue;
 			}
 

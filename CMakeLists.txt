@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
-project(cider-compiler CXX)
+project(
+	cider-compiler
+	VERSION 0.0.0
+	LANGUAGES CXX
+)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -35,6 +39,13 @@ add_library(ciderc_lib STATIC
 )
 # include headers in src
 target_include_directories(ciderc_lib SYSTEM PUBLIC src/)
+
+target_compile_definitions(ciderc_lib PRIVATE
+	CIDER_VERSION_MAJOR=${CMAKE_PROJECT_VERSION_MAJOR}
+	CIDER_VERSION_MINOR=${CMAKE_PROJECT_VERSION_MINOR}
+	CIDER_VERSION_PATCH=${CMAKE_PROJECT_VERSION_PATCH}
+	CIDER_VERSION="${CMAKE_PROJECT_VERSION}"
+)
 
 # Main compiler executable
 add_executable(ciderc src/main.cpp)

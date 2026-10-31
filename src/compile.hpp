@@ -5,6 +5,11 @@
 
 #include "backend/Target.hpp"
 
+extern const unsigned int cider_version_major;
+extern const unsigned int cider_version_minor;
+extern const unsigned int cider_version_patch;
+extern const char *cider_version;
+
 /// @brief An artifact the compiler can be asked to produce.
 /// Declaration order matches pipeline order — the compiler runs only as far as
 /// the furthest kind it was asked for.
