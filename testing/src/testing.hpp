@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <string_view>
+#include <filesystem>
 
 namespace testing
 {
@@ -34,18 +36,10 @@ namespace testing
 		Test(std::string_view name, Category category);
 		virtual ~Test() = default;
 
-		virtual Result run() const = 0;
+		virtual Result run(std::filesystem::path &artifacts_dir) const = 0;
+
+		std::string label() const;
 	};
 
-	constexpr std::string_view to_string(Test::Category category)
-	{
-		switch (category)
-		{
-		case Test::Category::Unit:
-			return "unit";
-		case Test::Category::EndToEnd:
-			return "e2e";
-		}
-		return "???";
-	}
+	std::string_view to_string(Test::Category category);
 }

@@ -17,9 +17,10 @@ _For Jaxson's eyes only_
 	- integer literals wrapping around their range (2000i8 == -48i8), a few tests falsely lean on it, see binary_op/{addition,subtraction,bitwise_*}/i8_*.cdr (maybe not applicable anoymore?)
 	- Check code for stuff that doesn't need to be in headers
 	- Testing improvements:
-		- Overhaul how tests are ran (move away from qemu-user, maybe containers? maybe only native?)
 		- Test timeouts
-		- finish stdout/stderr checking
+		- Capture output of unit tests
+		- Verify stdout/stderr checking works
+		- Prettify (eg colors, progress)
 	- Fix: hex literals with letter digits don't parse (`0x1Fu8` is a type error, the lexer's digit scan stops at `F`). Probably belongs with "Non-decimal int literals" below
 	- Fix: deeply nested expressions (~2000 nested parens) segfault the compiler (parser recursion), should be a proper error
 - Before self-hosting:

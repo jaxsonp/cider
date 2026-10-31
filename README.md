@@ -81,7 +81,7 @@ Tests are defined in the `tests/` subdirectory. Each test consists of a `.cdr` s
 | `EXIT_CODE` | int | `0` | Expected return value of the program |
 | `STDOUT` | string | `""` | Expected output to stdout |
 | `STDERR` | string | `""` | Expected output to stderr |
-| `REQUIRES` | list | `""` | Comma separated features a target needs to run this test (`32bit`, `64bit`). The test is skipped on targets without them |
+| `REQUIRES` | list | `""` | Features a target needs to run this test (`32bit`, `64bit`), the test is skipped on targets without them. Provide this line multiple times for multiple requirements |
 
 Every test is ran once for each supported target.
 

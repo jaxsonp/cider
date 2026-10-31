@@ -1,6 +1,6 @@
-/.vscode/*
-!/.vscode/example_tasks.json
-
 /build/
-/ciderc
+
+ciderc
+.ciderc_testing/
+
 /a.*

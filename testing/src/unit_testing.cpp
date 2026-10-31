@@ -18,7 +18,7 @@ namespace testing::unit
 	UnitTest::UnitTest(std::string_view name, std::function<void()> fn)
 		: Test(name, Test::Category::Unit), fn(fn) {}
 
-	Result UnitTest::run() const
+	Result UnitTest::run(std::filesystem::path &artifacts_dir) const
 	{
 		try
 		{

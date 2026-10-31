@@ -5,12 +5,11 @@
 
 TEST(poopygood)
 {
-	std::cout << "beep boop doing lexer tests" << std::endl;
+	ASSERT_TRUE(false);
 }
 
 TEST(poopybad)
 {
-	ASSERT_THROWS(std::cout << "This doesnt throw teehee" << std::endl, std::exception);
 }
 
 TEST(poopygood2)

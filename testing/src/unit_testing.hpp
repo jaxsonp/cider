@@ -21,7 +21,7 @@ namespace testing::unit
 
 		UnitTest(std::string_view name, std::function<void()> fn);
 
-		Result run() const override;
+		Result run(std::filesystem::path &artifacts_dir) const override;
 	};
 
 	/// Every test known to the runner. Statically defined tests (TEST) add themselves
