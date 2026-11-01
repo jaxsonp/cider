@@ -10,6 +10,7 @@
 #include "e2e_testing.hpp"
 #include "unit_testing.hpp"
 #include "utils/CliParser.hpp"
+#include "utils/error.hpp"
 
 #define MAX_WORKERS 255
 
@@ -43,10 +44,13 @@ int main(int argc, char **argv)
 	auto &e2e_arg = cli.add_flag("e2e", "Run end to end tests");
 	auto &list_arg = cli.add_flag("list", "List the selected tests instead of running them").short_name('l');
 	auto &verbose_arg = cli.add_flag("verbose", "Print every test, not just failures").short_name('v');
-	auto &ciderc_arg = cli.add_flag_arg("ciderc", "Ciderc executable used for e2e tests. Defaults to './ciderc' if it exists, else 'ciderc'").short_name('C').metavar("path");
-	auto &artifacts_arg = cli.add_flag_arg("artifacts", "Output directory for testing artifacts").short_name('A').default_value("./.ciderc_testing/").metavar("path");
-	auto &n_workers_arg = cli.add_flag_arg("workers", "Number of parallel test runners").short_name('n').default_value("4").metavar("N");
 	auto &noclean_arg = cli.add_flag("noclean", "Don't remove testing artifacts, even if successful");
+
+	auto &n_workers_arg = cli.add_flag_arg("workers", "Number of parallel test runners").short_name('n').default_value("4").metavar("N");
+	auto &ciderc_arg = cli.add_flag_arg("ciderc", "Ciderc executable used for e2e tests. Defaults to './ciderc' if it exists, else 'ciderc'").short_name('C').metavar("path");
+	auto &target_arg = cli.add_flag_arg("target", "Target to compile e2e tests for. Defaults to the host").short_name('t').metavar("name");
+	auto &e2e_prefix_arg = cli.add_flag_arg("e2e-prefix", "Command to run e2e test programs through, ie an emulator for other targets").metavar("cmd");
+	auto &artifacts_arg = cli.add_flag_arg("artifacts", "Output directory for testing artifacts").short_name('A').default_value("./.ciderc_testing/").metavar("path");
 	cli.add_help_flag();
 
 	try
@@ -100,6 +104,21 @@ int main(int argc, char **argv)
 
 	if (do_e2e_tests)
 	{
+		try
+		{
+			e2e::E2eTest::set_target(target_arg.value());
+		}
+		catch (const CompilerError &e)
+		{
+			std::cerr << e.what() << std::endl;
+			return 2;
+		}
+		e2e::E2eTest::set_run_prefix(e2e_prefix_arg.value());
+		if (target_arg.present())
+			std::cout << " ~ Compiling e2e tests for " << target_arg.value() << std::endl;
+		if (!e2e_prefix_arg.value().empty())
+			std::cout << " ~ Running e2e test programs through: " << e2e_prefix_arg.value() << std::endl;
+
 		// prepare ciderc executable path
 		if (ciderc_arg.maybe_value().has_value())
 		{

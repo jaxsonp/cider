@@ -126,7 +126,9 @@ build/testing/ciderc_test_runner
 `--unit` or `--e2e` selects one kind (both run by default), `-l` lists the
 selected tests without running them, `-v` also prints passes and skips, and
 `-n` sets the number of parallel workers. e2e tests use `./ciderc` if it
-exists, else `ciderc` from `PATH`, `-C` overrides this. Run
+exists, else `ciderc` from `PATH`, `-C` overrides this. `-t` compiles e2e
+tests for another target, and `--e2e-prefix` runs their programs through a
+command, see below. Run
 `build/testing/ciderc_test_runner -h` for the full list. The exit code is `1`
 if any test failed.
 
@@ -151,10 +153,20 @@ tests by what they prove:
   `literals/`, `type_truncation/`, `calling_convention/`,
   `register_spilling/`, `stack_frame/` and `startup/`.
 
-A test compiles the file for the host target, without passing `-t`, then runs
-the program natively. There is no per-target loop or QEMU anymore, so other
-targets aren't covered, but expected results must still be target independent
-(see the language notes below).
+A test compiles the file for the host target, or the one given with `-t`, then
+runs the program. One run covers one target, and expected results must be
+target independent (see the language notes below). To run another target's
+programs, give the runner the command to run them through:
+
+```
+build/testing/ciderc_test_runner --e2e -t linux-riscv64gc --e2e-prefix qemu-riscv64-static
+```
+
+The prefix is split on whitespace, and a program that can't be run fails its
+test. QEMU's default CPU has the C extension, so targets without it need
+`-cpu rv32,c=false` or `-cpu rv64,c=false` for a stray compressed instruction
+to be an error. x86_64 hosts can usually run `linux-x86` programs directly. CI
+covers every target this way, see `.github/workflows/test.yml`.
 
 Expected results are declared by `//! KEY=VALUE` lines at the very top of the
 file, parsing stops at the first line that isn't one. Keys are case sensitive
@@ -167,12 +179,12 @@ runner starts. Omitted keys take the defaults below:
 | `EXIT_CODE` | `0` | Expected program exit code, or the negated signal number if killed by one |
 | `STDOUT` | `""` | Expected program stdout, compared exactly |
 | `STDERR` | `""` | Expected program stderr, compared exactly |
-| `REQUIRES` | none | TODO: `32bit` or `64bit`. Parsed, but not enforced yet, so the test always runs |
+| `REQUIRES` | none | `32bit` or `64bit`. The test is skipped if the target's registers are another width |
 
 `STDOUT` and `STDERR` values are taken verbatim and can't contain a newline.
 No fixture uses them yet, and `TODO.md` lists verifying them as outstanding.
-Until `REQUIRES` is implemented, keep marking anything using `i64`/`u64` with
-`//! REQUIRES=64bit` anyway.
+Anything using `i64`/`u64` has to be marked `//! REQUIRES=64bit`, since 32 bit
+targets reject those types for now.
 The same reference lives in the doc comment on `E2eTest`
 (`testing/src/e2e_testing.hpp`), keep the two in sync.
 

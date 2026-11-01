@@ -4,7 +4,6 @@ _For Jaxson's eyes only_
 
 ## To implement
 - WIP:
-	- e2e tests
 - Soon:
 	- Unignore .vscode dir
 	- Decide what division by zero (and MIN / -1, which overflows) does. Right now it's target dependent: x86 traps
@@ -21,7 +20,6 @@ _For Jaxson's eyes only_
 		- Fix: renaming or deleting e2e tests does not re-embed them (no newer timestamp), the runner silently runs the old set until `build/testing/e2e_test_files.cpp` is deleted
 		- Capture output of unit tests
 		- Verify stdout/stderr checking works
-		- Implement e2e `REQUIRES` (it's parsed, but `E2eTest::run` ignores it, so nothing gets skipped)
 		- Prettify (eg colors, progress)
 	- Fix: hex literals with letter digits don't parse (`0x1Fu8` is a type error, the lexer's digit scan stops at `F`). Probably belongs with "Non-decimal int literals" below
 	- Fix: deeply nested expressions (~2000 nested parens) segfault the compiler (parser recursion), should be a proper error

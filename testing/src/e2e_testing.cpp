@@ -11,6 +11,7 @@
 
 #include "cpp-subprocess/subprocess.hpp"
 
+#include "backend/Target.hpp"
 #include "utils/logging.hpp"
 #include "compile.hpp"
 
@@ -32,6 +33,9 @@ namespace testing::e2e
 {
 
 	std::string E2eTest::ciderc_executable = "ciderc";
+	std::string E2eTest::target_name = "";
+	unsigned int E2eTest::target_bits = 0;
+	std::string E2eTest::run_prefix = "";
 
 	constexpr std::string_view make_test_name(std::string_view file_path)
 	{
@@ -65,7 +69,6 @@ namespace testing::e2e
 				this->expected_stderr = value;
 			else if (key == "REQUIRES")
 			{
-				// TODO: bit_requirement is stored, but run() doesn't check it yet
 				if (value == "32bit")
 					this->bit_requirement = BitRequirement::NEEDS_32_BIT;
 				else if (value == "64bit")
@@ -80,6 +83,11 @@ namespace testing::e2e
 
 	Result E2eTest::run(std::filesystem::path &artifacts_dir) const
 	{
+		if (this->bit_requirement == BitRequirement::NEEDS_32_BIT && E2eTest::target_bits != 32)
+			return Result(Outcome::Skip, "needs a 32 bit target");
+		if (this->bit_requirement == BitRequirement::NEEDS_64_BIT && E2eTest::target_bits != 64)
+			return Result(Outcome::Skip, "needs a 64 bit target");
+
 		// set up directory structure
 		std::filesystem::path output_dir = artifacts_dir / "e2e" / this->name;
 		std::filesystem::create_directories(output_dir);
@@ -100,6 +108,8 @@ namespace testing::e2e
 
 		// start compilation
 		std::string build_cmd = std::format("{} --emit exe --out {} -vv {}", E2eTest::ciderc_executable, bin_path.string(), src_path.string());
+		if (!E2eTest::target_name.empty())
+			build_cmd += std::format(" -t {}", E2eTest::target_name);
 		subprocess::Popen build_proc(
 			build_cmd,
 			subprocess::output{build_stdout_path.string().c_str()},
@@ -125,7 +135,7 @@ namespace testing::e2e
 			return Result(Outcome::Pass, "");
 
 		// run the produced executable
-		std::string run_cmd = bin_path.string();
+		std::string run_cmd = E2eTest::run_prefix.empty() ? bin_path.string() : std::format("{} {}", E2eTest::run_prefix, bin_path.string());
 		subprocess::Popen run_proc(
 			run_cmd,
 			subprocess::output{run_stdout_path.string().c_str()},
@@ -175,6 +185,18 @@ namespace testing::e2e
 			throw std::runtime_error(std::format("ciderc path \"{}\" is not a regular file", path.string()));
 
 		E2eTest::ciderc_executable = path.string();
+	}
+
+	void E2eTest::set_target(const std::string &name)
+	{
+		Target target = name.empty() ? Target() : Target(name);
+		E2eTest::target_name = name;
+		E2eTest::target_bits = target.register_width();
+	}
+
+	void E2eTest::set_run_prefix(const std::string &prefix)
+	{
+		E2eTest::run_prefix = prefix;
 	}
 
 	std::string E2eTest::check_ciderc_version()

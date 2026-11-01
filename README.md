@@ -16,10 +16,11 @@ Flags:
   -v, --verbose          Increase compiler verbosity (repeatable)
   -q, --quiet            Silence compiler output
   -h, --help             Show this help text
+  -V, --version          Print the program's version and exit
 
 Options:
   -o, --out <FILE>       Output file path for the executable, if "--emit exe" [default: a.out]
-  -t, --target <TARGET>  Target platform (defaults to the host's platform)
+  -t, --target <TARGET>  Target platform (defaults to the host's target)
       --emit <KIND>      Artifacts to produce: ast, ir, asm, exe. Append "=PATH" to write to file, or "=stdout" for standard output (repeatable) [default: exe]
 ```
 
@@ -69,9 +70,11 @@ Flags:
   -h, --help              Show this help text
 
 Options:
-  -C, --ciderc <path>     Ciderc executable used for e2e tests. Defaults to './ciderc' if it exists, else 'ciderc'
-  -A, --artifacts <path>  Output directory for testing artifacts [default: ./.ciderc_testing/]
   -n, --workers <N>       Number of parallel test runners [default: 4]
+  -C, --ciderc <path>     Ciderc executable used for e2e tests. Defaults to './ciderc' if it exists, else 'ciderc'
+  -t, --target <name>     Target to compile e2e tests for. Defaults to the host
+      --e2e-prefix <cmd>  Command to run e2e test programs through, ie an emulator for other targets
+  -A, --artifacts <path>  Output directory for testing artifacts [default: ./.ciderc_testing/]
 ```
 
 The test files are embedded into the runner when it's built, so rebuild after changing them. The runner exits with `1` if any test failed, and leaves that run's artifacts in the artifacts directory. How tests are defined is documented in [AGENTS.md](AGENTS.md#testing).

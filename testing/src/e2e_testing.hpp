@@ -21,7 +21,8 @@ namespace testing::e2e
 	/// @brief An e2e test fixture, embedded into the runner at build time
 	///
 	/// Every `.cdr` file under `testing/e2e_tests/` is one test, named after its path relative to that directory
-	/// (without the extension). The test compiles the file for the host, then runs the produced program natively.
+	/// (without the extension). The test compiles the file for the selected target (the host by default), then runs
+	/// the produced program, through the run prefix if there is one.
 	///
 	/// Expected results are declared by `//! KEY=VALUE` lines at the very top of the file, parsing stops at the first
 	/// line that isn't one. Keys are case sensitive and there can't be whitespace before the `=`. An unrecognized key
@@ -31,13 +32,20 @@ namespace testing::e2e
 	///  - `EXIT_CODE`: Expected program exit code (default: `0`)
 	///  - `STDOUT`: Expected program stdout, compared exactly (default : `""`)
 	///  - `STDERR`: Expected program stderr, compared exactly (default : `""`)
-	///  - `REQUIRES`: TODO
+	///  - `REQUIRES`: `32bit` or `64bit`, the test is skipped if the target's registers are another width (default:
+	///    runs on every target)
 	///
 	/// `STDOUT` and `STDERR` values are taken verbatim and can't contain a newline.
 	class E2eTest : public Test
 	{
 		/// @brief Stores ciderc executable. Defaults to 'ciderc' for OS path resolution
 		static std::string ciderc_executable;
+		/// @brief Target to compile for. Empty for the compiler's default, the host
+		static std::string target_name;
+		/// @brief Register width of the target being compiled for
+		static unsigned int target_bits;
+		/// @brief Command that programs are run through (ie an emulator). Empty to run them directly
+		static std::string run_prefix;
 
 		// test settings
 
@@ -59,6 +67,13 @@ namespace testing::e2e
 		/// @brief Sets the path of the ciderc executable to use for end to end testing. Throws a `std::runtime_error`
 		/// if the path is invalid.
 		static void set_ciderc_path(std::filesystem::path path);
+
+		/// @brief Sets the target to compile for, an empty name meaning the host. Throws a `CompilerError` if it's not
+		/// a supported target
+		static void set_target(const std::string &name);
+
+		/// @brief Sets the command that programs are run through, split on whitespace. Empty to run them directly
+		static void set_run_prefix(const std::string &prefix);
 
 		/// @brief Calls `ciderc --version` as a check that the binary is valid. Call `set_ciderc_path(...)` first
 		static std::string check_ciderc_version();
