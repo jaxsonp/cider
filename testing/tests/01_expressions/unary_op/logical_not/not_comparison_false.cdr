@@ -1,5 +1,0 @@
-//! EXIT_CODE=1
-
-fn main() -> bool {
-	return !(10i32 < 5i32);
-}

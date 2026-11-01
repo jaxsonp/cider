@@ -1,5 +1,0 @@
-//! EXIT_CODE=23
-
-fn main() -> u8 {
-	return 221u8 ^ 202u8;
-}

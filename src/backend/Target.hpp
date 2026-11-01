@@ -85,11 +85,10 @@ public:
 	ObjectFormat format;
 
 	/// Map of all supported targets
-	static const std::unordered_map<std::string, Target> supported_targets;
+	static const std::unordered_map<std::string_view, Target> supported_targets;
 
-	/// @brief Name of the platform the compiler itself was built for, in the same `<os>-<isa>` form as
-	/// `supported_targets`' keys. Detected from the host compiler's predefined macros, so it may name a
-	/// platform that isn't supported (e.g. "macos-aarch64")
+	/// @brief Name of the platform the compiler itself was built for. Detected from the host compiler's predefined
+	/// macros, so it may name a platform that isn't supported. Its cached so shouldn't be too slow to re-call
 	static std::string detect_host_target();
 
 	std::unique_ptr<CodeGenerator> get_code_generator() const;
@@ -104,7 +103,11 @@ public:
 	/// @brief 0 = no floats, 1 = single precision floats, 2 = double precision floats
 	unsigned short abi_float_precision() const;
 
-	Target() = delete;
+	/// Attempt to create a target for the current host platform
+	Target();
+
+	/// Attempt to find a target with the given name, throws `CompilerError::unsupported` if unknown.
+	Target(std::string_view target_name);
 
 private:
 	// constructors are private, only allowed targets are accessible through map

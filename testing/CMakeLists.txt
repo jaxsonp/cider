@@ -1,0 +1,71 @@
+cmake_minimum_required(VERSION 3.10)
+project(cider-compiler-tests CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(TEST_RUNNER_TARGET "ciderc_test_runner")
+
+# Embed the integration test files' content into the runner. Re-globbed every build
+set(E2E_DIR ${PROJECT_SOURCE_DIR}/e2e_tests)
+set(E2E_EMBED_SCRIPT ${PROJECT_SOURCE_DIR}/embed_e2e_tests.cmake)
+set(E2E_EMBED_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/e2e_test_files.cpp)
+file(GLOB_RECURSE E2E_TEST_FILES CONFIGURE_DEPENDS ${E2E_DIR}/*.cdr)
+add_custom_command(
+	OUTPUT ${E2E_EMBED_OUTPUT}
+	COMMAND ${CMAKE_COMMAND} -DE2E_DIR=${E2E_DIR} -DOUTPUT=${E2E_EMBED_OUTPUT} -P ${E2E_EMBED_SCRIPT}
+	DEPENDS ${E2E_EMBED_SCRIPT} ${E2E_TEST_FILES}
+	COMMENT "Embedding e2e test files"
+	VERBATIM
+)
+
+add_executable(${TEST_RUNNER_TARGET}
+	${PROJECT_SOURCE_DIR}/src/main.cpp
+	${PROJECT_SOURCE_DIR}/src/testing.cpp
+	${PROJECT_SOURCE_DIR}/src/unit_testing.cpp
+	${PROJECT_SOURCE_DIR}/src/e2e_testing.cpp
+	${PROJECT_SOURCE_DIR}/src/source_testing.cpp
+	${E2E_EMBED_OUTPUT}
+
+	# tests
+	${CMAKE_SOURCE_DIR}/src/compile.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/Target.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/codegen/CodeGenerator.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/codegen/RegAllocator.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/codegen/riscv/RiscvAssembler.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/codegen/riscv/RiscvInstruction.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/codegen/x86/x86.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/codegen/x86/x86Assembler.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/backend/objwriter/elf/ObjectWriter_ELF.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/frontend/AST_emitIr.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/frontend/AST_semantics.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/frontend/FrontendType.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/frontend/Lexer.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/frontend/Parser.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/ir/IrPrinter.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/ir/IrType.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/ir/IrWriter.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/utils/CliParser.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/utils/common.tests.cpp
+	${CMAKE_SOURCE_DIR}/src/utils/error.tests.cpp
+)
+target_include_directories(${TEST_RUNNER_TARGET} SYSTEM PRIVATE
+	${PROJECT_SOURCE_DIR}/src
+	${CMAKE_SOURCE_DIR}/src
+)
+target_link_libraries(${TEST_RUNNER_TARGET} PRIVATE ciderc_lib)
+
+# 3rd party dep for subprocesses
+include(FetchContent)
+FetchContent_Declare(
+    cpp-subprocess
+    GIT_REPOSITORY https://github.com/arun11299/cpp-subprocess.git
+    GIT_TAG        v2.5
+)
+FetchContent_MakeAvailable(cpp-subprocess)
+target_link_libraries(${TEST_RUNNER_TARGET} PRIVATE cpp-subprocess::subprocess)
+
+# required for parsing in-source unit tests
+target_compile_definitions(${TEST_RUNNER_TARGET}
+    PRIVATE CIDER_SRC_DIR="${CMAKE_SOURCE_DIR}/src/"
+)

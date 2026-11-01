@@ -12,10 +12,15 @@
 #include "backend/codegen/CodeGenerator.hpp"
 #include "backend/objwriter/ObjectWriter.hpp"
 
+// compile definitions provided by CMakeLists.txt
 const unsigned int cider_version_major = CIDER_VERSION_MAJOR;
 const unsigned int cider_version_minor = CIDER_VERSION_MINOR;
 const unsigned int cider_version_patch = CIDER_VERSION_PATCH;
-const char *cider_version = CIDER_VERSION;
+
+const std::string cider_version = std::format("{}.{}.{}", cider_version_major, cider_version_minor, cider_version_patch);
+
+CompileSettings::CompileSettings(Target target)
+	: target(target) {}
 
 EmitKind CompileSettings::furthest() const
 {
@@ -58,6 +63,8 @@ namespace
 		}
 	};
 }
+
+extern const std::string host_target_name = Target::detect_host_target();
 
 void compile(const std::string &filename, const CompileSettings &settings)
 {

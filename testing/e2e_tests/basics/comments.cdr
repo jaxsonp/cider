@@ -1,0 +1,7 @@
+//! EXIT_CODE=3
+
+// a comment before anything
+fn main() -> i32 { // one after a brace
+	// one on its own line
+	return 3i32; // and one after a statement
+}

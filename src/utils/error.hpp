@@ -14,8 +14,6 @@ public:
 private:
 	const ExitCode code = ExitCode::UncaughtInternalError;
 
-protected:
-	// ctor for implementors
 	CompilerError(
 		const char *type_name,
 		ExitCode code,

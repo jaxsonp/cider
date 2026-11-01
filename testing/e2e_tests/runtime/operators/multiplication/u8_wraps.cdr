@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+
+// overflow wraps around
+fn main() -> bool {
+	return 16u8 * 16u8 == 0u8;
+}

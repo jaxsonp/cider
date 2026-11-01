@@ -1,5 +1,0 @@
-//! EXIT_CODE=41
-
-fn main() -> i16 {
-	return 206i16 / 5i16;
-}

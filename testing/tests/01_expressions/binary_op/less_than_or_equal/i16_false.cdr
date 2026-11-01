@@ -1,5 +1,0 @@
-//! EXIT_CODE=0
-
-fn main() -> bool {
-	return 100i16 <= 5i16;
-}

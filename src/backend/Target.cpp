@@ -9,7 +9,7 @@
 
 #include "objwriter/elf/ObjectWriter_ELF.hpp"
 
-const std::unordered_map<std::string, Target> Target::supported_targets = {
+const std::unordered_map<std::string_view, Target> Target::supported_targets = {
 	{"linux-riscv32g", Target(Arch::RISCV32, RiscvExt::G, ABI::RISCV_ILP32D, OS::Linux, ObjectFormat::ELF32)},
 	{"linux-riscv32gc", Target(Arch::RISCV32, RiscvExt::G | RiscvExt::C, ABI::RISCV_ILP32D, OS::Linux, ObjectFormat::ELF32)},
 	{"linux-riscv64g", Target(Arch::RISCV64, RiscvExt::G, ABI::RISCV_LP64D, OS::Linux, ObjectFormat::ELF64)},
@@ -20,59 +20,66 @@ const std::unordered_map<std::string, Target> Target::supported_targets = {
 
 std::string Target::detect_host_target()
 {
+	static std::string cached_value;
+
+	if (cached_value.empty())
+	{
+
 #if defined(__linux__)
-	std::string os = "linux";
+		std::string os = "linux";
 #elif defined(__APPLE__) && defined(__MACH__)
-	std::string os = "macos";
+		std::string os = "macos";
 #elif defined(_WIN32)
-	std::string os = "windows";
+		std::string os = "windows";
 #elif defined(__FreeBSD__)
-	std::string os = "freebsd";
+		std::string os = "freebsd";
 #elif defined(__OpenBSD__)
-	std::string os = "openbsd";
+		std::string os = "openbsd";
 #elif defined(__NetBSD__)
-	std::string os = "netbsd";
+		std::string os = "netbsd";
 #else
-	std::string os = "unknown";
+		std::string os = "unknown";
 #endif
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64)
-	std::string isa = "x86_64";
+		std::string isa = "x86_64";
 #elif defined(__i386__) || defined(_M_IX86)
-	std::string isa = "x86";
+		std::string isa = "x86";
 #elif defined(__riscv)
-	std::string isa = std::format("riscv{}", __riscv_xlen);
-	// G (IMAFD) when the host has all of it, otherwise list the extensions individually so the name won't
-	// match a supported target (TODO maybe fix this? idk)
+		std::string isa = std::format("riscv{}", __riscv_xlen);
+		// G (IMAFD) when the host has all of it, otherwise list the extensions individually so the name won't
+		// match a supported target (TODO maybe fix this? idk)
 #if defined(__riscv_mul) && defined(__riscv_atomic) && defined(__riscv_flen) && __riscv_flen >= 64
-	isa += "g";
+		isa += "g";
 #else
-	isa += "i";
+		isa += "i";
 #if defined(__riscv_mul)
-	isa += "m";
+		isa += "m";
 #endif
 #if defined(__riscv_atomic)
-	isa += "a";
+		isa += "a";
 #endif
 #if defined(__riscv_flen) && __riscv_flen >= 32
-	isa += "f";
+		isa += "f";
 #endif
 #if defined(__riscv_flen) && __riscv_flen >= 64
-	isa += "d";
+		isa += "d";
 #endif
 #endif
 #if defined(__riscv_compressed)
-	isa += "c";
+		isa += "c";
 #endif
 #elif defined(__aarch64__) || defined(_M_ARM64)
-	std::string isa = "aarch64";
+		std::string isa = "aarch64";
 #elif defined(__arm__) || defined(_M_ARM)
-	std::string isa = "arm";
+		std::string isa = "arm";
 #else
-	std::string isa = "unknown";
+		std::string isa = "unknown";
 #endif
 
-	return std::format("{}-{}", os, isa);
+		cached_value = std::format("{}-{}", os, isa);
+	}
+	return cached_value;
 }
 
 std::unique_ptr<CodeGenerator> Target::get_code_generator() const
@@ -142,4 +149,22 @@ unsigned short Target::abi_float_precision() const
 		return 2;
 	}
 	throw CompilerError::internal("Uncaught ABI variant");
+}
+
+Target::Target()
+	: Target(Target::detect_host_target()) {}
+
+Target::Target(std::string_view target_name)
+{
+	auto found_target = Target::supported_targets.find(target_name);
+	if (found_target == Target::supported_targets.end())
+	{
+		std::string supported;
+		for (const auto &[name, target] : Target::supported_targets)
+			supported += std::format("{}{}", supported.empty() ? "" : ", ", name);
+		throw CompilerError::unsupported(
+			std::format("Unknown target \"{}\" (supported targets: {})", target_name, supported));
+	}
+
+	*this = found_target->second;
 }

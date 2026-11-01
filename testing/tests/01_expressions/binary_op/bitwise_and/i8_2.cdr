@@ -1,5 +1,0 @@
-//! EXIT_CODE=12
-
-fn main() -> i8 {
-	return 93i8 & 140i8;
-}

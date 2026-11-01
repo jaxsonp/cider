@@ -1,5 +1,0 @@
-//! EXIT_CODE=8
-
-fn main() -> u16 {
-	return 64u16 >> 3u8;
-}

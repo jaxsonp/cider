@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+
+// as a signed number the left side is negative, which would order the other way
+fn main() -> bool {
+	return 3000000000u32 > 100u32;
+}

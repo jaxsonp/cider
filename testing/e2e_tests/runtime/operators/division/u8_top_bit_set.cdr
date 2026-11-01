@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+
+// as a signed number the left side is negative
+fn main() -> bool {
+	return 200u8 / 3u8 == 66u8;
+}

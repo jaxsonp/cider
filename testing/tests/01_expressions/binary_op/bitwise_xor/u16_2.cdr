@@ -1,5 +1,0 @@
-//! EXIT_CODE=243
-
-fn main() -> u16 {
-	return 194u16 ^ 49u16;
-}

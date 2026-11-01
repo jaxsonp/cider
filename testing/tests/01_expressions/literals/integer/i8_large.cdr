@@ -1,5 +1,0 @@
-//! EXIT_CODE=208
-
-fn main() -> i8 {
-	return 2000i8;
-}

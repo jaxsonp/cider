@@ -1,5 +1,0 @@
-//! EXIT_CODE=30
-
-fn main() -> i16 {
-	return 5i16 * 6i16;
-}

@@ -1,5 +1,0 @@
-//! EXIT_CODE=240
-
-fn main() -> i16 {
-	return -256i16 >> 4u8;
-}

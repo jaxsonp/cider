@@ -1,5 +1,0 @@
-//! EXIT_CODE=225
-
-fn main() -> u32 {
-	return 20u32 ^ 245u32;
-}

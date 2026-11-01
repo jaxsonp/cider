@@ -16,10 +16,11 @@ Flags:
   -v, --verbose          Increase compiler verbosity (repeatable)
   -q, --quiet            Silence compiler output
   -h, --help             Show this help text
+  -V, --version          Print the program's version and exit
 
 Options:
   -o, --out <FILE>       Output file path for the executable, if "--emit exe" [default: a.out]
-  -t, --target <TARGET>  Target platform (defaults to the host's platform)
+  -t, --target <TARGET>  Target platform (defaults to the host's target)
       --emit <KIND>      Artifacts to produce: ast, ir, asm, exe. Append "=PATH" to write to file, or "=stdout" for standard output (repeatable) [default: exe]
 ```
 
@@ -42,48 +43,41 @@ Options:
 
 #### Requirements:
 
-- Linux (probably)
-- Python >= 3.12 (older versions probably work)
-- Qemu (specifically qemu-user-static, for binaries like `qemu-riscv32-static`, `qemu-riscv64-static`, etc.)
+- A C++20 compiler and CMake
+- Internet access the first time CMake configures the project (the test runner fetches [cpp-subprocess](https://github.com/arun11299/cpp-subprocess))
+- A host platform that is a [supported target](#supported-targets), end to end tests are compiled for the host and run natively
 
 ### To run:
 
-Run `testing/run_tests.py`, providing the path to the compiler binary to test.
+The test runner is a C++ program, built alongside the compiler. Run it from the repository root, where the build places a copy of `ciderc`:
 
 ```
-usage: run_tests.py [-h] [-n N] [--progress {auto,always,never}] [--color {auto,always,never}] [--show-passed {auto,always,never}] [--show-failed {auto,always,never}] compiler_path
-
-Test runner
-
-positional arguments:
-  compiler_path         Path of compiler binary to test
-
-options:
-  -h, --help            show this help message and exit
-  -n N, --workers N     Number of concurrent workers to use
-  --progress {auto,always,never}
-                        Show progress bar/info (default: auto)
-  --color {auto,always,never}
-                        Use color in output (default: auto)
-  --show-passed {auto,always,never}
-                        Print test cases that succeed (default: auto)
-  --show-failed {auto,always,never}
-                        Print test cases that fail (default: auto)
+cmake --build build
+build/testing/ciderc_test_runner
 ```
 
-### Defining tests
+```
+Usage: ciderc_test_runner [options]
 
-Tests are defined in the `tests/` subdirectory. Each test consists of a `.cdr` source file with comments *at the very top* defining what the expected output should be. These comments should be of the form: `//! KEY=VALUE` (note the exclamation mark). Keys are case insensitive. Below are the recognized keys:
+Runs Cider's unit and e2e tests
 
-| Key | Type | Default | Description |
-| --- | --- | --- | --- |
-| `BUILD_EXIT_CODE` | int | `0` | Expected return value of compilation of program |
-| `EXIT_CODE` | int | `0` | Expected return value of the program |
-| `STDOUT` | string | `""` | Expected output to stdout |
-| `STDERR` | string | `""` | Expected output to stderr |
-| `REQUIRES` | list | `""` | Comma separated features a target needs to run this test (`32bit`, `64bit`). The test is skipped on targets without them |
+Flags:
+      --unit              Run unit tests (if no category is given, all are run)
+      --e2e               Run end to end tests
+  -l, --list              List the selected tests instead of running them
+  -v, --verbose           Print every test, not just failures
+      --noclean           Don't remove testing artifacts, even if successful
+  -h, --help              Show this help text
 
-Every test is ran once for each supported target.
+Options:
+  -n, --workers <N>       Number of parallel test runners [default: 4]
+  -C, --ciderc <path>     Ciderc executable used for e2e tests. Defaults to './ciderc' if it exists, else 'ciderc'
+  -t, --target <name>     Target to compile e2e tests for. Defaults to the host
+      --e2e-prefix <cmd>  Command to run e2e test programs through, ie an emulator for other targets
+  -A, --artifacts <path>  Output directory for testing artifacts [default: ./.ciderc_testing/]
+```
+
+The test files are embedded into the runner when it's built, so rebuild after changing them. The runner exits with `1` if any test failed, and leaves that run's artifacts in the artifacts directory. How tests are defined is documented in [AGENTS.md](AGENTS.md#testing).
 
 ## Reference material
 

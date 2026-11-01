@@ -1,5 +1,0 @@
-//! EXIT_CODE=100
-
-fn main() -> u8 {
-	return 200u8 >> 1u8;
-}

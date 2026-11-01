@@ -1,5 +1,0 @@
-//! EXIT_CODE=0
-
-fn main() -> bool {
-	return 100i8 <= 5i8;
-}

@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout repository
@@ -18,11 +18,11 @@ jobs:
       run: cmake -S . -B build
 
     - name: Build
-      run: cmake --build build
+      run: cmake --build build --parallel
 
     # must tar to preserve build file permissions
     - name: Tar build files
-      run: tar -cvf build-output.tar build/
+      run: tar -cvf build-output.tar build/ciderc build/testing/ciderc_test_runner
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v7
@@ -31,20 +31,48 @@ jobs:
         archive: false
         if-no-files-found: error
 
-  test:
-    runs-on: ubuntu-latest
+  unit-tests:
+    runs-on: ubuntu-24.04
     needs: build
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - name: Download build artifacts
+      uses: actions/download-artifact@v8
       with:
-        python-version: '3.14'
+        name: build-output.tar
 
+    - name: Unpack build output
+      run: tar -xvf build-output.tar
+
+    - name: Run unit tests
+      run: build/testing/ciderc_test_runner --unit
+
+  e2e-tests:
+    runs-on: ubuntu-24.04
+    needs: build
+
+    strategy:
+      matrix:
+        include:
+          - target: linux-x86_64
+            prefix: ""
+          - target: linux-x86
+            prefix: qemu-i386-static
+          - target: linux-riscv32g
+            prefix: qemu-riscv32-static -cpu rv32,c=false
+          - target: linux-riscv32gc
+            prefix: qemu-riscv32-static
+          - target: linux-riscv64g
+            prefix: qemu-riscv64-static -cpu rv64,c=false
+          - target: linux-riscv64gc
+            prefix: qemu-riscv64-static
+      fail-fast: false
+
+    name: e2e-tests (${{ matrix.target }})
+
+    steps:
     - name: Install QEMU user emulator
+      if: matrix.prefix != ''
       run: |
         sudo apt-get update
         sudo apt-get install -y qemu-user-static
@@ -57,5 +85,5 @@ jobs:
     - name: Unpack build output
       run: tar -xvf build-output.tar
 
-    - name: Run Tests
-      run: python testing/run_tests.py build/ciderc --no-progress --show-results=failed
+    - name: Run e2e tests
+      run: build/testing/ciderc_test_runner --e2e -C build/ciderc -t ${{ matrix.target }} --e2e-prefix "${{ matrix.prefix }}"

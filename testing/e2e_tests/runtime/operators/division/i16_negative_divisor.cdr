@@ -1,0 +1,6 @@
+//! EXIT_CODE=1
+
+// division truncates toward zero
+fn main() -> bool {
+	return 7000i16 / -2i16 == -3500i16;
+}

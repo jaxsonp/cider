@@ -1,5 +1,0 @@
-//! EXIT_CODE=252
-
-fn main() -> i32 {
-	return -8i32 >> 1u8;
-}

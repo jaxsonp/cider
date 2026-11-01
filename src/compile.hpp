@@ -8,7 +8,7 @@
 extern const unsigned int cider_version_major;
 extern const unsigned int cider_version_minor;
 extern const unsigned int cider_version_patch;
-extern const char *cider_version;
+extern const std::string cider_version;
 
 /// @brief An artifact the compiler can be asked to produce.
 /// Declaration order matches pipeline order — the compiler runs only as far as
@@ -35,7 +35,7 @@ struct CompileSettings
 	/// Artifacts to produce, keyed by kind (so lookups and "furthest stage" stay cheap)
 	std::map<EmitKind, EmitTarget> emits;
 
-	explicit CompileSettings(Target target) : target(target) {}
+	explicit CompileSettings(Target target);
 
 	/// @brief Whether the given artifact was requested
 	bool wants(EmitKind kind) const { return this->emits.contains(kind); }
@@ -44,4 +44,4 @@ struct CompileSettings
 	EmitKind furthest() const;
 };
 
-void compile(const std::string &, const CompileSettings &);
+void compile(const std::string &filename, const CompileSettings &settings);

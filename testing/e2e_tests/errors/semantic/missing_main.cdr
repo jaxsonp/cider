@@ -1,0 +1,3 @@
+//! BUILD_EXIT_CODE=4
+
+fn not_main() {}
