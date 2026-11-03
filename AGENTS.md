@@ -19,13 +19,13 @@ applies to Cider-the-language and anything written in it.
 
 ## Project layout
 
-- `src/frontend/` — lexer (`Lexer.*`), parser/AST (`AST_parse.cpp`,
-  `AST.hpp`), semantic analysis (`AST_semantics.cpp`), type system
+- `src/frontend/` — lexer (`Lexer.*`), parser (`Parser.*`), AST
+  (`AST.*`), semantic analysis (`AST_semantics.cpp`), type system
   (`FrontendType.*`), IR emission (`AST_emitIr.cpp`), debug printing
   (`AST_print.cpp`).
-- `src/ir/` — the intermediate representation (`IR.*`, `IR_instructions.*`,
-  `IrType.*`), the builder the frontend emits through (`IrWriter.*`), and a
-  textual IR printer (`IrPrinter.*`) for debugging.
+- `src/ir/` — the intermediate representation (`IR.*`, `IrType.*`),
+  the builder the frontend emits through (`IrWriter.*`), and a textual IR
+  printer (`IrPrinter.*`) for debugging.
 - `src/backend/` — codegen and object file emission.
   - `Target.*` — the table of supported targets. A target is an architecture
     (`Arch`), a set of feature flags (ISA extensions), an ABI, an OS and an
@@ -38,14 +38,15 @@ applies to Cider-the-language and anything written in it.
   - `codegen/riscv/` — RISC-V backend, covering RV32 and RV64 with or
     without the C extension (targets `linux-riscv32g`, `linux-riscv32gc`,
     `linux-riscv64g`, `linux-riscv64gc`). `RiscvInstruction.*` encodes (and
-    compresses) single instructions, `RiscvAssembler.*` is the buffer
-    instructions are written to, and `RiscvCodeGenerator.*` implements the
-    lowering hooks.
+    compresses) single instructions, `Riscv.hpp` has the register
+    definitions, `RiscvAssembler.*` is the buffer instructions are
+    written to, and `RiscvCodeGenerator.*` implements the lowering hooks.
   - `codegen/x86/` — x86 backend, covering 32 bit x86 and x86-64 (targets
-    `linux-x86`, `linux-x86_64`). `x86Operand.hpp` has the typed operands
-    (`Reg<W>`, `Mem<W>`, `Imm<W>`), `x86Assembler.*` the `write_*` functions,
-    whose signatures only accept operand kinds/widths that the instruction
-    has an encoding for (invalid instructions don't compile), and
+    `linux-x86`, `linux-x86_64`). `x86.*` has the register definitions,
+    `x86Operand.hpp` the typed operands (`Reg<W>`, `Mem<W>`, `Imm<W>`),
+    `x86Assembler.*` the `write_*` functions, whose signatures only accept
+    operand kinds/widths that the instruction has an encoding for (invalid
+    instructions don't compile), and
     `x86Instruction.*` the untyped encoder, which rejects anything needing a
     REX prefix in 32 bit mode. `x86CodeGenerator.*` implements the lowering
     hooks.
@@ -56,12 +57,12 @@ applies to Cider-the-language and anything written in it.
   `ExitCode`), `logging.hpp` (verbosity-gated `log`/`log_v`/`log_vv`).
 - `src/compile.cpp` / `compile.hpp` — top-level pipeline: source → lex →
   parse → semantic check → IR → codegen → object file.
-- `src/main.cpp` — CLI entry point (`cdrc`).
+- `src/main.cpp` — CLI entry point (`ciderc`).
 - `grammar.ebnf` — the authoritative grammar. Update this whenever syntax
   changes.
 - `testing/` — C++ test runner (`src/`) and `.cdr` end to end test fixtures
-  (`e2e_tests/`), see below. `.old_run_tests.py` is the previous Python
-  runner and is no longer used.
+  (`e2e_tests/`, embedded into the runner by `embed_e2e_tests.cmake`), see
+  below.
 - `TODO.md` — the running TODO list ("For Jaxson's eyes only") tracking
   near-term work and a list of pre-self-hosting requirements, plus notes for
   the eventual language docs. Check it for current priorities before
@@ -94,8 +95,9 @@ build/ciderc <file.cdr> -t linux-riscv32g -o out
 
 Targets are named `<os>-<isa>`, see `Target::supported_targets` (or pass a
 bogus `-t` to have them listed). Without `-t` the compiler targets the
-platform it was itself built for (`Target::host_target()`, detected from the
-host C++ compiler's predefined macros), erroring if that isn't supported.
+platform it was itself built for (`Target::detect_host_target()`,
+detected from the host C++ compiler's predefined macros), erroring if that
+isn't supported.
 
 `--emit=<kind>[,...]` selects which artifacts to produce: `ast`, `ir`,
 `asm`, or `exe` (the default). The compiler runs only as far as the furthest
@@ -135,8 +137,8 @@ if any test failed.
 Each run writes to `.ciderc_testing/<timestamp>-<pid>/` (`-A` changes the
 parent directory), which is removed afterwards unless a test failed or
 `--noclean` was passed. An e2e test's files are in `e2e/<test name>/`: its
-source, compiled `program`, and captured output (`build_stdout.txt`,
-`build_stderr.txt`, `stdout.txt`, `stderr.txt`).
+source (`source.cdr`), compiled `program`, and captured output
+(`build_stdout.txt`, `build_stderr.txt`, `stdout.txt`, `stderr.txt`).
 
 ### End to end tests
 
@@ -179,7 +181,7 @@ runner starts. Omitted keys take the defaults below:
 | `EXIT_CODE` | `0` | Expected program exit code, or the negated signal number if killed by one |
 | `STDOUT` | `""` | Expected program stdout, compared exactly |
 | `STDERR` | `""` | Expected program stderr, compared exactly |
-| `REQUIRES` | none | `32bit` or `64bit`. The test is skipped if the target's registers are another width |
+| `REQUIRES` | none | `32bit` or `64bit`. The test is skipped if the target's registers are another width. Any other value only prints a warning |
 
 `STDOUT` and `STDERR` values are taken verbatim and can't contain a newline.
 No fixture uses them yet, and `TODO.md` lists verifying them as outstanding.
@@ -254,15 +256,19 @@ unit tests next to the code that implements it.
 
 ## Language notes worth knowing before editing the frontend
 
-- Top-level functions are hoisted; global variable initialization order is
-  resolved via dependency DAG, not declaration order.
+- Top-level functions are hoisted. Global variables don't exist yet; the plan
+  is for their initialization order to be resolved via dependency DAG, not
+  declaration order.
 - Binary operators are left-associative, except equality/comparison, which
   require explicit parens when chained.
 - Type names start with a letter; a leading digit means it's a numeric
   literal (integer literals carry an explicit type suffix, e.g. `1u32`,
   `100i32` — see `testing/e2e_tests/basics/*.cdr` for examples).
 - `grammar.ebnf` is the source of truth for syntax — if a parser change
-  alters accepted syntax, update the grammar file in the same change.
+  alters accepted syntax, update the grammar file in the same change. It also
+  describes syntax the parser doesn't accept yet (`let`, assignment, `if`,
+  block expressions, indexing, generic types), check `Parser.cpp` before
+  assuming something parses.
 - Language semantics must not depend on the target. Operations on types of
   32 bits or less behave identically on 32 and 64 bit targets (including
   shift amounts: only the lower 5 bits are used, or the lower 6 when

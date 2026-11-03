@@ -20,7 +20,7 @@ Flags:
 
 Options:
   -o, --out <FILE>       Output file path for the executable, if "--emit exe" [default: a.out]
-  -t, --target <TARGET>  Target platform (defaults to the host's target)
+  -t, --target <TARGET>  Target platform (defaults to the host's target, linux-x86_64)
       --emit <KIND>      Artifacts to produce: ast, ir, asm, exe. Append "=PATH" to write to file, or "=stdout" for standard output (repeatable) [default: exe]
 ```
 
@@ -45,7 +45,7 @@ Options:
 
 - A C++20 compiler and CMake
 - Internet access the first time CMake configures the project (the test runner fetches [cpp-subprocess](https://github.com/arun11299/cpp-subprocess))
-- A host platform that is a [supported target](#supported-targets), end to end tests are compiled for the host and run natively
+- A host platform that is a [supported target](#supported-targets). End to end tests are compiled for the host and run natively by default, testing another target needs a way to run its programs, ie QEMU user mode emulation (`-t linux-riscv64gc --e2e-prefix qemu-riscv64-static`)
 
 ### To run:
 

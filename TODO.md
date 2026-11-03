@@ -5,7 +5,6 @@ _For Jaxson's eyes only_
 ## To implement
 - WIP:
 - Soon:
-	- Unignore .vscode dir
 	- Decide what division by zero (and MIN / -1, which overflows) does. Right now it's target dependent: x86 traps
 	  (SIGFPE) for x/0, and for MIN / -1 on 32 and 64 bit values (8/16 bit ones are divided as 32 bit values, so they
 	  wrap like on riscv), while riscv gives all ones for x/0 and x for x%0. Untested on purpose until decided
@@ -21,7 +20,7 @@ _For Jaxson's eyes only_
 		- Capture output of unit tests
 		- Verify stdout/stderr checking works
 		- Prettify (eg colors, progress)
-	- Fix: hex literals with letter digits don't parse (`0x1Fu8` is a type error, the lexer's digit scan stops at `F`). Probably belongs with "Non-decimal int literals" below
+	- Fix: hex literals with letter digits don't parse (`0x1Fu8` is a type error, the lexer's digit scan stops at `F`). `0x`/`0o`/`0b` literals otherwise work
 	- Fix: deeply nested expressions (~2000 nested parens) segfault the compiler (parser recursion), should be a proper error
 	- Fix: `//` comment at EOF without a trailing newline hangs the compiler (lexer loops on EOF forever)
 	- Fix: `true`/`false` token where another is expected exits 253, not a syntax error (`to_string(TokenType)` has no case for them)
@@ -30,8 +29,6 @@ _For Jaxson's eyes only_
 	- Fix: `a << b << c` and `a || b || c` / `a && b && c` are syntax errors, but the grammar says they chain
 - Before self-hosting:
 	- 64 bit types in 32bit archs (needs register pairs, carries, and a software 64 bit divide)
-	- Platform detection
-	- Non-decimal int literals
 	- control flow analysis (for checking if a function returns, among others probably)
 	- locals vars
 	- if statements
