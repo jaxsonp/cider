@@ -77,11 +77,11 @@ static void assert_does_not_lower_to(const std::string &target, const std::strin
 }
 
 /// Fail the test unless source lowers on every one of these targets
-#define ASSERT_LOWERS(source, targets)                                                 \
-	do                                                                                 \
-	{                                                                                  \
-		for (const std::string &target_ : targets)                                     \
-			ASSERT_EQ(int(lower_result(source, target_)), int(ExitCode::Success));     \
+#define ASSERT_LOWERS(source, targets)                                             \
+	do                                                                             \
+	{                                                                              \
+		for (const std::string &target_ : targets)                                 \
+			ASSERT_EQ(int(lower_result(source, target_)), int(ExitCode::Success)); \
 	} while (0)
 
 // every target ==================================================================================================
@@ -168,7 +168,7 @@ TEST(calls_with_more_arguments_than_registers_lower)
 {
 	const std::string source =
 		"fn many(a: i8, b: u16, c: i32, d: u8, e: bool, f: i16, g: u32, h: i8, i: u8, j: bool, k: i16) -> bool { j }\n"
-		"fn f() -> bool { many(1i8, 2u16, 3i32, 4u8, true, 6i16, 7u32, 8i8, 9u8, false, 11i16) }";
+		"fn caller() -> bool { many(1i8, 2u16, 3i32, 4u8, true, 6i16, 7u32, 8i8, 9u8, false, 11i16) }";
 	ASSERT_LOWERS(source, all_targets);
 }
 

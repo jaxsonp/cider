@@ -1,0 +1,8 @@
+//! EXIT_CODE=1
+
+fn main() -> bool {
+	let x: i32 = 300i32;
+	let x: u8 = 44u8;
+	let x: bool = x == 44u8;
+	x
+}

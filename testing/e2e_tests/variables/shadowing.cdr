@@ -1,0 +1,9 @@
+//! EXIT_CODE=12
+
+fn main() -> i32 {
+	let x: i32 = 5i32;
+	let y: i32 = x;
+	// the initializer reads the x being shadowed
+	let x: i32 = x + 1i32;
+	x + y + 1i32
+}

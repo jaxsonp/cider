@@ -95,10 +95,15 @@ bool FrontendType::is_function() const
 	return this->variant == Variant::FUNCTION;
 }
 
+bool FrontendType::is_void() const
+{
+	return this->variant == Variant::VOID;
+}
+
 FrontendType FrontendType::function(FrontendType return_type, std::vector<FrontendType> param_types)
 {
 	FrontendType type(Variant::FUNCTION);
-	type.function_return_type = std::make_shared<FrontendType>(std::move(return_type));
+	type.function_return_type = std::make_unique<FrontendType>(std::move(return_type));
 	type.function_param_types = std::move(param_types);
 	return type;
 }

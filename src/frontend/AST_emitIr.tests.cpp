@@ -2,6 +2,7 @@
 #include "source_testing.hpp"
 
 #include <format>
+#include <regex>
 
 using testing::unit::source_to_ir;
 
@@ -188,6 +189,60 @@ TEST(code_after_a_return_is_not_reachable)
 {
 	ASSERT_EQ(first_function_ir("fn aaa() -> i32 { return 1i32; return 2i32; }\nfn main() {}"),
 			  "fn aaa() -> i32 {\n  %0: i32\n  %1: i32\nbb0: // aaa start\n  %0 = loadimm 1\n  ret %0\n}\n");
+}
+
+// local variables ===============================================================================================
+
+/// Number of times `needle` appears in `haystack`
+static size_t count(const std::string &haystack, const std::string &needle)
+{
+	size_t n = 0;
+	for (size_t pos = haystack.find(needle); pos != std::string::npos; pos = haystack.find(needle, pos + 1))
+		++n;
+	return n;
+}
+
+TEST(local_initializer_is_evaluated_once)
+{
+	std::string ir = source_to_ir("fn g() -> i32 { 1i32 }\nfn main() -> i32 { let x: i32 = g(); x + x }");
+	ASSERT_EQ(count(ir, "call g()"), 1u);
+	// both reads of x are the same vreg, like a_parameter_is_the_same_vreg_every_time
+	ASSERT_TRUE(std::regex_search(ir, std::regex(R"(= add (%\d+) \1\n)")));
+}
+
+TEST(unused_local_initializer_is_still_evaluated)
+{
+	ASSERT_EQ(count(source_to_ir("fn g() -> i32 { 1i32 }\nfn main() { let x: i32 = g(); }"), "call g()"), 1u);
+}
+
+TEST(initializers_are_evaluated_in_declaration_order)
+{
+	std::string ir = source_to_ir("fn a() -> i32 { 1i32 }\nfn b() -> i32 { 2i32 }\nfn g(x: i32, y: i32) {}\n"
+								  "fn main() { let y: i32 = b(); let x: i32 = a(); g(x, y); }");
+	ASSERT_TRUE(ir.find("call b()") < ir.find("call a()"));
+	ASSERT_TRUE(ir.find("call a()") < ir.find("call g("));
+}
+
+TEST(locals_and_statements_interleave)
+{
+	std::string ir = source_to_ir("fn a() {}\nfn b() -> u8 { 1u8 }\nfn main() -> u8 { a(); let x: u8 = b(); a(); x }");
+	size_t first_a = ir.find("call a()");
+	ASSERT_TRUE(first_a < ir.find("call b()"));
+	ASSERT_TRUE(ir.find("call b()") < ir.find("call a()", first_a + 1));
+}
+
+TEST(shadowing_local_is_read_after_its_declaration)
+{
+	// %0 is the parameter, the trailing x has to be the local that shadows it
+	std::string ir = source_to_ir("fn f(x: i32) -> i32 { let x: i32 = 5i32; x }");
+	ASSERT_TRUE(ir.find("  ret %0\n") == std::string::npos);
+}
+
+TEST(shadowing_initializer_reads_the_shadowed_local)
+{
+	std::string ir = source_to_ir("fn f(x: i32) -> i32 { let x: i32 = x + x; x }");
+	ASSERT_TRUE(ir.find("= add %0 %0\n") != std::string::npos);
+	ASSERT_TRUE(ir.find("  ret %0\n") == std::string::npos);
 }
 
 // functions =====================================================================================================

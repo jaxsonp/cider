@@ -5,6 +5,7 @@
 #include <ostream>
 #include <vector>
 #include <optional>
+#include <deque>
 #include <unordered_map>
 #include <memory>
 #include <string>
@@ -17,22 +18,35 @@
 
 namespace ast
 {
-	enum class SymbolType
+	/// @brief What declared a symbol
+	enum class SymbolKind
 	{
-		Variable,
+		/// Top level function, can't be shadowed
+		Function,
+		/// Function parameter, may be shadowed by locals
+		Parameter,
+		/// Local variable, may shadow parameters and other locals
+		Local,
 	};
 
-	struct Symbol
+	class Symbol
 	{
+	public:
 		std::string name;
 		FrontendType type;
+		SymbolKind kind;
 
-		Symbol(std::string name, FrontendType type) : name(name), type(type) {}
+		Symbol(std::string name, FrontendType type, SymbolKind kind)
+			: name(name), type(type), kind(kind) {}
 	};
 
 	class SymbolScope
 	{
-		std::unordered_map<std::string, Symbol> symbols;
+		/// @brief Every symbol ever added to this scope, including shadowed ones. A deque so that pointers into it
+		/// (held by resolved identifiers) stay valid as more are added
+		std::deque<Symbol> storage;
+		/// @brief Name to the latest symbol declared with it in this scope
+		std::unordered_map<std::string, Symbol *> symbols;
 
 		/// @brief Parent (if not root)
 		SymbolScope *parent;
@@ -47,13 +61,12 @@ namespace ast
 		/// @return Pointer to the symbol, nullptr if not found
 		Symbol *find(const std::string &name, bool recursive = true);
 
-		/// @brief Insert a symbol into this symbol table scope, throwing on collision
-		/// @param name Symbol name
-		/// @param type Symbol type
-		void add(std::string name, FrontendType type);
-		/// @brief Insert a symbol into this symbol table scope, throwing on collision
-		/// @param symbol Name/type pair
-		void add(std::pair<std::string, FrontendType> symbol) { this->add(symbol.first, symbol.second); }
+		/// @brief Insert a symbol into this symbol table scope, throwing if it collides with a symbol it isn't
+		/// allowed to shadow. Only locals may shadow, and only parameters and other locals (in this scope or an
+		/// enclosing one). Code resolved before this keeps pointing at the shadowed symbol
+		/// @param symbol Pre-instantiated symbol
+		/// @param loc Location of the declaration, for errors
+		void add(Symbol symbol, CompilerError::LocVariant loc = std::monostate{});
 
 		SymbolScope(SymbolScope *parent);
 	};
@@ -61,7 +74,7 @@ namespace ast
 	class GlobalSymbolTable : public SymbolScope
 	{
 	public:
-		virtual inline bool is_root() { return false; };
+		virtual inline bool is_root() { return true; };
 		GlobalSymbolTable() : SymbolScope(nullptr) {}
 	};
 
@@ -301,13 +314,30 @@ namespace ast
 		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
 
-	/// An expression evaluated only for its side effects, its value (if any) is discarded
 	struct ExpressionStatement : StatementNode
 	{
 		std::unique_ptr<ExpressionNode> expr;
 
 		ExpressionStatement(SourceLocRange src_loc, std::unique_ptr<ExpressionNode> expr)
 			: StatementNode(src_loc), expr(std::move(expr)) {};
+
+		void resolve_symbols(SymbolScope *scope) override;
+
+		void check_semantics(SemanticAnalysisState &state) const override;
+
+		void emit_ir(IrFunctionWriter &writer) const override;
+
+		void print(std::ostream &out, unsigned int depth = 0) const;
+	};
+
+	struct DeclarationStatement : StatementNode
+	{
+		std::unique_ptr<ExpressionNode> init_expr;
+		std::string binding_name;
+		FrontendType binding_type;
+
+		DeclarationStatement(SourceLocRange src_loc, std::string_view name, FrontendType type, std::unique_ptr<ExpressionNode> init_expr)
+			: StatementNode(src_loc), init_expr(std::move(init_expr)), binding_name(name), binding_type(type) {};
 
 		void resolve_symbols(SymbolScope *scope) override;
 

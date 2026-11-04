@@ -64,6 +64,7 @@ struct FrontendType
 	bool is_numeric() const;
 	bool is_bool() const;
 	bool is_function() const;
+	bool is_void() const;
 
 	/// @brief Return type of this function type, throwing if this is not a function type
 	const FrontendType &return_type() const;

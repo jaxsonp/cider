@@ -23,6 +23,7 @@ namespace parse
 
 	std::optional<std::unique_ptr<ast::StatementNode>> try_parse_stmt(Lexer &lexer);
 	std::optional<std::unique_ptr<ast::ReturnStatement>> try_parse_return_stmt(Lexer &lexer);
+	std::optional<std::unique_ptr<ast::DeclarationStatement>> try_parse_declaration_stmt(Lexer &lexer);
 
 	// === EXPRESSIONS =========================================================
 	// Listed loosest binding first, matching the precedence chain in the grammar

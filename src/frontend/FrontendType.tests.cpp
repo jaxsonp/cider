@@ -21,6 +21,7 @@ TEST(signed_integers)
 		ASSERT_TRUE(!type.is_bool());
 		ASSERT_TRUE(!type.is_float());
 		ASSERT_TRUE(!type.is_function());
+		ASSERT_TRUE(!type.is_void());
 	}
 }
 
@@ -35,6 +36,7 @@ TEST(unsigned_integers)
 		ASSERT_TRUE(!type.is_bool());
 		ASSERT_TRUE(!type.is_float());
 		ASSERT_TRUE(!type.is_function());
+		ASSERT_TRUE(!type.is_void());
 	}
 }
 
@@ -60,11 +62,13 @@ TEST(bool_is_not_numeric)
 	ASSERT_TRUE(type.is_bool());
 	ASSERT_TRUE(!type.is_numeric());
 	ASSERT_TRUE(!type.is_integer());
+	ASSERT_TRUE(!type.is_void());
 }
 
 TEST(void_is_nothing)
 {
 	Type type = Type::void_type();
+	ASSERT_TRUE(type.is_void());
 	ASSERT_TRUE(!type.is_numeric());
 	ASSERT_TRUE(!type.is_integer());
 	ASSERT_TRUE(!type.is_bool());
@@ -74,16 +78,33 @@ TEST(void_is_nothing)
 TEST(default_type_is_void)
 {
 	ASSERT_TRUE(Type() == Type::void_type());
+	ASSERT_TRUE(Type().is_void());
+}
+
+TEST(unresolved_and_unknown_types_are_not_void)
+{
+	ASSERT_TRUE(!Type::unresolved().is_void());
+	ASSERT_TRUE(!Type::unresolved_int().is_void());
+	ASSERT_TRUE(!Type(Type::Variant::UNRESOLVED_FLOAT).is_void());
+	ASSERT_TRUE(!Type::unknown().is_void());
 }
 
 TEST(function_type_parts)
 {
 	Type type = Type::function(Type::i32(), {Type::u8(), Type::boolean()});
 	ASSERT_TRUE(type.is_function());
+	ASSERT_TRUE(!type.is_void());
 	ASSERT_TRUE(type.return_type() == Type::i32());
 	ASSERT_EQ(type.param_types().size(), 2u);
 	ASSERT_TRUE(type.param_types()[0] == Type::u8());
 	ASSERT_TRUE(type.param_types()[1] == Type::boolean());
+}
+
+TEST(function_returning_void_is_not_void)
+{
+	Type type = Type::function(Type::void_type(), {});
+	ASSERT_TRUE(!type.is_void());
+	ASSERT_TRUE(type.return_type().is_void());
 }
 
 TEST(function_parts_of_non_function_types)

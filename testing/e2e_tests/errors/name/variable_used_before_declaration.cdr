@@ -1,0 +1,7 @@
+//! BUILD_EXIT_CODE=2
+
+fn main() -> i32 {
+	let y: i32 = x;
+	let x: i32 = 1i32;
+	y
+}

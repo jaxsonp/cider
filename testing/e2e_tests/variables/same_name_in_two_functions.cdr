@@ -1,0 +1,16 @@
+//! EXIT_CODE=12
+
+fn f() -> i32 {
+	let x: i32 = 5i32;
+	x
+}
+
+fn g(y: i32) -> i32 {
+	let x: i32 = 7i32;
+	x + y - 5i32
+}
+
+fn main() -> i32 {
+	let x: i32 = f();
+	g(x) + x - 0i32
+}

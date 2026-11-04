@@ -1,0 +1,7 @@
+//! EXIT_CODE=1
+
+fn main() -> bool {
+	let t: bool = true;
+	let f: bool = !t;
+	!f
+}

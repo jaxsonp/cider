@@ -35,7 +35,7 @@ AST::AST(std::istream &input)
 	for (const std::unique_ptr<ast::TopLevelDeclaration> &tld : this->tlds)
 	{
 		auto [name, type] = tld->declares();
-		this->symbols->add(name, type);
+		this->symbols->add(ast::Symbol(name, type, ast::SymbolKind::Function), tld->src_loc);
 	}
 
 	log_vvv("Resolving symbols");
@@ -78,21 +78,29 @@ namespace ast
 	{
 		auto it = this->symbols.find(name);
 		if (it != this->symbols.end())
-			return &(it->second);
+			return it->second;
 		if (recursive && this->parent != nullptr)
 			return this->parent->find(name, recursive);
 		return nullptr;
 	}
 
-	void SymbolScope::add(std::string name, FrontendType type)
+	void SymbolScope::add(Symbol symbol, CompilerError::LocVariant loc)
 	{
-		if (this->symbols.contains(name))
-			throw CompilerError::name_error(std::format("Name \"{}\" is already defined at this point", name));
-		auto [_, success] = this->symbols.insert({name, Symbol(name, type)});
-		if (!success)
-			throw CompilerError::internal(std::format("Failed to insert symbol \"{}\": {}", name, type.to_string()));
+		if (const Symbol *existing = this->find(symbol.name))
+		{
+			if (existing->kind == SymbolKind::Function)
+				throw CompilerError::name_error(
+					std::format("Name \"{}\" is already defined as a function, functions can't be shadowed", symbol.name), loc);
+			if (symbol.kind != SymbolKind::Local)
+				throw CompilerError::name_error(std::format("Name \"{}\" is already defined at this point", symbol.name), loc);
+		}
+
+		// shadowing replaces the name's entry, the shadowed symbol stays alive in storage
+		Symbol &stored = this->storage.emplace_back(std::move(symbol));
+		this->symbols.insert_or_assign(stored.name, &stored);
 	}
 
 	SymbolScope::SymbolScope(SymbolScope *parent)
 		: parent(parent) {}
+
 }

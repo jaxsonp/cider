@@ -1,0 +1,8 @@
+//! EXIT_CODE=1
+
+fn main() -> bool {
+	let x: i8 = 100i8;
+	// 200 wraps to -56
+	let y: i8 = x * 2i8;
+	y >> 1u8 == -28i8
+}

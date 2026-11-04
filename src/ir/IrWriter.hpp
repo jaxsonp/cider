@@ -52,7 +52,8 @@ public:
 	ir::Function *cur_function;
 	ir::BasicBlock *cur_bblock;
 
-	/// @brief Creates a new local in the current scope, returning its vreg
+	/// @brief Creates a new local in the current scope, returning its vreg. A name already in the current scope is
+	/// shadowed, it refers to the new vreg from then on
 	ir::VRegId new_local(const std::string &name, ir::IrType type);
 
 	/// @brief Find the vreg allocation of a name in the current or surrounding scopes (throws if cannot find)

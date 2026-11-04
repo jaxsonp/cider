@@ -421,6 +421,123 @@ TEST(stray_semicolon_is_not_a_statement)
 	ASSERT_SOURCE(in_function("return;;"), ExitCode::SyntaxError);
 }
 
+// declarations ===============================================================================================
+
+/// The declaration a function body starts with
+static ast::DeclarationStatement *first_declaration(ast::FunctionDefinition &fn)
+{
+	ASSERT_TRUE(!fn.body_statements.empty());
+	auto *decl = dynamic_cast<ast::DeclarationStatement *>(fn.body_statements[0].get());
+	ASSERT_TRUE(decl != nullptr);
+	return decl;
+}
+
+TEST(declaration_parts)
+{
+	ast::FunctionDefinition fn = parse_function("fn f() { let x: i32 = a + b; }");
+	ASSERT_EQ(fn.body_statements.size(), 1u);
+	ast::DeclarationStatement *decl = first_declaration(fn);
+	ASSERT_EQ(decl->binding_name, "x");
+	ASSERT_TRUE(decl->binding_type == FrontendType::i32());
+	ASSERT_EQ(shape(*decl->init_expr), "(+ a b)");
+}
+
+TEST(every_type_name_as_declaration_type)
+{
+	const std::vector<std::pair<std::string, FrontendType>> cases = {
+		{"bool", FrontendType::boolean()},
+		{"i8", FrontendType::i8()},
+		{"i16", FrontendType::i16()},
+		{"i32", FrontendType::i32()},
+		{"i64", FrontendType::i64()},
+		{"u8", FrontendType::u8()},
+		{"u16", FrontendType::u16()},
+		{"u32", FrontendType::u32()},
+		{"u64", FrontendType::u64()},
+		{"void", FrontendType::void_type()},
+	};
+	for (const auto &[name, type] : cases)
+	{
+		ast::FunctionDefinition fn = parse_function(std::format("fn f() {{ let x: {} = a; }}", name));
+		ASSERT_TRUE(first_declaration(fn)->binding_type == type);
+	}
+}
+
+TEST(declarations_mix_with_other_statements)
+{
+	ast::FunctionDefinition fn = parse_function("fn f() -> i32 { let a: i32 = 1i32; g(a); let b: i32 = a; return b; b }");
+	ASSERT_EQ(fn.body_statements.size(), 4u);
+	ASSERT_TRUE(dynamic_cast<ast::DeclarationStatement *>(fn.body_statements[0].get()) != nullptr);
+	ASSERT_TRUE(dynamic_cast<ast::ExpressionStatement *>(fn.body_statements[1].get()) != nullptr);
+	ASSERT_TRUE(dynamic_cast<ast::DeclarationStatement *>(fn.body_statements[2].get()) != nullptr);
+	ASSERT_TRUE(dynamic_cast<ast::ReturnStatement *>(fn.body_statements[3].get()) != nullptr);
+	ASSERT_TRUE(fn.body_return_expr.has_value());
+}
+
+TEST(declaration_initializer_is_a_full_expression)
+{
+	ast::FunctionDefinition fn = parse_function("fn f() { let x: bool = (a + b) * c == -f(d); }");
+	ASSERT_EQ(shape(*first_declaration(fn)->init_expr), "(== (* (+ a b) c) (- (call f d)))");
+}
+
+TEST(declaration_syntax_errors)
+{
+	// a type annotation is required until there's type inference
+	ASSERT_SOURCE(in_function("let x = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let x;"), ExitCode::SyntaxError);
+	// so is an initializer, there are no uninitialized variables
+	ASSERT_SOURCE(in_function("let x: i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let x: i32 = ;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let x: i32 = 1i32"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let x: i32 = 1i32 2i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let x i32 = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let x: = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let x: 1i32 = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let x: i32 == 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let : i32 = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let"), ExitCode::SyntaxError);
+	ASSERT_SOURCE("fn main() { let x: i32 = 1i32;", ExitCode::SyntaxError);
+}
+
+TEST(declaration_name_has_to_be_an_identifier)
+{
+	ASSERT_SOURCE(in_function("let 1i32: i32 = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let let: i32 = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let fn: i32 = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let return: i32 = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let true: bool = true;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let (x): i32 = 1i32;"), ExitCode::SyntaxError);
+}
+
+TEST(declaration_is_not_an_expression)
+{
+	ASSERT_SOURCE("fn main() -> i32 { let x: i32 = 1i32 }", ExitCode::SyntaxError);
+	ASSERT_SOURCE("fn main() -> i32 { return let x: i32 = 1i32; }", ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let x: i32 = let y: i32 = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE("fn g(a: i32) {}\nfn main() { g(let x: i32 = 1i32); }", ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("(let x: i32 = 1i32);"), ExitCode::SyntaxError);
+}
+
+TEST(declaration_type_errors_from_the_parser)
+{
+	ASSERT_SOURCE(in_function("let x: foo = 1i32;"), ExitCode::NameError);
+	ASSERT_SOURCE(in_function("let x: I32 = 1i32;"), ExitCode::NameError);
+	// addr is reserved by the grammar but not implemented yet. update this test once it is
+	ASSERT_SOURCE(in_function("let x: addr = 1i32;"), ExitCode::Unimplemented);
+}
+
+TEST(location_of_a_declaration)
+{
+	ast::FunctionDefinition fn = parse_function("fn f() {\n\tlet x: i32 =\n\t\t1i32;\n}");
+	ast::DeclarationStatement *decl = first_declaration(fn);
+	// from the start of 'let' to the end of the semicolon
+	ASSERT_EQ(decl->src_loc.start.line, 1u);
+	ASSERT_EQ(decl->src_loc.start.col, 1u);
+	ASSERT_EQ(decl->src_loc.end.line, 2u);
+	ASSERT_EQ(decl->src_loc.end.col, 7u);
+}
+
 // function definitions ==========================================================================================
 
 TEST(function_name_and_no_params)
@@ -535,4 +652,10 @@ TEST(only_functions_at_the_top_level)
 	ASSERT_SOURCE("1i32;", ExitCode::SyntaxError);
 	ASSERT_SOURCE("fn main() {} }", ExitCode::SyntaxError);
 	ASSERT_SOURCE("fn main() {};", ExitCode::SyntaxError);
+}
+
+TEST(no_declarations_at_the_top_level_yet)
+{
+	// the grammar has top level declarations, but global variables don't exist yet. update this test once they do
+	ASSERT_SOURCE("let x: i32 = 1i32;\nfn main() {}", ExitCode::SyntaxError);
 }

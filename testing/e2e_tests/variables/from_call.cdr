@@ -1,0 +1,11 @@
+//! EXIT_CODE=30
+
+fn ten() -> i32 {
+	10i32
+}
+
+fn main() -> i32 {
+	let x: i32 = ten();
+	let y: i32 = ten() + x;
+	x + y
+}

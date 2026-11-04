@@ -1,0 +1,8 @@
+//! EXIT_CODE=72
+
+fn main() -> u8 {
+	let x: u8 = 200u8;
+	// 400 wraps to 144
+	let y: u8 = x + x;
+	y >> 1u8
+}

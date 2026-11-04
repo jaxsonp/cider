@@ -235,6 +235,10 @@ Token Lexer::take()
 			{
 				tok.type = TokenType::KEYWORD_FALSE;
 			}
+			else if (token_str == "let")
+			{
+				tok.type = TokenType::KEYWORD_LET;
+			}
 			else if (token_str == "fn")
 			{
 				tok.type = TokenType::KEYWORD_FN;
@@ -288,6 +292,12 @@ std::string to_string(TokenType type)
 		return "identifier";
 	case TokenType::INT_LITERAL:
 		return "integer literal";
+	case TokenType::KEYWORD_TRUE:
+		return "keyword \"true\"";
+	case TokenType::KEYWORD_FALSE:
+		return "keyword \"false\"";
+	case TokenType::KEYWORD_LET:
+		return "keyword \"let\"";
 	case TokenType::KEYWORD_FN:
 		return "keyword \"fn\"";
 	case TokenType::KEYWORD_RETURN:
@@ -369,10 +379,6 @@ std::string to_string(Token tok)
 		return std::format("identifier \"{}\"", tok.str);
 	case TokenType::INT_LITERAL:
 		return std::format("integer literal \"{}\"", tok.str);
-	case TokenType::KEYWORD_FN:
-		return "keyword \"fn\"";
-	case TokenType::KEYWORD_RETURN:
-		return "keyword \"return\"";
 	case TokenType::ERROR_UNEXPECTED_CHAR:
 		return std::format("unexpected \"{}\"", tok.str);
 	}

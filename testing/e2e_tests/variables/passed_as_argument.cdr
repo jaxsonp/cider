@@ -1,0 +1,12 @@
+//! EXIT_CODE=13
+
+fn sub(a: i32, b: i32) -> i32 {
+	a - b
+}
+
+fn main() -> i32 {
+	let x: i32 = 20i32;
+	let y: i32 = 7i32;
+	// argument order matters, 7 - 20 would be a different exit code
+	sub(x, y)
+}

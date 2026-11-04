@@ -170,6 +170,11 @@ namespace ast
 		this->expr->emit_ir(writer);
 	}
 
+	void DeclarationStatement::emit_ir(IrFunctionWriter &writer) const
+	{
+		throw CompilerError::unimplemented("TODO emit ir for declarations");
+	}
+
 	void FunctionDefinition::emit_ir(IrWriter &writer) const
 	{
 		std::vector<ir::IrType> argument_types;

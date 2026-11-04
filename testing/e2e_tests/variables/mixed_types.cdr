@@ -1,0 +1,11 @@
+//! EXIT_CODE=1
+
+fn main() -> bool {
+	let a: u8 = 200u8;
+	let b: i16 = -5i16;
+	let c: u32 = 1u32;
+	let small: bool = b < 0i16;
+	let big: bool = a > 100u8;
+	let shifted: u8 = a >> c;
+	(small == big) == (shifted == 100u8)
+}

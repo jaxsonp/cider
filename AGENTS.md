@@ -147,7 +147,7 @@ relative path without the extension. Files are embedded into the runner at
 build time, so rebuild it after adding or changing one. Subdirectories group
 tests by what they prove:
 
-- `basics/`, `expressions/`, `functions/` — the broad tests, a
+- `basics/`, `expressions/`, `functions/`, `variables/` — the broad tests, a
   representative case or two for each feature.
 - `errors/` — one test per kind of failure, grouped by error.
 - `runtime/` — what can only be proven by running the code:

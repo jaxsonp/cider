@@ -143,6 +143,15 @@ namespace ast
 		this->expr->print(out, depth + 1);
 	}
 
+	void DeclarationStatement::print(std::ostream &out, unsigned int depth) const
+	{
+		for (size_t i = 0; i < depth; ++i)
+			out << INDENTATION_STR;
+		out << "Declaration statement (binding name: \"" << this->binding_name << "\", type: " << this->binding_type.to_string() << ")";
+		out << " [" << this->src_loc.to_string() << "]" << std::endl;
+		this->init_expr->print(out, depth + 1);
+	}
+
 	// FUNCTION STUFF ==========================================================
 
 	void ArgDefinition::print(std::ostream &out, unsigned int depth) const

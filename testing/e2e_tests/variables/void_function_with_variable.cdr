@@ -1,0 +1,12 @@
+//! EXIT_CODE=4
+
+fn side(a: i32) {
+	let b: i32 = a * 2i32;
+	b;
+}
+
+fn main() -> i32 {
+	side(1i32);
+	let r: i32 = 4i32;
+	r
+}

@@ -116,17 +116,18 @@ TEST(keywords)
 	ASSERT_EQ(lex_one("return").type, KEYWORD_RETURN);
 	ASSERT_EQ(lex_one("true").type, KEYWORD_TRUE);
 	ASSERT_EQ(lex_one("false").type, KEYWORD_FALSE);
+	ASSERT_EQ(lex_one("let").type, KEYWORD_LET);
 }
 
 TEST(keywords_are_case_sensitive)
 {
-	for (const std::string &name : {"Fn", "FN", "Return", "True", "FALSE"})
+	for (const std::string &name : {"Fn", "FN", "Return", "True", "FALSE", "Let", "LET"})
 		ASSERT_EQ(lex_one(name).type, IDENT);
 }
 
 TEST(identifier_containing_a_keyword_is_an_identifier)
 {
-	for (const std::string &name : {"fnord", "myfn", "fn_", "_fn", "returned", "truex", "falsey", "fn1"})
+	for (const std::string &name : {"fnord", "myfn", "fn_", "_fn", "returned", "truex", "falsey", "fn1", "letter", "let_", "_let", "outlet"})
 	{
 		Token tok = lex_one(name);
 		ASSERT_EQ(tok.type, IDENT);
@@ -372,6 +373,9 @@ TEST(token_type_names)
 	ASSERT_EQ(to_string(INT_LITERAL), "integer literal");
 	ASSERT_EQ(to_string(KEYWORD_FN), "keyword \"fn\"");
 	ASSERT_EQ(to_string(KEYWORD_RETURN), "keyword \"return\"");
+	ASSERT_EQ(to_string(KEYWORD_LET), "keyword \"let\"");
+	ASSERT_EQ(to_string(KEYWORD_TRUE), "keyword \"true\"");
+	ASSERT_EQ(to_string(KEYWORD_FALSE), "keyword \"false\"");
 	ASSERT_EQ(to_string(THIN_ARROW), "\"->\"");
 	ASSERT_EQ(to_string(LESS_EQUAL), "\"<=\"");
 	ASSERT_EQ(to_string(ERROR_UNEXPECTED_CHAR), "Unexpected char");
@@ -384,4 +388,6 @@ TEST(token_names_include_their_text)
 	ASSERT_EQ(to_string(lex_one("@")), "unexpected \"@\"");
 	ASSERT_EQ(to_string(lex_one(";")), "\";\"");
 	ASSERT_EQ(to_string(lex_one("fn")), "keyword \"fn\"");
+	ASSERT_EQ(to_string(lex_one("return")), "keyword \"return\"");
+	ASSERT_EQ(to_string(lex_one("let")), "keyword \"let\"");
 }

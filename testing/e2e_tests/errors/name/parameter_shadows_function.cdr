@@ -1,0 +1,13 @@
+//! BUILD_EXIT_CODE=2
+
+fn five() -> i32 {
+	5i32
+}
+
+fn f(five: i32) -> i32 {
+	five
+}
+
+fn main() -> i32 {
+	f(1i32)
+}

@@ -1,0 +1,10 @@
+//! EXIT_CODE=21
+
+fn f(a: i32) -> i32 {
+	let a: i32 = a * 3i32;
+	a
+}
+
+fn main() -> i32 {
+	f(7i32)
+}

@@ -299,7 +299,7 @@ namespace ast
 					"Invalid return type, function expects '{}', found '{}'",
 					state.cur_fn_return_type.value().to_string(),
 					return_type.to_string()),
-				this->src_loc);
+				this->expr.has_value() ? CompilerError::LocVariant(this->expr.value()->src_loc.start) : CompilerError::LocVariant(this->src_loc));
 		}
 	}
 
@@ -316,12 +316,46 @@ namespace ast
 		this->expr->check_semantics(state);
 	}
 
+	// ==== DeclarationStatement =========================================
+
+	void DeclarationStatement::resolve_symbols(SymbolScope *scope)
+	{
+		this->init_expr->resolve_symbols(scope);
+
+		// add to scope AFTER resolving expr, cus name doesn't exist while evaluating expr (or is the shadowed symbol)
+		scope->add(Symbol(this->binding_name, this->binding_type, SymbolKind::Local), this->src_loc);
+	}
+
+	void DeclarationStatement::check_semantics(SemanticAnalysisState &state) const
+	{
+		// no no
+		if (this->binding_type.is_void())
+			throw CompilerError::type_error(
+				std::format("Cannot declare variables with type: '{}'", this->binding_type.to_string()),
+				this->init_expr->src_loc.start);
+
+		this->init_expr->resolve_type();
+		this->init_expr->check_semantics(state);
+
+		// make sure types match
+		if (this->init_expr->type != this->binding_type)
+		{
+			throw CompilerError::type_error(
+				std::format(
+					"Invalid initialization type, \"{}\" has type '{}', found '{}'",
+					this->binding_name,
+					this->binding_type.to_string(),
+					this->init_expr->type.to_string()),
+				this->init_expr->src_loc.start);
+		}
+	}
+
 	// ==== ArgDefinition =========================================
 
 	void ArgDefinition::resolve_symbols(SymbolScope *scope)
 	{
 		// add this argument to the local scope
-		scope->add(this->name, this->type);
+		scope->add(Symbol(this->name, this->type, SymbolKind::Parameter), this->src_loc);
 	}
 
 	void ArgDefinition::check_semantics(SemanticAnalysisState &state) const

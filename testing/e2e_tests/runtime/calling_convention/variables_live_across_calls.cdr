@@ -1,0 +1,17 @@
+//! EXIT_CODE=76
+
+// variables have to survive calls that clobber caller saved registers
+fn clobber(a: i32, b: i32, c: i32, d: i32) -> i32 {
+	let x: i32 = a * b;
+	let y: i32 = c * d;
+	x - y
+}
+
+fn main() -> i32 {
+	let a: i32 = 10i32;
+	let b: i32 = 20i32;
+	let c: i32 = clobber(1i32, 2i32, 3i32, 4i32);
+	let d: i32 = 30i32;
+	let e: i32 = clobber(5i32, 6i32, 7i32, 8i32);
+	a + b + c + d - e
+}

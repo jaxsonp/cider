@@ -1,7 +1,7 @@
 program = top_level_decl* ;
 
 top_level_decl = function_definition
-               | let_stmt ;
+               | var_decl_stmt ;
 
 function_definition = "fn", ident, "(", arg_definition_list, ")", [ "->", type ], block ;
 
@@ -12,14 +12,15 @@ arg_definition = ident, ":", type ;
 block = "{", { stmt }, [ expr ], "}" ;
 
 (* Statements *)
-stmt = let_stmt
+stmt = var_decl_stmt
      | return_stmt
      | assignment_stmt
      | if_expr (* if used as statement, no semicolon *)
      | block (* block as statement, no semicolon *)
      | expr, ";" ; (* other expressions need semicolon *)
 
-let_stmt = "let", ident, ":", type, "=", expr, ";" ;
+(* "let" is immutable, "let mut" is mutable (never assigning a "let mut" is an error) *)
+var_decl_stmt = "let", [ "mut" ], ident, ":", type, "=", expr, ";" ;
 
 return_stmt = "return", [ expr ], ";" ;
 

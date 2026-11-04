@@ -208,16 +208,13 @@ TEST(functions_are_hoisted)
 	ASSERT_SOURCE("fn a() { a(); }", OK);
 }
 
-TEST(a_param_can_share_a_name_with_its_function)
+TEST(params_cannot_shadow_functions)
 {
-	ASSERT_SOURCE("fn a(a: i32) -> i32 { a }\nfn main() -> i32 { a(1i32) }", OK);
-}
-
-TEST(params_shadow_functions)
-{
-	// inside g, 'five' is the i32 parameter, not the function
-	ASSERT_SOURCE("fn five() -> i32 { 5i32 }\nfn g(five: i32) -> i32 { five() }\nfn main() -> i32 { g(1i32) }", TYPE_ERROR);
-	ASSERT_SOURCE("fn five() -> i32 { 5i32 }\nfn g(five: i32) -> i32 { five }\nfn main() -> i32 { g(1i32) }", OK);
+	// functions are top level, and only locals can shadow
+	ASSERT_SOURCE("fn five() -> i32 { 5i32 }\nfn g(five: i32) -> i32 { five }\nfn main() -> i32 { g(1i32) }", NAME_ERROR);
+	ASSERT_SOURCE("fn a(a: i32) -> i32 { a }\nfn main() -> i32 { a(1i32) }", NAME_ERROR);
+	// not even a function defined later, since functions are hoisted
+	ASSERT_SOURCE("fn g(five: i32) -> i32 { five }\nfn five() -> i32 { 5i32 }", NAME_ERROR);
 }
 
 // functions as values ===========================================================================================
@@ -402,6 +399,172 @@ TEST(each_function_is_checked_against_its_own_return_type)
 	ASSERT_SOURCE("fn a() -> i32 { 1i32 }\nfn b() -> u8 { 1u8 }\nfn c() { }", OK);
 	ASSERT_SOURCE("fn a() -> i32 { 1i32 }\nfn b() -> u8 { 1i32 }", TYPE_ERROR);
 	ASSERT_SOURCE("fn a() -> u32 { return 1u32; }\nfn b() -> i32 { return 1u32; }", TYPE_ERROR);
+}
+
+// local variables ===============================================================================================
+
+TEST(local_has_its_declared_type)
+{
+	for (const std::string &decl : value_types)
+	{
+		for (const std::string &ret : value_types)
+		{
+			std::string source = std::format("fn f() -> {1} {{ let x: {0} = {2}; x }}", decl, ret, value_of(decl));
+			ASSERT_SOURCE(source, decl == ret ? OK : TYPE_ERROR);
+		}
+	}
+}
+
+TEST(initializer_has_to_match_the_declared_type_exactly)
+{
+	for (const std::string &decl : value_types)
+	{
+		for (const std::string &value : value_types)
+			ASSERT_SOURCE(as_statement(std::format("let x: {} = {}", decl, value_of(value))), decl == value ? OK : TYPE_ERROR);
+	}
+}
+
+TEST(initializer_type_is_checked_against_a_call_result)
+{
+	const std::string five = "fn five() -> i32 { 5i32 }\n";
+	ASSERT_SOURCE(five + "fn main() { let x: i32 = five(); }", OK);
+	ASSERT_SOURCE(five + "fn main() { let x: u32 = five(); }", TYPE_ERROR);
+	ASSERT_SOURCE(five + "fn main() { let x: bool = five() == 5i32; }", OK);
+	ASSERT_SOURCE(five + "fn main() { let x: i32 = five() == 5i32; }", TYPE_ERROR);
+}
+
+TEST(locals_cannot_be_void)
+{
+	const std::string nothing = "fn nothing() {}\n";
+	ASSERT_SOURCE(nothing + "fn main() { let x: void = nothing(); }", TYPE_ERROR);
+	ASSERT_SOURCE(nothing + "fn main() { let x: i32 = nothing(); }", TYPE_ERROR);
+	ASSERT_SOURCE("fn main() { let x: void = 1i32; }", TYPE_ERROR);
+}
+
+TEST(initializer_is_type_checked)
+{
+	const std::string five = "fn five() -> i32 { 5i32 }\n";
+	ASSERT_SOURCE(as_statement("let x: i32 = 1i32 + 1u32"), TYPE_ERROR);
+	ASSERT_SOURCE(as_statement("let x: i32 = -1u32"), TYPE_ERROR);
+	ASSERT_SOURCE(five + "fn main() { let x: i32 = five(1i32); }", TYPE_ERROR);
+	ASSERT_SOURCE(five + "fn main() { let x: i32 = five; }", TYPE_ERROR);
+	ASSERT_SOURCE(as_statement("let x: i32 = 1i32()"), TYPE_ERROR);
+}
+
+TEST(initializer_names_are_resolved)
+{
+	ASSERT_SOURCE(as_statement("let x: i32 = y"), NAME_ERROR);
+	ASSERT_SOURCE(as_statement("let x: i32 = 1i32 + y"), NAME_ERROR);
+	ASSERT_SOURCE(as_statement("let x: i32 = missing()"), NAME_ERROR);
+}
+
+TEST(local_is_not_visible_in_its_own_initializer)
+{
+	ASSERT_SOURCE(as_statement("let x: i32 = x"), NAME_ERROR);
+	ASSERT_SOURCE(as_statement("let x: i32 = x + 1i32"), NAME_ERROR);
+}
+
+TEST(shadowing_initializer_sees_the_shadowed_symbol)
+{
+	ASSERT_SOURCE("fn f(x: u8) -> u8 { let x: u8 = x + 1u8; x }", OK);
+	ASSERT_SOURCE("fn f(x: u8) -> i32 { let x: i32 = x; x }", TYPE_ERROR);
+	ASSERT_SOURCE("fn f() -> bool { let x: i32 = 1i32; let x: bool = x == 1i32; x }", OK);
+}
+
+TEST(local_is_not_visible_before_its_declaration)
+{
+	ASSERT_SOURCE("fn main() { x; let x: i32 = 1i32; }", NAME_ERROR);
+	ASSERT_SOURCE("fn main() -> i32 { return x; let x: i32 = 1i32; }", NAME_ERROR);
+	ASSERT_SOURCE("fn main() { let y: i32 = x; let x: i32 = 1i32; }", NAME_ERROR);
+}
+
+TEST(locals_are_not_visible_in_other_functions)
+{
+	ASSERT_SOURCE("fn f() { let x: i32 = 1i32; }\nfn main() -> i32 { x }", NAME_ERROR);
+	// not even in a function defined after it
+	ASSERT_SOURCE("fn main() -> i32 { x }\nfn f() { let x: i32 = 1i32; }", NAME_ERROR);
+}
+
+TEST(locals_can_use_params_and_earlier_locals)
+{
+	ASSERT_SOURCE("fn f(a: i32) -> i32 { let b: i32 = a + 1i32; let c: i32 = b * a; c }", OK);
+	ASSERT_SOURCE("fn f(a: u8) -> bool { let b: u8 = a; let c: bool = a == b; c }", OK);
+	ASSERT_SOURCE("fn f(a: i32) -> i32 { let b: i32 = a; return b; }", OK);
+}
+
+TEST(locals_can_be_used_as_arguments)
+{
+	const std::string add = "fn add(a: i32, b: i32) -> i32 { a + b }\n";
+	ASSERT_SOURCE(add + "fn main() -> i32 { let x: i32 = 1i32; let y: i32 = add(x, x); add(x, y) }", OK);
+	ASSERT_SOURCE(add + "fn main() -> i32 { let x: u32 = 1u32; add(x, 1i32) }", TYPE_ERROR);
+}
+
+TEST(locals_can_shadow_locals)
+{
+	ASSERT_SOURCE(as_statement("let x: i32 = 1i32; let x: i32 = 2i32"), OK);
+	ASSERT_SOURCE(as_statement("let x: i32 = 1i32; let x: i32 = 2i32; let x: i32 = 3i32"), OK);
+}
+
+TEST(locals_can_shadow_params)
+{
+	ASSERT_SOURCE("fn f(a: i32) { let a: i32 = 1i32; }", OK);
+	ASSERT_SOURCE("fn f(a: i32) { let a: bool = true; }", OK);
+}
+
+TEST(shadowing_local_has_its_own_type)
+{
+	ASSERT_SOURCE("fn f() -> u8 { let x: i32 = 1i32; let x: u8 = 2u8; x }", OK);
+	ASSERT_SOURCE("fn f() -> i32 { let x: i32 = 1i32; let x: u8 = 2u8; x }", TYPE_ERROR);
+	ASSERT_SOURCE("fn f(a: i32) -> bool { let a: bool = true; a }", OK);
+	ASSERT_SOURCE("fn f(a: i32) -> i32 { let a: bool = true; a }", TYPE_ERROR);
+}
+
+TEST(reads_before_a_shadow_keep_the_shadowed_type)
+{
+	// y was resolved against the first x, shadowing it afterwards doesn't change what y read
+	ASSERT_SOURCE("fn f() -> i32 { let x: i32 = 1i32; let y: i32 = x; let x: bool = true; y }", OK);
+	ASSERT_SOURCE("fn f(a: u8) -> u8 { let b: u8 = a; let a: bool = true; b }", OK);
+}
+
+TEST(the_same_local_name_in_different_functions)
+{
+	ASSERT_SOURCE("fn f() -> i32 { let x: i32 = 1i32; x }\nfn g() -> u8 { let x: u8 = 1u8; x }", OK);
+	ASSERT_SOURCE("fn f(x: i32) -> i32 { x }\nfn g() -> u8 { let x: u8 = 1u8; x }", OK);
+}
+
+TEST(locals_do_not_shadow_functions)
+{
+	// functions are top level, and only locals can shadow, and only params and other locals
+	const std::string five = "fn five() -> i32 { 5i32 }\n";
+	ASSERT_SOURCE(five + "fn main() { let five: i32 = 1i32; }", NAME_ERROR);
+	ASSERT_SOURCE(five + "fn main() -> i32 { let five: i32 = five(); five }", NAME_ERROR);
+	ASSERT_SOURCE("fn main() { let main: i32 = 1i32; }", NAME_ERROR);
+}
+
+TEST(locals_are_not_callable)
+{
+	ASSERT_SOURCE(as_statement("let x: i32 = 1i32; x()"), TYPE_ERROR);
+	ASSERT_SOURCE(as_statement("let x: bool = true; x()"), TYPE_ERROR);
+}
+
+TEST(locals_work_with_every_operator)
+{
+	ASSERT_SOURCE("fn f() -> i32 { let a: i32 = 6i32; let b: i32 = 3i32; (a + b) * (a - b) / (a % b) }", OK);
+	ASSERT_SOURCE("fn f() -> i32 { let a: i32 = 6i32; let s: u8 = 1u8; (a << s) >> s & ~a | -a ^ a }", OK);
+	ASSERT_SOURCE("fn f() -> bool { let a: i32 = 6i32; let b: bool = a < 1i32; !b == (a >= a) }", OK);
+	ASSERT_SOURCE("fn f() { let a: i32 = 6i32; let s: i32 = 1i32; a << s; }", TYPE_ERROR);
+	ASSERT_SOURCE("fn f() { let a: u32 = 6u32; -a; }", TYPE_ERROR);
+}
+
+TEST(declaration_does_not_return)
+{
+	ASSERT_SOURCE("fn main() -> i32 { let x: i32 = 1i32; }", TYPE_ERROR);
+	ASSERT_SOURCE("fn main() { let x: i32 = 1i32; }", OK);
+}
+
+TEST(unused_locals_are_fine)
+{
+	ASSERT_SOURCE("fn main() -> i32 { let x: i32 = 1i32; let y: bool = false; 0i32 }", OK);
 }
 
 // main isn't special to the frontend, a missing one is only found when linking the runtime ======================

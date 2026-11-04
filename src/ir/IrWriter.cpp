@@ -22,7 +22,8 @@ IrFunctionWriter::IrFunctionWriter(ir::Function *fn)
 ir::VRegId IrFunctionWriter::new_local(const std::string &name, ir::IrType type)
 {
 	ir::VRegId id = this->new_vreg(type);
-	this->vreg_map_scopes.back().insert({name, id});
+	// overwrite, a shadowing local takes over the name from here on
+	this->vreg_map_scopes.back().insert_or_assign(name, id);
 	return id;
 }
 

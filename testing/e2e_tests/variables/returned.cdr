@@ -1,0 +1,6 @@
+//! EXIT_CODE=7
+
+fn main() -> i32 {
+	let x: i32 = 7i32;
+	x
+}

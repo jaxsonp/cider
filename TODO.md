@@ -27,10 +27,11 @@ _For Jaxson's eyes only_
 	- Fix: comparing two void calls (`f() == f()`) crashes with exit 255
 	- Fix: malformed int literals (`0xi32`, `0b2i32`) crash with exit 255 (uncaught `std::invalid_argument` from `stoull`)
 	- Fix: `a << b << c` and `a || b || c` / `a && b && c` are syntax errors, but the grammar says they chain
+	- Investigate why frontend type needs a shared pointer, perhaps optimize
 - Before self-hosting:
 	- 64 bit types in 32bit archs (needs register pairs, carries, and a software 64 bit divide)
 	- control flow analysis (for checking if a function returns, among others probably)
-	- locals vars
+	- locals vars (`let` immutable, `let mut` mutable like rust, warning (or error?) if a `let mut` is never assigned. locals may shadow params and other locals, nothing shadows functions/globals)
 	- if statements
 	- loops
 	- floats
@@ -55,6 +56,7 @@ _For Jaxson's eyes only_
 		- Red zone?
 - At some point:
 	- Basic type inference for int literals
+	- `const` for compile time evaluation: const expressions, const blocks, and some sort of const functions
 	- Non-G riscv ISAs without M: multiplication/division throw `unsupported` for now, needs runtime routines (soft floats too once there are floats). Target flags exist for M/A/F/D/C, only C changes codegen today
 	- Branch encoding (B-type) and jump relaxation for the C extension (jumps and calls are never compressed so offsets are final when emitted), once the IR has branches
 	- Better error messages (include code snippet)
@@ -79,6 +81,9 @@ _For Jaxson's eyes only_
 		- Spill slots are fp-relative with negative offsets, which can't be compressed. sp-relative slots would shrink riscv *gc output
 		- t6 is reserved as scratch for far frame offsets, could be handed back to the allocator on functions with small frames
 - Perhaps?
+	- Pattern matching
+		- let else maybe?
+		- If let maybe?
 	- No bitwise operators, only methods with explicit behavior such as wrapping, unchecked, etc
 	- If I do macros, macros for cur fn and line
 	- Trailing commas in function calls, etc
@@ -89,6 +94,8 @@ _For Jaxson's eyes only_
 - all top level functions are hoisted (global var initialization is calculated with DAG)
 - binary operators are left associative (except for equality/comparison, needs parens)
 - type names must start with letters, numbers signifiy number literal
+- All names are (currently) `[a-zA-Z_][a-zA-Z0-9_]*`
+- a `let` may shadow a parameter or an earlier local (its initializer still sees the shadowed one), but nothing may shadow a top level name, so parameters can't share a name with any function
 - bitshift right is arithmetic shift right for signed types, unsigned types are logical shift right
 - the left side of a bitshift is any integer, the shift amount must be an *unsigned* integer.
   the two widths do not have to match (`1i32 << 4u8` is fine, `1i32 << 4i32` is a type error)
@@ -104,5 +111,3 @@ _For Jaxson's eyes only_
   and the bitwise ops can leave junk above the type's width, which is fine because their low
   bits are still correct - the backend truncates before anything that reads the upper bits
   (right shift, division, comparison, returning)
-
-## Tests to remember to write

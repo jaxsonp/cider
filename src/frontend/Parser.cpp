@@ -127,9 +127,13 @@ namespace parse
 
 	std::optional<std::unique_ptr<ast::StatementNode>> try_parse_stmt(Lexer &lexer)
 	{
-		if (auto statement = try_parse_return_stmt(lexer))
+		if (auto stmt = try_parse_declaration_stmt(lexer))
 		{
-			return std::move(statement.value());
+			return std::move(stmt.value());
+		}
+		else if (auto stmt = try_parse_return_stmt(lexer))
+		{
+			return std::move(stmt.value());
 		}
 		return std::nullopt;
 	}
@@ -157,6 +161,33 @@ namespace parse
 		SourceLoc end = lexer.expect(TokenType::SEMICOLON).loc.end;
 
 		return std::make_unique<ast::ReturnStatement>(SourceLocRange{start, end}, std::move(expr));
+	}
+
+	std::optional<std::unique_ptr<ast::DeclarationStatement>> try_parse_declaration_stmt(Lexer &lexer)
+	{
+		if (lexer.peek().type != TokenType::KEYWORD_LET)
+			return std::nullopt;
+
+		SourceLoc start = lexer.take().loc.start;
+		std::string name = std::move(lexer.expect(TokenType::IDENT).str);
+
+		// require type annotation FOR NOW
+		// TODO type inference
+		lexer.expect(TokenType::COLON);
+		FrontendType type = type_from_token(lexer.expect(TokenType::IDENT));
+
+		lexer.expect(TokenType::EQUAL);
+
+		SourceLoc expr_start = lexer.peek().loc.start;
+		std::unique_ptr<ast::ExpressionNode> expr;
+		if (auto parsed_expr = try_parse_expr(lexer))
+			expr = std::move(parsed_expr.value());
+		else
+			throw CompilerError::syntax_error("Expected expression", expr_start);
+
+		SourceLoc end = lexer.expect(TokenType::SEMICOLON).loc.end;
+
+		return std::make_unique<ast::DeclarationStatement>(SourceLocRange{start, end}, name, type, std::move(expr));
 	}
 
 	// EXPRESSIONS =============================================================

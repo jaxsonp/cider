@@ -1,0 +1,9 @@
+//! EXIT_CODE=42
+
+fn main() -> i32 {
+	let a: i32 = 3i32;
+	let b: i32 = a * 2i32;
+	let c: i32 = a + b;
+	let d: i32 = c * c - a * b - a - b;
+	d - b - c + a
+}

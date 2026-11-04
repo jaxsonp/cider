@@ -1,0 +1,26 @@
+//! EXIT_CODE=210
+
+// more values live at once than any target has registers
+fn main() -> i32 {
+	let v1: i32 = 1i32;
+	let v2: i32 = 2i32;
+	let v3: i32 = 3i32;
+	let v4: i32 = 4i32;
+	let v5: i32 = 5i32;
+	let v6: i32 = 6i32;
+	let v7: i32 = 7i32;
+	let v8: i32 = 8i32;
+	let v9: i32 = 9i32;
+	let v10: i32 = 10i32;
+	let v11: i32 = 11i32;
+	let v12: i32 = 12i32;
+	let v13: i32 = 13i32;
+	let v14: i32 = 14i32;
+	let v15: i32 = 15i32;
+	let v16: i32 = 16i32;
+	let v17: i32 = 17i32;
+	let v18: i32 = 18i32;
+	let v19: i32 = 19i32;
+	let v20: i32 = 20i32;
+	v1 + v2 + v3 + v4 + v5 + v6 + v7 + v8 + v9 + v10 + v11 + v12 + v13 + v14 + v15 + v16 + v17 + v18 + v19 + v20
+}
