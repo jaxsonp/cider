@@ -5,6 +5,7 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
+#include <cstdlib>
 
 #include "testing.hpp"
 #include "e2e_testing.hpp"
@@ -18,11 +19,36 @@ using namespace testing;
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
+#include <io.h>
 static unsigned int pid = (unsigned int)GetCurrentProcessId();
 #else
 #include <unistd.h>
 static unsigned int pid = (unsigned int)getpid();
 #endif
+
+/// Whether stdout/stderr should be colored, set once from --color before any worker starts
+static bool use_color = false;
+
+// ANSI COLOR codes
+static constexpr std::string_view RED = "31";
+static constexpr std::string_view GREEN = "32";
+static constexpr std::string_view YELLOW = "33";
+static constexpr std::string_view MAGENTA = "35";
+static constexpr std::string_view CYAN = "36";
+
+/// Wraps `text` in the given color code *if* color is enabled
+static std::string colored(std::string_view text, std::string_view code)
+{
+	if (!use_color)
+		return std::string(text);
+	return std::format("\x1b[{}m{}\x1b[0m", code, text);
+}
+
+/// The common bullet point in front of the runner's status lines
+static std::string bullet()
+{
+	return colored(" ~ ", MAGENTA);
+}
 
 /// Worker thread pull tests from this
 static std::vector<const Test *> test_queue;
@@ -36,6 +62,7 @@ static std::atomic<unsigned int> tests_failed = 0;
 static std::atomic<unsigned int> tests_skipped = 0;
 
 void test_runner_thread(std::filesystem::path &, bool);
+bool stdout_supports_color();
 
 int main(int argc, char **argv)
 {
@@ -51,6 +78,7 @@ int main(int argc, char **argv)
 	auto &target_arg = cli.add_flag_arg("target", "Target to compile e2e tests for. Defaults to the host").short_name('t').metavar("name");
 	auto &e2e_prefix_arg = cli.add_flag_arg("e2e-prefix", "Command to run e2e test programs through, ie an emulator for other targets").metavar("cmd");
 	auto &artifacts_arg = cli.add_flag_arg("artifacts", "Output directory for testing artifacts").short_name('A').default_value("./.ciderc_testing/").metavar("path");
+	auto &color_arg = cli.add_flag_arg("color", "Color output: 'auto' (if stdout is a terminal that supports it), 'always' or 'never'").default_value("auto").metavar("when");
 	cli.add_help_flag();
 
 	try
@@ -68,6 +96,18 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
+	if (color_arg.value() == "always")
+		use_color = true;
+	else if (color_arg.value() == "never")
+		use_color = false;
+	else if (color_arg.value() == "auto")
+		use_color = stdout_supports_color();
+	else
+	{
+		std::cerr << "CLI Error: invalid --color value '" << color_arg.value() << "', expected 'auto', 'always' or 'never'\n";
+		return 2;
+	}
+
 	bool do_unit_tests = unit_arg.present();
 	bool do_e2e_tests = e2e_arg.present();
 	if (!(do_unit_tests || do_e2e_tests))
@@ -79,7 +119,7 @@ int main(int argc, char **argv)
 	if (do_unit_tests)
 	{
 		auto &unit_tests = unit::get_unit_test_registry();
-		std::cout << " ~ Preparing " << unit_tests.size() << " unit tests" << std::endl;
+		std::cout << bullet() << "Preparing " << unit_tests.size() << " unit tests" << std::endl;
 		test_queue.reserve(unit_tests.size());
 		for (const unit::UnitTest &test : unit_tests)
 			test_queue.push_back(&test);
@@ -87,7 +127,7 @@ int main(int argc, char **argv)
 
 	if (do_e2e_tests)
 	{
-		std::cout << " ~ Preparing " << e2e::e2e_tests.size() << " end-to-end tests" << std::endl;
+		std::cout << bullet() << "Preparing " << e2e::e2e_tests.size() << " end-to-end tests" << std::endl;
 		test_queue.reserve(e2e::e2e_tests.size());
 		for (const e2e::E2eTest &test : e2e::e2e_tests)
 			test_queue.push_back(&test);
@@ -115,14 +155,14 @@ int main(int argc, char **argv)
 		}
 		e2e::E2eTest::set_run_prefix(e2e_prefix_arg.value());
 		if (target_arg.present())
-			std::cout << " ~ Compiling e2e tests for " << target_arg.value() << std::endl;
+			std::cout << bullet() << "Compiling e2e tests for " << target_arg.value() << std::endl;
 		if (!e2e_prefix_arg.value().empty())
-			std::cout << " ~ Running e2e test programs through: " << e2e_prefix_arg.value() << std::endl;
+			std::cout << bullet() << "Running e2e test programs through: " << e2e_prefix_arg.value() << std::endl;
 
 		// prepare ciderc executable path
 		if (ciderc_arg.maybe_value().has_value())
 		{
-			std::cout << " ~ Using provided ciderc:\n"
+			std::cout << bullet() << "Using provided ciderc:\n"
 					  << ciderc_arg.value() << std::endl;
 			e2e::E2eTest::set_ciderc_path(ciderc_arg.value());
 		}
@@ -132,17 +172,17 @@ int main(int argc, char **argv)
 			std::filesystem::path default_path = std::filesystem::current_path() / "ciderc";
 			if (std::filesystem::exists(default_path))
 			{
-				std::cout << " ~ Using local ciderc:\n"
+				std::cout << bullet() << "Using local ciderc:\n"
 						  << default_path.string() << std::endl;
 				e2e::E2eTest::set_ciderc_path(default_path);
 			}
 			else
 			{
-				std::cout << " ~ Using ciderc from path resolution" << std::endl;
+				std::cout << bullet() << "Using ciderc from path resolution" << std::endl;
 			}
 		}
 		std::string version_info = e2e::E2eTest::check_ciderc_version();
-		std::cout << " ~ Compiler version info:\n"
+		std::cout << bullet() << "Compiler version info:\n"
 				  << version_info << std::flush;
 	}
 
@@ -171,7 +211,7 @@ int main(int argc, char **argv)
 	std::vector<std::thread> worker_threads;
 	worker_threads.reserve(n_workers);
 
-	std::cout << " ~ Test execution starting (" << n_workers << " threads)" << std::endl;
+	std::cout << bullet() << "Test execution starting (" << n_workers << " threads)" << std::endl;
 	auto start = std::chrono::steady_clock::now();
 	for (unsigned int i = 0; i < n_workers; i++)
 	{
@@ -188,24 +228,35 @@ int main(int argc, char **argv)
 	unsigned int failed = tests_failed;
 	unsigned int skipped = tests_skipped;
 	unsigned int tests_ran = passed + failed + skipped;
+	bool no_fails = failed == 0;
 
-	std::cout << std::format(" ~ Test execution completed: {} tests in {:.2f}s\n", tests_ran, elapsed_secs);
+	std::cout << std::format("{}Test execution completed: {} tests in {:.2f}s\n", bullet(), tests_ran, elapsed_secs);
 
-	if (noclean_arg || failed != 0)
+	if (noclean_arg || !no_fails)
 	{
-		std::cout << " ~ Leaving testing artifacts at:\n"
+		std::cout << bullet() << "Leaving testing artifacts at:\n"
 				  << artifacts_dir.string() << "\n";
 	}
 	else
 	{
-		std::cout << " ~ Cleaning up artifacts" << std::endl;
+		std::cout << bullet() << "Cleaning up artifacts" << std::endl;
 		std::filesystem::remove_all(artifacts_dir);
 	}
 
-	float pass_rate = (passed + failed > 0) ? ((float)passed) / (float)(passed + failed) : 1.0f;
-	std::cout << std::format("\n{} passed, {} failed, {} skipped ({:.1f}%)\n", passed, failed, skipped, pass_rate * 100.0f);
+	float pass_percent = (passed + failed > 0) ? 100.0f * ((float)passed) / (float)(passed + failed) : 100.0f;
+	// counts are only colored if nonzero
+	auto colored_count = [](unsigned int n, std::string_view code)
+	{
+		return n != 0 ? colored(std::to_string(n), code) : std::to_string(n);
+	};
+	std::cout << std::format("\n{} passed, {} failed, {} skipped ({:.1f}%)\n", colored_count(passed, GREEN), colored_count(failed, RED), skipped, pass_percent);
+
+	if (no_fails)
+		std::cout << colored("All tests passed\n", GREEN);
+
 	std::cout.flush();
-	return failed == 0 ? 0 : 1;
+
+	return no_fails ? 0 : 1;
 }
 
 void test_runner_thread(std::filesystem::path &artifacts_dir, bool verbose)
@@ -247,7 +298,7 @@ void test_runner_thread(std::filesystem::path &artifacts_dir, bool verbose)
 			if (verbose)
 			{
 				std::scoped_lock printing_lock(printing_mtx);
-				std::cout << "PASS " << label << "\n";
+				std::cout << colored("PASS", GREEN) << " " << label << "\n";
 			}
 			break;
 		case Outcome::Skip:
@@ -255,16 +306,41 @@ void test_runner_thread(std::filesystem::path &artifacts_dir, bool verbose)
 			if (verbose)
 			{
 				std::scoped_lock printing_lock(printing_mtx);
-				std::cout << std::format("SKIP {} ({})\n", label, result.message);
+				std::cout << std::format("{} {} ({})\n", colored("SKIP", YELLOW), label, result.message);
 			}
 			break;
 		case Outcome::Fail:
 			tests_failed++;
 			{
 				std::scoped_lock printing_lock(printing_mtx);
-				std::cout << std::format("FAIL {}\n  {}\n", label, result.message);
+				std::cout << std::format("{} {}\n  {}\n", colored("FAIL", RED), label, result.message);
 			}
 			break;
 		}
 	}
+}
+
+/// Detects whether stdout is a terminal that can display ANSI colors. Honors the
+/// NO_COLOR convention (https://no-color.org) and TERM=dumb
+bool stdout_supports_color()
+{
+	const char *no_color = std::getenv("NO_COLOR");
+	if (no_color != nullptr && no_color[0] != '\0')
+		return false;
+
+#if defined(_WIN32) || defined(_WIN64)
+	if (!_isatty(_fileno(stdout)))
+		return false;
+	// older consoles only understand ANSI escapes once virtual terminal processing is on
+	HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+	DWORD mode;
+	if (handle == INVALID_HANDLE_VALUE || !GetConsoleMode(handle, &mode))
+		return false;
+	return SetConsoleMode(handle, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+#else
+	if (!isatty(STDOUT_FILENO))
+		return false;
+	const char *term = std::getenv("TERM");
+	return term != nullptr && std::string_view(term) != "dumb";
+#endif
 }

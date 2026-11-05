@@ -11,10 +11,14 @@ set(E2E_DIR ${PROJECT_SOURCE_DIR}/e2e_tests)
 set(E2E_EMBED_SCRIPT ${PROJECT_SOURCE_DIR}/embed_e2e_tests.cmake)
 set(E2E_EMBED_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/e2e_test_files.cpp)
 file(GLOB_RECURSE E2E_TEST_FILES CONFIGURE_DEPENDS ${E2E_DIR}/*.cdr)
+# Rewritten when a test is added, removed or renamed, which none of the test files'
+# timestamps reflect, so the embed reruns
+set(E2E_TEST_LIST ${CMAKE_CURRENT_BINARY_DIR}/e2e_test_list.txt)
+file(CONFIGURE OUTPUT ${E2E_TEST_LIST} CONTENT "${E2E_TEST_FILES}")
 add_custom_command(
 	OUTPUT ${E2E_EMBED_OUTPUT}
 	COMMAND ${CMAKE_COMMAND} -DE2E_DIR=${E2E_DIR} -DOUTPUT=${E2E_EMBED_OUTPUT} -P ${E2E_EMBED_SCRIPT}
-	DEPENDS ${E2E_EMBED_SCRIPT} ${E2E_TEST_FILES}
+	DEPENDS ${E2E_EMBED_SCRIPT} ${E2E_TEST_FILES} ${E2E_TEST_LIST}
 	COMMENT "Embedding e2e test files"
 	VERBATIM
 )
