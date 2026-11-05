@@ -10,7 +10,7 @@ namespace ast
 {
 	ir::VRegId IntegerLiteralExpression::emit_ir(IrFunctionWriter &writer) const
 	{
-		ir::IrType irType = this->type.resolveType();
+		ir::IrType irType = this->type.resolve_type();
 
 		ir::VRegId dst_reg = writer.new_vreg(irType);
 		writer.add_immediate(dst_reg, raw_value);
@@ -90,7 +90,7 @@ namespace ast
 			throw CompilerError::internal("Uncaught BinaryExpression::Operator variant");
 		}
 
-		ir::IrType irType = this->type.resolveType();
+		ir::IrType irType = this->type.resolve_type();
 		ir::VRegId l_reg = this->l_expr->emit_ir(writer);
 		ir::VRegId r_reg = this->r_expr->emit_ir(writer);
 		ir::VRegId dst_reg = writer.new_vreg(irType);
@@ -100,7 +100,7 @@ namespace ast
 
 	ir::VRegId UnaryExpression::emit_ir(IrFunctionWriter &writer) const
 	{
-		ir::IrType irType = this->type.resolveType();
+		ir::IrType irType = this->type.resolve_type();
 
 		ir::VRegId src_reg = this->expr->emit_ir(writer);
 		ir::VRegId dst_reg = writer.new_vreg(irType);
@@ -142,7 +142,7 @@ namespace ast
 
 		std::optional<ir::IrType> return_type;
 		if (this->type.variant != FrontendType::Variant::VOID)
-			return_type = this->type.resolveType();
+			return_type = this->type.resolve_type();
 
 		// if return_type is nullopt, the returned vreg is ir::NO_VREG and must not be used
 		return writer.add_call(callee_ident->name, return_type, std::move(arg_regs));
@@ -172,7 +172,10 @@ namespace ast
 
 	void DeclarationStatement::emit_ir(IrFunctionWriter &writer) const
 	{
-		throw CompilerError::unimplemented("TODO emit ir for declarations");
+		// locals are immutable, so the name can just refer to the initializer's vreg instead of a copy of it
+		// TODO change this when vars become mutable
+		ir::VRegId init_reg = this->init_expr->emit_ir(writer);
+		writer.bind_local(this->declared_name, init_reg);
 	}
 
 	void FunctionDefinition::emit_ir(IrWriter &writer) const
@@ -180,11 +183,11 @@ namespace ast
 		std::vector<ir::IrType> argument_types;
 		argument_types.reserve(this->args.size());
 		for (const ArgDefinition &arg : this->args)
-			argument_types.push_back(arg.type.resolveType());
+			argument_types.push_back(arg.type.resolve_type());
 
 		std::optional<ir::IrType> ir_return_type;
 		if (this->return_type.variant != FrontendType::Variant::VOID)
-			ir_return_type = this->return_type.resolveType();
+			ir_return_type = this->return_type.resolve_type();
 
 		IrFunctionWriter fn_writer = writer.start_function(this->name, std::move(argument_types), ir_return_type);
 
@@ -192,7 +195,7 @@ namespace ast
 		uint64_t arg_index = 0;
 		for (const ArgDefinition &arg : this->args)
 		{
-			ir::VRegId arg_reg = fn_writer.new_local(arg.name, arg.type.resolveType());
+			ir::VRegId arg_reg = fn_writer.new_local(arg.name, arg.type.resolve_type());
 			fn_writer.add_load_arg(arg_reg, arg_index);
 			++arg_index;
 		}

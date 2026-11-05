@@ -56,6 +56,10 @@ public:
 	/// shadowed, it refers to the new vreg from then on
 	ir::VRegId new_local(const std::string &name, ir::IrType type);
 
+	/// @brief Binds a name to an existing vreg in the current scope, shadowing it like `new_local`. The vreg must
+	/// never be written again, since every name bound to it would see the write
+	void bind_local(const std::string &name, ir::VRegId vreg);
+
 	/// @brief Find the vreg allocation of a name in the current or surrounding scopes (throws if cannot find)
 	ir::VRegId get_local(const std::string &name) const;
 

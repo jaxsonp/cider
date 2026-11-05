@@ -333,11 +333,11 @@ namespace ast
 	struct DeclarationStatement : StatementNode
 	{
 		std::unique_ptr<ExpressionNode> init_expr;
-		std::string binding_name;
-		FrontendType binding_type;
+		std::string declared_name;
+		FrontendType declared_type;
 
 		DeclarationStatement(SourceLocRange src_loc, std::string_view name, FrontendType type, std::unique_ptr<ExpressionNode> init_expr)
-			: StatementNode(src_loc), init_expr(std::move(init_expr)), binding_name(name), binding_type(type) {};
+			: StatementNode(src_loc), init_expr(std::move(init_expr)), declared_name(name), declared_type(type) {};
 
 		void resolve_symbols(SymbolScope *scope) override;
 

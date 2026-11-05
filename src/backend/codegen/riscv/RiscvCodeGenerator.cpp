@@ -424,21 +424,24 @@ namespace codegen
 
 	void RiscvCodeGenerator::lower_unary_instr(const ir::UnaryInstruction &instr)
 	{
+		RegSlot *dest = this->regalloc.load_dest_vreg(instr.dest);
+		RegSlot *src = this->regalloc.load_src_vreg(instr.src);
 		switch (instr.op)
 		{
+		case ir::UnaryOp::Mov:
+		{
+			this->body.write_addi(reg_of(dest), reg_of(src), 0);
+			break;
+		}
 		case ir::UnaryOp::Neg:
 		{
-			RegSlot *dest = this->regalloc.load_dest_vreg(instr.dest);
-			RegSlot *src = this->regalloc.load_src_vreg(instr.src);
 			this->body.write_sub(reg_of(dest), Register::zero, reg_of(src));
 			break;
 		}
 		case ir::UnaryOp::BitNot:
 		{
-			RegSlot *dest = this->regalloc.load_dest_vreg(instr.dest);
-			RegSlot *op1 = this->regalloc.load_src_vreg(instr.src);
 			// XORing with all ones to "flip bits" (the ones above the value's width don't matter)
-			this->body.write_xori(reg_of(dest), reg_of(op1), -1);
+			this->body.write_xori(reg_of(dest), reg_of(src), -1);
 			break;
 		}
 		default:

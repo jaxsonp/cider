@@ -158,16 +158,16 @@ TEST(resolving_to_ir_types)
 		{Type::u64(), ir::IrType::Variant::U64},
 	};
 	for (const auto &[type, variant] : cases)
-		ASSERT_EQ(int(type.resolveType().variant), int(variant));
+		ASSERT_EQ(int(type.resolve_type().variant), int(variant));
 }
 
 TEST(types_with_no_ir_type)
 {
-	ASSERT_THROWS(Type::void_type().resolveType(), CompilerError);
-	ASSERT_THROWS(Type::unresolved().resolveType(), CompilerError);
-	ASSERT_THROWS(Type::unresolved_int().resolveType(), CompilerError);
-	ASSERT_THROWS(Type::unknown().resolveType(), CompilerError);
-	ASSERT_THROWS(Type::function(Type::i32(), {}).resolveType(), CompilerError);
+	ASSERT_THROWS(Type::void_type().resolve_type(), CompilerError);
+	ASSERT_THROWS(Type::unresolved().resolve_type(), CompilerError);
+	ASSERT_THROWS(Type::unresolved_int().resolve_type(), CompilerError);
+	ASSERT_THROWS(Type::unknown().resolve_type(), CompilerError);
+	ASSERT_THROWS(Type::function(Type::i32(), {}).resolve_type(), CompilerError);
 }
 
 TEST(every_type_only_equals_itself)

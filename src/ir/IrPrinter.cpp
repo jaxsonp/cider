@@ -53,6 +53,8 @@ namespace ir
 	{
 		switch (op)
 		{
+		case UnaryOp::Mov:
+			return "mov";
 		case UnaryOp::Neg:
 			return "neg";
 		case UnaryOp::BitNot:

@@ -323,28 +323,28 @@ namespace ast
 		this->init_expr->resolve_symbols(scope);
 
 		// add to scope AFTER resolving expr, cus name doesn't exist while evaluating expr (or is the shadowed symbol)
-		scope->add(Symbol(this->binding_name, this->binding_type, SymbolKind::Local), this->src_loc);
+		scope->add(Symbol(this->declared_name, this->declared_type, SymbolKind::Local), this->src_loc);
 	}
 
 	void DeclarationStatement::check_semantics(SemanticAnalysisState &state) const
 	{
 		// no no
-		if (this->binding_type.is_void())
+		if (this->declared_type.is_void())
 			throw CompilerError::type_error(
-				std::format("Cannot declare variables with type: '{}'", this->binding_type.to_string()),
+				std::format("Cannot declare variables with type: '{}'", this->declared_type.to_string()),
 				this->init_expr->src_loc.start);
 
 		this->init_expr->resolve_type();
 		this->init_expr->check_semantics(state);
 
 		// make sure types match
-		if (this->init_expr->type != this->binding_type)
+		if (this->init_expr->type != this->declared_type)
 		{
 			throw CompilerError::type_error(
 				std::format(
 					"Invalid initialization type, \"{}\" has type '{}', found '{}'",
-					this->binding_name,
-					this->binding_type.to_string(),
+					this->declared_name,
+					this->declared_type.to_string(),
 					this->init_expr->type.to_string()),
 				this->init_expr->src_loc.start);
 		}

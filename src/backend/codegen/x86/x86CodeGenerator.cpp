@@ -429,6 +429,8 @@ namespace codegen
 			case ir::UnaryOp::BitNot:
 				this->body.write_not(Reg<W>(dest));
 				break;
+			case ir::UnaryOp::Mov:
+				break; // nothing to do
 			default:
 				throw CompilerError::internal("Uncaught UnaryOp variant");
 			} });

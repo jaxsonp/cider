@@ -41,6 +41,7 @@ TEST(binary_mnemonics)
 
 TEST(unary_mnemonics)
 {
+	ASSERT_EQ(ir::unary_op_mnemonic(ir::UnaryOp::Mov), "mov");
 	ASSERT_EQ(ir::unary_op_mnemonic(ir::UnaryOp::Neg), "neg");
 	ASSERT_EQ(ir::unary_op_mnemonic(ir::UnaryOp::BitNot), "not");
 }

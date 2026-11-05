@@ -147,7 +147,7 @@ namespace ast
 	{
 		for (size_t i = 0; i < depth; ++i)
 			out << INDENTATION_STR;
-		out << "Declaration statement (binding name: \"" << this->binding_name << "\", type: " << this->binding_type.to_string() << ")";
+		out << "Declaration statement (binding name: \"" << this->declared_name << "\", type: " << this->declared_type.to_string() << ")";
 		out << " [" << this->src_loc.to_string() << "]" << std::endl;
 		this->init_expr->print(out, depth + 1);
 	}

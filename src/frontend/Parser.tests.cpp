@@ -437,8 +437,8 @@ TEST(declaration_parts)
 	ast::FunctionDefinition fn = parse_function("fn f() { let x: i32 = a + b; }");
 	ASSERT_EQ(fn.body_statements.size(), 1u);
 	ast::DeclarationStatement *decl = first_declaration(fn);
-	ASSERT_EQ(decl->binding_name, "x");
-	ASSERT_TRUE(decl->binding_type == FrontendType::i32());
+	ASSERT_EQ(decl->declared_name, "x");
+	ASSERT_TRUE(decl->declared_type == FrontendType::i32());
 	ASSERT_EQ(shape(*decl->init_expr), "(+ a b)");
 }
 
@@ -459,7 +459,7 @@ TEST(every_type_name_as_declaration_type)
 	for (const auto &[name, type] : cases)
 	{
 		ast::FunctionDefinition fn = parse_function(std::format("fn f() {{ let x: {} = a; }}", name));
-		ASSERT_TRUE(first_declaration(fn)->binding_type == type);
+		ASSERT_TRUE(first_declaration(fn)->declared_type == type);
 	}
 }
 

@@ -75,7 +75,7 @@ struct FrontendType
 	static FrontendType from_string(std::string_view s);
 
 	/// @brief Attempts to convert/resolve self into IR type, throwing if not possible
-	ir::IrType resolveType() const;
+	ir::IrType resolve_type() const;
 
 	bool operator==(const FrontendType &other) const;
 };

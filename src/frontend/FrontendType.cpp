@@ -191,7 +191,7 @@ FrontendType FrontendType::from_string(std::string_view s)
 		return FrontendType::unknown();
 }
 
-ir::IrType FrontendType::resolveType() const
+ir::IrType FrontendType::resolve_type() const
 {
 	switch (this->variant)
 	{

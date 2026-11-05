@@ -41,6 +41,7 @@ namespace ir
 
 	enum class UnaryOp
 	{
+		Mov,
 		Neg,
 		BitNot,
 	};

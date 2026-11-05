@@ -128,6 +128,40 @@ TEST(inner_scopes_shadow)
 	ASSERT_EQ(f.fn.get_local("a"), outer);
 }
 
+TEST(bound_locals_refer_to_the_vreg)
+{
+	Fixture f;
+	ir::VRegId vreg = f.fn.new_vreg(IrType::i32());
+	f.fn.bind_local("a", vreg);
+	ASSERT_EQ(f.fn.get_local("a"), vreg);
+}
+
+TEST(binding_doesnt_allocate_a_vreg)
+{
+	Fixture f;
+	ir::VRegId vreg = f.fn.new_vreg(IrType::i32());
+	f.fn.bind_local("a", vreg);
+	ASSERT_EQ(f.fn.new_vreg(IrType::i32()), vreg + 1);
+}
+
+TEST(binding_shadows_in_the_same_scope)
+{
+	Fixture f;
+	f.fn.new_local("a", IrType::i32());
+	ir::VRegId vreg = f.fn.new_vreg(IrType::i32());
+	f.fn.bind_local("a", vreg);
+	ASSERT_EQ(f.fn.get_local("a"), vreg);
+}
+
+TEST(one_vreg_can_have_several_names)
+{
+	Fixture f;
+	ir::VRegId a = f.fn.new_local("a", IrType::i32());
+	f.fn.bind_local("b", a);
+	ASSERT_EQ(f.fn.get_local("b"), a);
+	ASSERT_EQ(f.fn.get_local("a"), a);
+}
+
 TEST(popped_scopes_are_gone)
 {
 	Fixture f;
