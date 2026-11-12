@@ -127,7 +127,9 @@ build/testing/ciderc_test_runner
 
 `--unit` or `--e2e` selects one kind (both run by default), `-l` lists the
 selected tests without running them, `-v` also prints passes and skips, and
-`-n` sets the number of parallel workers. e2e tests use `./ciderc` if it
+`-n` sets the number of parallel workers, `--color=auto|always|never` controls
+colored output (`auto`, the default, colors only when stdout is a terminal and
+`NO_COLOR` isn't set). e2e tests use `./ciderc` if it
 exists, else `ciderc` from `PATH`, `-C` overrides this. `-t` compiles e2e
 tests for another target, and `--e2e-prefix` runs their programs through a
 command, see below. Run
