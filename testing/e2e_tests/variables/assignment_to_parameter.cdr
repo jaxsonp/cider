@@ -1,0 +1,11 @@
+//! EXIT_CODE=21
+
+fn triple_plus_one(mut n: i32) -> i32 {
+	n = n * 3i32;
+	n = n + 1i32;
+	n
+}
+
+fn main() -> i32 {
+	triple_plus_one(5i32) + 5i32
+}

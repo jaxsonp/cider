@@ -245,6 +245,68 @@ TEST(shadowing_initializer_reads_the_shadowed_local)
 	ASSERT_TRUE(ir.find("  ret %0\n") == std::string::npos);
 }
 
+// assignment ====================================================================================================
+
+TEST(assignment_rebinds_without_a_copy)
+{
+	// the variable just refers to the assigned value's vreg from then on, no instruction moves it anywhere
+	ASSERT_EQ(source_to_ir("fn f() -> i32 { let mut x: i32 = 1i32; x = 2i32; x }"),
+			  "fn f() -> i32 {\n  %0: i32\n  %1: i32\nbb0: // f start\n"
+			  "  %0 = loadimm 1\n  %1 = loadimm 2\n  ret %1\n}\n");
+}
+
+TEST(reads_before_an_assignment_see_the_old_value)
+{
+	std::string ir = source_to_ir("fn f() -> i32 { let mut x: i32 = 1i32; let y: i32 = x; x = 2i32; x + y }");
+	ASSERT_TRUE(ir.find("= add %1 %0\n") != std::string::npos);
+}
+
+TEST(assignment_reads_the_old_value)
+{
+	std::string ir = source_to_ir("fn f(mut a: i32) -> i32 { a = a + a; a = a * a; a }");
+	ASSERT_TRUE(ir.find("%1 = add %0 %0\n") != std::string::npos);
+	ASSERT_TRUE(ir.find("%2 = mul %1 %1\n") != std::string::npos);
+	ASSERT_TRUE(ir.find("  ret %2\n") != std::string::npos);
+}
+
+TEST(assigning_a_variable_doesnt_change_its_source)
+{
+	// x starts out as the parameter's vreg, assigning x mustn't change what a reads
+	std::string ir = source_to_ir("fn f(a: i32) -> i32 { let mut x: i32 = a; x = 5i32; a }");
+	ASSERT_TRUE(ir.find("  ret %0\n") != std::string::npos);
+}
+
+TEST(assigning_one_variable_to_another_shares_the_vreg)
+{
+	std::string ir = source_to_ir("fn f(a: i32, mut b: i32) -> i32 { b = a; b }");
+	ASSERT_TRUE(ir.find("  ret %0\n") != std::string::npos);
+}
+
+TEST(assigned_value_is_evaluated_once)
+{
+	std::string ir = source_to_ir("fn g() -> i32 { 1i32 }\nfn main() -> i32 { let mut x: i32 = 0i32; x = g(); x + x }");
+	ASSERT_EQ(count(ir, "call g()"), 1u);
+	ASSERT_TRUE(std::regex_search(ir, std::regex(R"(= add (%\d+) \1\n)")));
+}
+
+TEST(unused_assignment_is_still_evaluated)
+{
+	ASSERT_EQ(count(source_to_ir("fn g() -> i32 { 1i32 }\nfn main() { let mut x: i32 = 0i32; x = g(); }"), "call g()"), 1u);
+}
+
+TEST(assignment_as_the_trailing_expression)
+{
+	std::string ir = source_to_ir("fn g() -> i32 { 1i32 }\nfn main() { let mut x: i32 = 0i32; x = g() }");
+	ASSERT_EQ(count(ir, "call g()"), 1u);
+	ASSERT_TRUE(ir.find("  ret\n") != std::string::npos);
+}
+
+TEST(assignment_in_a_return_statement)
+{
+	std::string ir = source_to_ir("fn g() -> i32 { 1i32 }\nfn main() { let mut x: i32 = 0i32; return x = g(); }");
+	ASSERT_EQ(count(ir, "call g()"), 1u);
+}
+
 // functions =====================================================================================================
 
 TEST(every_function_is_emitted)

@@ -142,6 +142,15 @@ namespace ast
 		/// @return ID of output register
 		virtual ir::VRegId emit_ir(IrFunctionWriter &writer) const = 0;
 
+		/// @brief Throw if this expression isn't a place that can be assigned to (or isn't mutable). Called on the
+		/// left side of an assignment after symbols are resolved, but before its type is. By default an expression
+		/// is a value, not a place
+		virtual void check_assignable() const;
+
+		/// @brief Write IR storing `value` into the place this expression names. Only called on expressions that
+		/// passed `check_assignable`
+		virtual void emit_assign(IrFunctionWriter &writer, ir::VRegId value) const;
+
 		virtual ~ExpressionNode() = default;
 	};
 
@@ -260,8 +269,10 @@ namespace ast
 
 		void resolve_type() override;
 		void check_semantics(SemanticAnalysisState &state) const override;
+		void check_assignable() const override;
 
 		ir::VRegId emit_ir(IrFunctionWriter &writer) const override;
+		void emit_assign(IrFunctionWriter &writer, ir::VRegId value) const override;
 		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
 
@@ -339,6 +350,25 @@ namespace ast
 
 		FunctionCall(SourceLocRange src_loc, std::unique_ptr<ExpressionNode> callee, std::vector<std::unique_ptr<ExpressionNode>> args)
 			: ExpressionNode(src_loc), callee(std::move(callee)), args(std::move(args)) {}
+
+		void resolve_symbols(SymbolScope *scope) override;
+
+		void resolve_type() override;
+		void check_semantics(SemanticAnalysisState &state) const override;
+
+		ir::VRegId emit_ir(IrFunctionWriter &writer) const override;
+		void print(std::ostream &out, unsigned int depth = 0) const;
+	};
+
+	/// `place = value`, an expression of type void. Non-associative, so it can't be chained
+	struct AssignmentExpression : public ExpressionNode
+	{
+		/// @brief What's being assigned to, has to pass `check_assignable`
+		std::unique_ptr<ExpressionNode> place;
+		std::unique_ptr<ExpressionNode> value;
+
+		AssignmentExpression(SourceLocRange src_loc, std::unique_ptr<ExpressionNode> place, std::unique_ptr<ExpressionNode> value)
+			: ExpressionNode(src_loc), place(std::move(place)), value(std::move(value)) {}
 
 		void resolve_symbols(SymbolScope *scope) override;
 

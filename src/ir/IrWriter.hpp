@@ -25,10 +25,14 @@ class IrFunctionWriter
 {
 	friend class IrWriter;
 
-	using VRegMap = std::unordered_map<std::string, ir::VRegId>;
+public:
+	/// @brief Opaque identity of a source level variable, the frontend uses its `ast::Symbol *`. Keyed by identity
+	/// rather than by name, so shadowing and scoping are left to the frontend's name resolution
+	using Variable = const void *;
 
-	/// @brief A stack of vreg maps, mapping names to assigned virtual registers
-	std::vector<VRegMap> vreg_map_scopes;
+private:
+	/// @brief The vreg holding each variable's current value
+	std::unordered_map<Variable, ir::VRegId> var_values;
 
 	struct ConstCacheKey
 	{
@@ -52,19 +56,14 @@ public:
 	ir::Function *cur_function;
 	ir::BasicBlock *cur_bblock;
 
-	/// @brief Creates a new local in the current scope, returning its vreg. A name already in the current scope is
-	/// shadowed, it refers to the new vreg from then on
-	ir::VRegId new_local(const std::string &name, ir::IrType type);
+	/// @brief Defines (declares or assigns) a variable, its value is `value` from here on. Vregs are never written
+	/// twice, an assignment just makes the variable refer to the vreg holding the new value
+	/// TODO once there's control flow, this has to track definitions per basic block and add block arguments where
+	/// they merge (Braun et al., "Simple and Efficient Construction of SSA Form")
+	void def_var(Variable var, ir::VRegId value);
 
-	/// @brief Binds a name to an existing vreg in the current scope, shadowing it like `new_local`. The vreg must
-	/// never be written again, since every name bound to it would see the write
-	void bind_local(const std::string &name, ir::VRegId vreg);
-
-	/// @brief Find the vreg allocation of a name in the current or surrounding scopes (throws if cannot find)
-	ir::VRegId get_local(const std::string &name) const;
-
-	void push_scope();
-	void pop_scope();
+	/// @brief The vreg holding a variable's current value (throws if it was never defined)
+	ir::VRegId use_var(Variable var) const;
 
 	/// @brief Reserve a new virtual reg
 	ir::VRegId new_vreg(ir::IrType);

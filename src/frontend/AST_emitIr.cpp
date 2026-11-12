@@ -25,9 +25,19 @@ namespace ast
 		return dst_reg;
 	}
 
+	void ExpressionNode::emit_assign(IrFunctionWriter &writer, ir::VRegId value) const
+	{
+		throw CompilerError::internal("emit_assign called on an expression that isn't a place");
+	}
+
 	ir::VRegId IdentifierExpression::emit_ir(IrFunctionWriter &writer) const
 	{
-		return writer.get_local(this->name);
+		return writer.use_var(this->symbol);
+	}
+
+	void IdentifierExpression::emit_assign(IrFunctionWriter &writer, ir::VRegId value) const
+	{
+		writer.def_var(this->symbol, value);
 	}
 
 	ir::VRegId BinaryExpression::emit_ir(IrFunctionWriter &writer) const
@@ -148,6 +158,15 @@ namespace ast
 		return writer.add_call(callee_ident->name, return_type, std::move(arg_regs));
 	}
 
+	ir::VRegId AssignmentExpression::emit_ir(IrFunctionWriter &writer) const
+	{
+		// the value is evaluated before the place, like Rust. nothing can observe the order until places have
+		// subexpressions of their own (eg `a[f()] = g()`)
+		ir::VRegId value_reg = this->value->emit_ir(writer);
+		this->place->emit_assign(writer, value_reg);
+		return ir::NO_VREG;
+	}
+
 	void ReturnStatement::emit_ir(IrFunctionWriter &writer) const
 	{
 		if (this->expr.has_value() && this->expr.value()->type.variant != FrontendType::Variant::VOID)
@@ -227,8 +246,8 @@ namespace ast
 
 	void BindingPattern::emit_ir(IrFunctionWriter &writer, ir::VRegId value) const
 	{
-		// nothing can be assigned yet, so the name can just refer to the value's vreg instead of a copy of it
-		// TODO a mut binding needs its own storage once there's assignment
-		writer.bind_local(this->name, value);
+		// vregs are never written twice (assigning just redefines the variable), so the binding can refer to the
+		// value's vreg rather than a copy of it, even if it's mut
+		writer.def_var(this->symbol, value);
 	}
 }

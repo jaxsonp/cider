@@ -122,6 +122,16 @@ namespace ast
 			arg->print(out, depth + 1);
 	}
 
+	void AssignmentExpression::print(std::ostream &out, unsigned int depth) const
+	{
+		for (size_t i = 0; i < depth; ++i)
+			out << INDENTATION_STR;
+		out << "Assignment expression (type: \"" << this->type.to_string() << "\")";
+		out << " [" << this->src_loc.to_string() << "]" << std::endl;
+		this->place->print(out, depth + 1);
+		this->value->print(out, depth + 1);
+	}
+
 	// STATEMENTS ==============================================================
 
 	void ReturnStatement::print(std::ostream &out, unsigned int depth) const

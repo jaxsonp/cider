@@ -1,0 +1,18 @@
+//! EXIT_CODE=12
+
+fn six() -> u8 {
+	6u8
+}
+
+fn nothing() {
+	let mut x: u8 = 0u8;
+	// an assignment is void, so it can end a void function
+	x = six()
+}
+
+fn main() -> u8 {
+	let mut x: u8 = 0u8;
+	nothing();
+	x = six();
+	x + x
+}

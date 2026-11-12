@@ -5,7 +5,6 @@ _For Jaxson's eyes only_
 ## To implement
 - WIP:
 	- Local vars
-    	- mutability
 		- wild card
 - Soon:
 	- Add reg-imm instructions to IR representation
@@ -22,6 +21,7 @@ _For Jaxson's eyes only_
 		- Crashing test kills the test runner
 		- Capture output of unit tests
 		- Verify stdout/stderr checking works
+	- Don't allow lexing of things like `===` (require whitespace between tokens like dis)
 	- Fix: hex literals with letter digits don't parse (`0x1Fu8` is a type error, the lexer's digit scan stops at `F`). `0x`/`0o`/`0b` literals otherwise work
 	- Fix: deeply nested expressions (~2000 nested parens) segfault the compiler (parser recursion), should be a proper error
 	- Fix: `//` comment at EOF without a trailing newline hangs the compiler (lexer loops on EOF forever)
@@ -61,7 +61,10 @@ _For Jaxson's eyes only_
 	- `const` for compile time evaluation: const expressions, const blocks, and some sort of const functions
 	- Non-G riscv ISAs without M: multiplication/division throw `unsupported` for now, needs runtime routines (soft floats too once there are floats). Target flags exist for M/A/F/D/C, only C changes codegen today
 	- Branch encoding (B-type) and jump relaxation for the C extension (jumps and calls are never compressed so offsets are final when emitted), once the IR has branches
-	- Better error messages (include code snippet)
+	- Better error messages/hints
+		- Include code snippet in message
+		- Hint when a non-void function ends in a void trailing expression (eg `fn f() -> i32 { x = 1i32 }`), the
+		  reverse of the existing "remove the semicolon" hint. Probably meant to return the variable afterwards
 	- try doing UTF8
 	- labelled code blocks (for early breaks)
 	- Warnings:
@@ -97,6 +100,9 @@ _For Jaxson's eyes only_
 - binary operators are left associative (except for equality/comparison, needs parens)
 - type names must start with letters, numbers signifiy number literal
 - All names are (currently) `[a-zA-Z_][a-zA-Z0-9_]*`
+- assignment (`place = value`) is an expression of type void, with the lowest precedence. it's non-associative
+  (`a = b = c` is a syntax error). only `mut` locals and `mut` parameters can be assigned to for now. the value is
+  evaluated before the place (like Rust, only observable once places have subexpressions, eg `a[f()] = g()`)
 - a `let` may shadow a parameter or an earlier local (its initializer still sees the shadowed one), but nothing may shadow a top level name, so parameters can't share a name with any function
 - bitshift right is arithmetic shift right for signed types, unsigned types are logical shift right
 - the left side of a bitshift is any integer, the shift amount must be an *unsigned* integer.

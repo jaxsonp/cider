@@ -1,0 +1,11 @@
+//! EXIT_CODE=73
+
+fn main() -> i32 {
+	let mut a: i32 = 3i32;
+	let mut b: i32 = 7i32;
+	let t: i32 = a;
+	a = b;
+	b = t;
+	// 73, the other way around would be 37
+	a * 10i32 + b
+}

@@ -1,0 +1,11 @@
+//! BUILD_EXIT_CODE=4
+
+
+fn f(a: i32) {
+	a = 10i32;
+}
+
+fn main() -> i32 {
+	f(5i32);
+	0i32
+}

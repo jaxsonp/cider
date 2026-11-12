@@ -12,6 +12,13 @@
 
 namespace ast
 {
+	// === ExpressionNode ======================
+
+	void ExpressionNode::check_assignable() const
+	{
+		throw CompilerError::semantic_error("Invalid left-hand side of assignment, only variables can be assigned to", this->src_loc);
+	}
+
 	// === IntegerLiteralExpression ======================
 
 	void IntegerLiteralExpression::resolve_symbols(SymbolScope *scope) {}
@@ -55,6 +62,27 @@ namespace ast
 	}
 
 	void IdentifierExpression::check_semantics(SemanticAnalysisState &state) const {}
+
+	void IdentifierExpression::check_assignable() const
+	{
+		switch (this->symbol->kind)
+		{
+		case SymbolKind::Function:
+			throw CompilerError::semantic_error(std::format("Cannot assign to function '{}'", this->name), this->src_loc);
+		case SymbolKind::Parameter:
+			if (!this->symbol->mut)
+				throw CompilerError::semantic_error(
+					std::format("Cannot assign to immutable parameter '{0}' (declare it as 'mut {0}' to make it mutable)", this->name),
+					this->src_loc);
+			break;
+		case SymbolKind::Local:
+			if (!this->symbol->mut)
+				throw CompilerError::semantic_error(
+					std::format("Cannot assign to immutable variable '{0}' (declare it with 'let mut {0}' to make it mutable)", this->name),
+					this->src_loc);
+			break;
+		}
+	}
 
 	// === BinaryExpression =========================
 
@@ -266,6 +294,40 @@ namespace ast
 		this->callee->check_semantics(state);
 		for (const std::unique_ptr<ExpressionNode> &arg : this->args)
 			arg->check_semantics(state);
+	}
+
+	// ==== AssignmentExpression =========================================
+
+	void AssignmentExpression::resolve_symbols(SymbolScope *scope)
+	{
+		this->place->resolve_symbols(scope);
+		this->value->resolve_symbols(scope);
+	}
+
+	void AssignmentExpression::resolve_type()
+	{
+		// before resolving the place's type, so that eg a function name gets an assignment error rather than one
+		// about functions not being values
+		this->place->check_assignable();
+
+		this->place->resolve_type();
+		this->value->resolve_type();
+
+		if (this->value->type != this->place->type)
+			throw CompilerError::type_error(
+				std::format(
+					"Invalid assignment type, expected '{}', found '{}'",
+					this->place->type.to_string(),
+					this->value->type.to_string()),
+				this->value->src_loc);
+
+		this->type = FrontendType::void_type();
+	}
+
+	void AssignmentExpression::check_semantics(SemanticAnalysisState &state) const
+	{
+		this->place->check_semantics(state);
+		this->value->check_semantics(state);
 	}
 
 	// ==== ReturnSTatement =========================================

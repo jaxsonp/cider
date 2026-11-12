@@ -21,6 +21,8 @@ static std::string shape(const ast::ExpressionNode &expr)
 			out += " " + shape(*arg);
 		return out + ")";
 	}
+	if (auto *assignment = dynamic_cast<const ast::AssignmentExpression *>(&expr))
+		return std::format("(= {} {})", shape(*assignment->place), shape(*assignment->value));
 	if (auto *ident = dynamic_cast<const ast::IdentifierExpression *>(&expr))
 		return ident->name;
 	if (auto *integer = dynamic_cast<const ast::IntegerLiteralExpression *>(&expr))
@@ -571,6 +573,95 @@ TEST(location_of_a_declaration)
 	ASSERT_EQ(decl->src_loc.start.col, 1u);
 	ASSERT_EQ(decl->src_loc.end.line, 2u);
 	ASSERT_EQ(decl->src_loc.end.col, 7u);
+}
+
+// assignment ====================================================================================================
+
+TEST(assignment_parts)
+{
+	ASSERT_EQ(parse_shape("x = y"), "(= x y)");
+	ASSERT_EQ(parse_shape("x = 1i32"), "(= x 1i32)");
+}
+
+TEST(assignment_binds_loosest)
+{
+	ASSERT_EQ(parse_shape("x = a + b * c"), "(= x (+ a (* b c)))");
+	ASSERT_EQ(parse_shape("x = a == b"), "(= x (== a b))");
+	ASSERT_EQ(parse_shape("x = !a"), "(= x (! a))");
+	ASSERT_EQ(parse_shape("x = f(a, b)"), "(= x (call f a b))");
+	// whatever is on the left parses, semantic analysis rejects what isn't a place
+	ASSERT_EQ(parse_shape("a + b = c"), "(= (+ a b) c)");
+	ASSERT_EQ(parse_shape("f() = c"), "(= (call f) c)");
+}
+
+TEST(equality_is_not_assignment)
+{
+	ASSERT_EQ(parse_shape("x == y"), "(== x y)");
+}
+
+TEST(assignment_is_non_associative)
+{
+	ASSERT_SOURCE(in_function("x = y = z;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("x = y = z = w;"), ExitCode::SyntaxError);
+	// with parens it parses, and fails type checking instead (an assignment is void)
+	ASSERT_EQ(parse_shape("x = (y = z)"), "(= x (= y z))");
+	ASSERT_EQ(parse_shape("(x = y) = z"), "(= (= x y) z)");
+}
+
+TEST(assignment_is_an_expression)
+{
+	ASSERT_EQ(parse_shape("f(x = y)"), "(call f (= x y))");
+	ASSERT_EQ(parse_shape("(x = y)"), "(= x y)");
+}
+
+TEST(assignment_as_a_statement)
+{
+	ast::FunctionDefinition fn = parse_function("fn f() { x = 1i32; y = x; }");
+	ASSERT_EQ(fn.body_statements.size(), 2u);
+	auto *stmt = dynamic_cast<ast::ExpressionStatement *>(fn.body_statements[0].get());
+	ASSERT_TRUE(stmt != nullptr);
+	ASSERT_EQ(shape(*stmt->expr), "(= x 1i32)");
+	ASSERT_TRUE(!fn.body_return_expr.has_value());
+}
+
+TEST(assignment_as_the_trailing_expression)
+{
+	ast::FunctionDefinition fn = parse_function("fn f() { x = 1i32 }");
+	ASSERT_TRUE(fn.body_statements.empty());
+	ASSERT_TRUE(fn.body_return_expr.has_value());
+	ASSERT_EQ(shape(**fn.body_return_expr), "(= x 1i32)");
+}
+
+TEST(assignment_in_other_statements)
+{
+	ast::FunctionDefinition decl_fn = parse_function("fn f() { let a: i32 = x = y; }");
+	ASSERT_EQ(shape(*first_declaration(decl_fn)->init_expr), "(= x y)");
+
+	ast::FunctionDefinition ret_fn = parse_function("fn f() { return x = y; }");
+	auto *ret = dynamic_cast<ast::ReturnStatement *>(ret_fn.body_statements.at(0).get());
+	ASSERT_TRUE(ret != nullptr);
+	ASSERT_EQ(shape(**ret->expr), "(= x y)");
+}
+
+TEST(assignment_syntax_errors)
+{
+	ASSERT_SOURCE(in_function("x = ;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("= 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("x = 1i32 y = 2i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("x = let y: i32 = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("x = return;"), ExitCode::SyntaxError);
+}
+
+TEST(location_of_an_assignment)
+{
+	ast::FunctionDefinition fn = parse_function("fn f() {\n\tx =\n\t\ta + b;\n}");
+	auto *stmt = dynamic_cast<ast::ExpressionStatement *>(fn.body_statements.at(0).get());
+	ASSERT_TRUE(stmt != nullptr);
+	// from the start of the place to the end of the value
+	ASSERT_EQ(stmt->expr->src_loc.start.line, 1u);
+	ASSERT_EQ(stmt->expr->src_loc.start.col, 1u);
+	ASSERT_EQ(stmt->expr->src_loc.end.line, 2u);
+	ASSERT_EQ(stmt->expr->src_loc.end.col, 7u);
 }
 
 // function definitions ==========================================================================================

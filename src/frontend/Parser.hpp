@@ -31,6 +31,8 @@ namespace parse
 
 	std::optional<std::unique_ptr<ast::ExpressionNode>> try_parse_expr(Lexer &lexer);
 
+	std::optional<std::unique_ptr<ast::ExpressionNode>> try_parse_assignment(Lexer &lexer);
+
 	std::optional<std::unique_ptr<ast::ExpressionNode>> try_parse_logical_or(Lexer &lexer);
 	std::optional<std::unique_ptr<ast::ExpressionNode>> try_parse_logical_and(Lexer &lexer);
 	std::optional<std::unique_ptr<ast::ExpressionNode>> try_parse_equality(Lexer &lexer);

@@ -16,44 +16,19 @@ IrFunctionWriter IrWriter::start_function(const std::string &name, std::vector<i
 IrFunctionWriter::IrFunctionWriter(ir::Function *fn)
 	: cur_function(fn), cur_bblock(fn->entry)
 {
-	this->vreg_map_scopes.emplace_back();
 }
 
-ir::VRegId IrFunctionWriter::new_local(const std::string &name, ir::IrType type)
+void IrFunctionWriter::def_var(Variable var, ir::VRegId value)
 {
-	ir::VRegId id = this->new_vreg(type);
-	this->bind_local(name, id);
-	return id;
+	this->var_values.insert_or_assign(var, value);
 }
 
-void IrFunctionWriter::bind_local(const std::string &name, ir::VRegId vreg)
+ir::VRegId IrFunctionWriter::use_var(Variable var) const
 {
-	// overwrite, a shadowing local takes over the name from here on
-	this->vreg_map_scopes.back().insert_or_assign(name, vreg);
-}
-
-ir::VRegId IrFunctionWriter::get_local(const std::string &name) const
-{
-	// visit scope stack from top to bottom
-	for (std::vector<VRegMap>::const_reverse_iterator vreg_map = this->vreg_map_scopes.rbegin(); vreg_map != this->vreg_map_scopes.rend(); ++vreg_map)
-	{
-		VRegMap::const_iterator found = vreg_map->find(name);
-		if (found != vreg_map->end())
-		{
-			return found->second;
-		}
-	}
-	throw CompilerError::internal(std::format("Failed to find vreg allocation for name \"{}\"", name));
-}
-
-void IrFunctionWriter::push_scope()
-{
-	this->vreg_map_scopes.emplace_back();
-}
-
-void IrFunctionWriter::pop_scope()
-{
-	this->vreg_map_scopes.pop_back();
+	auto found = this->var_values.find(var);
+	if (found == this->var_values.end())
+		throw CompilerError::internal("Variable used before any definition of it was emitted");
+	return found->second;
 }
 
 ir::VRegId IrFunctionWriter::new_vreg(ir::IrType ty)

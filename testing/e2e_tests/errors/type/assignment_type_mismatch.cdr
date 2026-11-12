@@ -1,0 +1,7 @@
+//! BUILD_EXIT_CODE=3
+
+fn main() -> i32 {
+	let mut x: i32 = 1i32;
+	x = 2u32;
+	x
+}

@@ -9,21 +9,22 @@ arg_definition_list = [ arg_definition, { ",", arg_definition }, [ "," ] ] ;
 
 arg_definition = pattern, ":", type ;
 
-block = "{", { stmt }, [ expr ], "}" ;
+block = "{", block_body, "}" ;
+
+(* An expression followed by ";" is a statement, without one it's the block's value and has to come last.
+   TODO once if/blocks parse: an if_expr or block at the start of a statement ends it without a ";", like Rust.
+   That keeps this LL(1), the token after it decides *)
+block_body = stmt, block_body
+           | expr, [ ";", block_body ]
+           | (* empty *) ;
 
 (* Statements *)
 stmt = var_decl_stmt
-     | return_stmt
-     | assignment_stmt
-     | if_expr (* if used as statement, no semicolon *)
-     | block (* block as statement, no semicolon *)
-     | expr, ";" ; (* other expressions need semicolon *)
+     | return_stmt ;
 
 var_decl_stmt = "let", pattern, ":", type, "=", expr, ";" ;
 
 return_stmt = "return", [ expr ], ";" ;
-
-assignment_stmt = expr, "=", expr, ";" ;
 
 if_expr = "if", expr, block, { "elif", expr, block }, [ "else", block ] ;
 
@@ -32,7 +33,11 @@ pattern = "_" (* wildcard, binds nothing *)
         | [ "mut" ], ident ; (* binding *)
 
 (* Expression precedence *)
-expr = logical_or ;
+expr = assignment ;
+
+(* Has type void. Non-associative, `a = b = c` is a syntax error. Any expression parses as the left side, semantic
+   analysis checks that it's a place (only mutable variables for now) *)
+assignment = logical_or, [ "=", logical_or ] ;
 
 logical_or = logical_and, { "||", logical_and } ;
 logical_and = equality, { "&&", equality } ;

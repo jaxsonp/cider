@@ -268,9 +268,9 @@ unit tests next to the code that implements it.
   `100i32` — see `testing/e2e_tests/basics/*.cdr` for examples).
 - `grammar.ebnf` is the source of truth for syntax — if a parser change
   alters accepted syntax, update the grammar file in the same change. It also
-  describes syntax the parser doesn't accept yet (`let`, assignment, `if`,
-  block expressions, indexing, generic types), check `Parser.cpp` before
-  assuming something parses.
+  describes syntax the parser doesn't accept yet (`if`, block expressions,
+  indexing, generic types), check `Parser.cpp` before assuming something
+  parses.
 - Language semantics must not depend on the target. Operations on types of
   32 bits or less behave identically on 32 and 64 bit targets (including
   shift amounts: only the lower 5 bits are used, or the lower 6 when

@@ -84,91 +84,56 @@ TEST(vregs_are_per_function)
 	ASSERT_EQ(b.new_vreg(IrType::i32()), 0u);
 }
 
-// locals ========================================================================================================
+// variables =====================================================================================================
 
-TEST(locals_are_found_by_name)
+// variables are opaque identities, any distinct addresses will do
+static const int var_a = 0, var_b = 0;
+
+TEST(variables_have_the_value_they_were_defined_with)
 {
 	Fixture f;
-	ir::VRegId a = f.fn.new_local("a", IrType::i32());
-	ir::VRegId b = f.fn.new_local("b", IrType::i32());
-	ASSERT_TRUE(a != b);
-	ASSERT_EQ(f.fn.get_local("a"), a);
-	ASSERT_EQ(f.fn.get_local("b"), b);
+	ir::VRegId a = f.fn.new_vreg(IrType::i32());
+	ir::VRegId b = f.fn.new_vreg(IrType::i32());
+	f.fn.def_var(&var_a, a);
+	f.fn.def_var(&var_b, b);
+	ASSERT_EQ(f.fn.use_var(&var_a), a);
+	ASSERT_EQ(f.fn.use_var(&var_b), b);
 }
 
-TEST(locals_have_a_vreg_of_their_type)
+TEST(undefined_variable)
 {
 	Fixture f;
-	ir::VRegId a = f.fn.new_local("a", IrType::boolean());
-	ASSERT_TRUE(f.fn.cur_function->vregs.at(a).variant == IrType::Variant::BOOL);
+	ASSERT_THROWS(f.fn.use_var(&var_a), CompilerError);
 }
 
-TEST(unknown_local)
+TEST(redefining_a_variable_replaces_its_value)
 {
 	Fixture f;
-	ASSERT_THROWS(f.fn.get_local("nope"), CompilerError);
+	ir::VRegId first = f.fn.new_vreg(IrType::i32());
+	ir::VRegId second = f.fn.new_vreg(IrType::i32());
+	f.fn.def_var(&var_a, first);
+	f.fn.def_var(&var_a, second);
+	ASSERT_EQ(f.fn.use_var(&var_a), second);
 }
 
-TEST(outer_scopes_are_visible)
-{
-	Fixture f;
-	ir::VRegId a = f.fn.new_local("a", IrType::i32());
-	f.fn.push_scope();
-	ASSERT_EQ(f.fn.get_local("a"), a);
-}
-
-TEST(inner_scopes_shadow)
-{
-	Fixture f;
-	ir::VRegId outer = f.fn.new_local("a", IrType::i32());
-	f.fn.push_scope();
-	ir::VRegId inner = f.fn.new_local("a", IrType::i32());
-	ASSERT_EQ(f.fn.get_local("a"), inner);
-	f.fn.pop_scope();
-	ASSERT_EQ(f.fn.get_local("a"), outer);
-}
-
-TEST(bound_locals_refer_to_the_vreg)
+TEST(defining_doesnt_allocate_a_vreg)
 {
 	Fixture f;
 	ir::VRegId vreg = f.fn.new_vreg(IrType::i32());
-	f.fn.bind_local("a", vreg);
-	ASSERT_EQ(f.fn.get_local("a"), vreg);
-}
-
-TEST(binding_doesnt_allocate_a_vreg)
-{
-	Fixture f;
-	ir::VRegId vreg = f.fn.new_vreg(IrType::i32());
-	f.fn.bind_local("a", vreg);
+	f.fn.def_var(&var_a, vreg);
 	ASSERT_EQ(f.fn.new_vreg(IrType::i32()), vreg + 1);
 }
 
-TEST(binding_shadows_in_the_same_scope)
+TEST(one_vreg_can_be_the_value_of_several_variables)
 {
 	Fixture f;
-	f.fn.new_local("a", IrType::i32());
 	ir::VRegId vreg = f.fn.new_vreg(IrType::i32());
-	f.fn.bind_local("a", vreg);
-	ASSERT_EQ(f.fn.get_local("a"), vreg);
-}
-
-TEST(one_vreg_can_have_several_names)
-{
-	Fixture f;
-	ir::VRegId a = f.fn.new_local("a", IrType::i32());
-	f.fn.bind_local("b", a);
-	ASSERT_EQ(f.fn.get_local("b"), a);
-	ASSERT_EQ(f.fn.get_local("a"), a);
-}
-
-TEST(popped_scopes_are_gone)
-{
-	Fixture f;
-	f.fn.push_scope();
-	f.fn.new_local("a", IrType::i32());
-	f.fn.pop_scope();
-	ASSERT_THROWS(f.fn.get_local("a"), CompilerError);
+	f.fn.def_var(&var_a, vreg);
+	f.fn.def_var(&var_b, vreg);
+	ir::VRegId other = f.fn.new_vreg(IrType::i32());
+	f.fn.def_var(&var_a, other);
+	// redefining one doesn't touch the other
+	ASSERT_EQ(f.fn.use_var(&var_b), vreg);
 }
 
 // constants =====================================================================================================

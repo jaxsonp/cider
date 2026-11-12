@@ -1,0 +1,11 @@
+//! EXIT_CODE=23
+
+fn main() -> i32 {
+	let mut x: i32 = 1i32;
+	x = x + 2i32;
+	x = x * x;
+	// a read before the next assignment keeps the value it read
+	let nine: i32 = x;
+	x = x + 5i32;
+	x + nine
+}

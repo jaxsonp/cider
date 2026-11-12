@@ -37,6 +37,8 @@ static bool is_unsigned(const std::string &type)
 static constexpr ExitCode OK = ExitCode::Success;
 static constexpr ExitCode NAME_ERROR = ExitCode::NameError;
 static constexpr ExitCode TYPE_ERROR = ExitCode::TypeError;
+static constexpr ExitCode SEMANTIC_ERROR = ExitCode::SemanticError;
+static constexpr ExitCode SYNTAX_ERROR = ExitCode::SyntaxError;
 
 // binary operators, every operator with every pair of types =====================================================
 
@@ -565,6 +567,114 @@ TEST(declaration_does_not_return)
 TEST(unused_locals_are_fine)
 {
 	ASSERT_SOURCE("fn main() -> i32 { let x: i32 = 1i32; let y: bool = false; 0i32 }", OK);
+}
+
+// assignment ====================================================================================================
+
+TEST(mut_locals_can_be_assigned)
+{
+	for (const std::string &type : value_types)
+		ASSERT_SOURCE(as_statement(std::format("let mut x: {0} = {1}; x = {1}", type, value_of(type))), OK);
+}
+
+TEST(mut_params_can_be_assigned)
+{
+	ASSERT_SOURCE("fn f(mut a: i32) { a = 1i32; }", OK);
+	ASSERT_SOURCE("fn f(a: u8, mut b: bool) { b = true; }", OK);
+}
+
+TEST(immutable_locals_cannot_be_assigned)
+{
+	ASSERT_SOURCE(as_statement("let x: i32 = 1i32; x = 2i32"), SEMANTIC_ERROR);
+	ASSERT_SOURCE(as_statement("let x: bool = true; x = x"), SEMANTIC_ERROR);
+}
+
+TEST(immutable_params_cannot_be_assigned)
+{
+	ASSERT_SOURCE("fn f(a: i32) { a = 1i32; }", SEMANTIC_ERROR);
+	ASSERT_SOURCE("fn f(mut a: i32, b: i32) { b = a; }", SEMANTIC_ERROR);
+}
+
+TEST(mutability_follows_shadowing)
+{
+	// the assignment is to whichever symbol the name refers to at that point
+	ASSERT_SOURCE(as_statement("let mut x: i32 = 1i32; let x: i32 = 2i32; x = 3i32"), SEMANTIC_ERROR);
+	ASSERT_SOURCE(as_statement("let x: i32 = 1i32; let mut x: i32 = 2i32; x = 3i32"), OK);
+	ASSERT_SOURCE("fn f(a: i32) { let mut a: i32 = a; a = 1i32; }", OK);
+	ASSERT_SOURCE("fn f(mut a: i32) { let a: i32 = a; a = 1i32; }", SEMANTIC_ERROR);
+}
+
+TEST(functions_cannot_be_assigned)
+{
+	const std::string five = "fn five() -> i32 { 5i32 }\n";
+	ASSERT_SOURCE(five + "fn main() { five = 1i32; }", SEMANTIC_ERROR);
+	ASSERT_SOURCE("fn main() { main = main; }", SEMANTIC_ERROR);
+}
+
+TEST(only_variables_can_be_assigned)
+{
+	const std::string five = "fn five() -> i32 { 5i32 }\n";
+	ASSERT_SOURCE(as_statement("1i32 = 1i32"), SEMANTIC_ERROR);
+	ASSERT_SOURCE(as_statement("true = false"), SEMANTIC_ERROR);
+	ASSERT_SOURCE(as_statement("let mut x: i32 = 1i32; x + 1i32 = 2i32"), SEMANTIC_ERROR);
+	ASSERT_SOURCE(as_statement("let mut x: i32 = 1i32; -x = 2i32"), SEMANTIC_ERROR);
+	ASSERT_SOURCE(five + "fn main() { five() = 1i32; }", SEMANTIC_ERROR);
+	ASSERT_SOURCE(as_statement("let mut x: i32 = 1i32; let mut y: i32 = 1i32; (x = y) = 2i32"), SEMANTIC_ERROR);
+	// parens don't make an expression any less of a place
+	ASSERT_SOURCE(as_statement("let mut x: i32 = 1i32; (x) = 2i32"), OK);
+}
+
+TEST(assigned_value_has_to_match_exactly)
+{
+	for (const std::string &var : value_types)
+	{
+		for (const std::string &value : value_types)
+		{
+			std::string source = as_statement(std::format("let mut x: {} = {}; x = {}", var, value_of(var), value_of(value)));
+			ASSERT_SOURCE(source, var == value ? OK : TYPE_ERROR);
+		}
+	}
+}
+
+TEST(assigned_value_is_type_checked)
+{
+	ASSERT_SOURCE(as_statement("let mut x: i32 = 1i32; x = 1i32 + 1u32"), TYPE_ERROR);
+	ASSERT_SOURCE(as_statement("let mut x: u32 = 1u32; x = -x"), TYPE_ERROR);
+	ASSERT_SOURCE("fn nothing() {}\nfn main() { let mut x: i32 = 1i32; x = nothing(); }", TYPE_ERROR);
+}
+
+TEST(assignment_names_are_resolved)
+{
+	ASSERT_SOURCE(as_statement("x = 1i32"), NAME_ERROR);
+	ASSERT_SOURCE(as_statement("let mut x: i32 = 1i32; x = y"), NAME_ERROR);
+	// assignment doesn't declare anything
+	ASSERT_SOURCE(as_statement("let mut x: i32 = 1i32; x = 2i32; y"), NAME_ERROR);
+}
+
+TEST(assignment_can_read_what_it_assigns)
+{
+	ASSERT_SOURCE(as_statement("let mut x: i32 = 1i32; x = x + x"), OK);
+	ASSERT_SOURCE("fn f(mut n: u8) -> u8 { n = n * 2u8; n = n + 1u8; n }", OK);
+}
+
+TEST(assignment_is_void)
+{
+	const std::string decl = "let mut x: i32 = 1i32; ";
+	ASSERT_SOURCE("fn f() { let mut x: i32 = 1i32; x = 2i32 }", OK);
+	ASSERT_SOURCE("fn f() -> i32 { let mut x: i32 = 1i32; x = 2i32 }", TYPE_ERROR);
+	ASSERT_SOURCE("fn f() -> i32 { let mut x: i32 = 1i32; return x = 2i32; }", TYPE_ERROR);
+	ASSERT_SOURCE("fn f() { let mut x: i32 = 1i32; return x = 2i32; }", OK);
+	ASSERT_SOURCE(as_statement(decl + "let y: i32 = x = 2i32"), TYPE_ERROR);
+	ASSERT_SOURCE(as_statement(decl + "let y: void = x = 2i32"), TYPE_ERROR);
+	ASSERT_SOURCE(as_statement(decl + "let mut y: i32 = 1i32; x = (y = 2i32)"), TYPE_ERROR);
+	ASSERT_SOURCE(as_statement(decl + "(x = 2i32) + 1i32"), TYPE_ERROR);
+	ASSERT_SOURCE(as_statement(decl + "!(x = 2i32)"), TYPE_ERROR);
+	ASSERT_SOURCE("fn g(a: i32) {}\nfn main() { let mut x: i32 = 1i32; g(x = 2i32); }", TYPE_ERROR);
+}
+
+TEST(chained_assignment_is_a_syntax_error)
+{
+	ASSERT_SOURCE(as_statement("let mut x: i32 = 1i32; let mut y: i32 = 1i32; x = y = 2i32"), SYNTAX_ERROR);
 }
 
 // main isn't special to the frontend, a missing one is only found when linking the runtime ======================

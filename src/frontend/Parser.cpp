@@ -201,10 +201,33 @@ namespace parse
 
 	std::optional<std::unique_ptr<ast::ExpressionNode>> try_parse_expr(Lexer &lexer)
 	{
-		auto maybe_expr = try_parse_logical_or(lexer);
-		if (maybe_expr.has_value())
-			return std::move(maybe_expr.value());
-		return std::nullopt;
+		return try_parse_assignment(lexer);
+	}
+
+	std::optional<std::unique_ptr<ast::ExpressionNode>> try_parse_assignment(Lexer &lexer)
+	{
+		// any expression parses as the place, semantic analysis checks that it's actually one
+		auto maybe_place = try_parse_logical_or(lexer);
+		if (!maybe_place.has_value())
+			return std::nullopt;
+
+		if (lexer.peek().type != TokenType::EQUAL)
+			return std::move(maybe_place.value());
+		Token op_tok = lexer.take();
+
+		std::unique_ptr<ast::ExpressionNode> place = std::move(maybe_place.value());
+
+		auto maybe_value = try_parse_logical_or(lexer);
+		if (!maybe_value.has_value())
+			throw CompilerError::syntax_error("Expected expression following " + to_string(op_tok), op_tok.loc.end);
+		std::unique_ptr<ast::ExpressionNode> value = std::move(maybe_value.value());
+
+		// non-associative. `a = b = c` would only fail type checking anyway (an assignment is void), this is clearer
+		if (lexer.peek().type == TokenType::EQUAL)
+			throw CompilerError::syntax_error("Assignments can't be chained", lexer.peek().loc.start);
+
+		SourceLocRange src_loc{place->src_loc.start, value->src_loc.end};
+		return std::make_unique<ast::AssignmentExpression>(src_loc, std::move(place), std::move(value));
 	}
 
 	std::optional<std::unique_ptr<ast::ExpressionNode>> try_parse_logical_or(Lexer &lexer)
