@@ -423,6 +423,14 @@ TEST(stray_semicolon_is_not_a_statement)
 
 // declarations ===============================================================================================
 
+/// A pattern, which has to be a binding
+static const ast::BindingPattern *as_binding(const std::unique_ptr<ast::PatternNode> &pattern)
+{
+	auto *binding = dynamic_cast<const ast::BindingPattern *>(pattern.get());
+	ASSERT_TRUE(binding != nullptr);
+	return binding;
+}
+
 /// The declaration a function body starts with
 static ast::DeclarationStatement *first_declaration(ast::FunctionDefinition &fn)
 {
@@ -437,9 +445,36 @@ TEST(declaration_parts)
 	ast::FunctionDefinition fn = parse_function("fn f() { let x: i32 = a + b; }");
 	ASSERT_EQ(fn.body_statements.size(), 1u);
 	ast::DeclarationStatement *decl = first_declaration(fn);
-	ASSERT_EQ(decl->declared_name, "x");
+	ASSERT_EQ(as_binding(decl->pattern)->name, "x");
+	ASSERT_TRUE(!as_binding(decl->pattern)->mut);
 	ASSERT_TRUE(decl->declared_type == FrontendType::i32());
 	ASSERT_EQ(shape(*decl->init_expr), "(+ a b)");
+}
+
+TEST(mut_declaration)
+{
+	ast::FunctionDefinition fn = parse_function("fn f() { let mut x: i32 = a; }");
+	const ast::BindingPattern *binding = as_binding(first_declaration(fn)->pattern);
+	ASSERT_EQ(binding->name, "x");
+	ASSERT_TRUE(binding->mut);
+}
+
+TEST(mut_needs_a_name)
+{
+	ASSERT_SOURCE(in_function("let mut: i32 = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let mut mut x: i32 = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let x mut: i32 = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE(in_function("let mut 1i32: i32 = 1i32;"), ExitCode::SyntaxError);
+	ASSERT_SOURCE("fn f(mut: i32) {}", ExitCode::SyntaxError);
+}
+
+TEST(location_of_a_binding_pattern)
+{
+	ast::FunctionDefinition fn = parse_function("fn f() { let mut abc: i32 = a; }");
+	const ast::BindingPattern *binding = as_binding(first_declaration(fn)->pattern);
+	// from the start of 'mut' to the end of the name
+	ASSERT_EQ(binding->src_loc.start.col, 13u);
+	ASSERT_EQ(binding->src_loc.end.col, 20u);
 }
 
 TEST(every_type_name_as_declaration_type)
@@ -553,12 +588,20 @@ TEST(function_params_in_order)
 {
 	ast::FunctionDefinition fn = parse_function("fn f(a: i32, b: bool, c: u8) {}");
 	ASSERT_EQ(fn.args.size(), 3u);
-	ASSERT_EQ(fn.args[0].name, "a");
+	ASSERT_EQ(as_binding(fn.args[0].pattern)->name, "a");
 	ASSERT_TRUE(fn.args[0].type == FrontendType::i32());
-	ASSERT_EQ(fn.args[1].name, "b");
+	ASSERT_EQ(as_binding(fn.args[1].pattern)->name, "b");
 	ASSERT_TRUE(fn.args[1].type == FrontendType::boolean());
-	ASSERT_EQ(fn.args[2].name, "c");
+	ASSERT_EQ(as_binding(fn.args[2].pattern)->name, "c");
 	ASSERT_TRUE(fn.args[2].type == FrontendType::u8());
+}
+
+TEST(mut_function_param)
+{
+	ast::FunctionDefinition fn = parse_function("fn f(a: i32, mut b: bool) {}");
+	ASSERT_TRUE(!as_binding(fn.args[0].pattern)->mut);
+	ASSERT_TRUE(as_binding(fn.args[1].pattern)->mut);
+	ASSERT_EQ(as_binding(fn.args[1].pattern)->name, "b");
 }
 
 TEST(function_param_trailing_comma)

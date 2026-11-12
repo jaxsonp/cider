@@ -117,6 +117,7 @@ TEST(keywords)
 	ASSERT_EQ(lex_one("true").type, KEYWORD_TRUE);
 	ASSERT_EQ(lex_one("false").type, KEYWORD_FALSE);
 	ASSERT_EQ(lex_one("let").type, KEYWORD_LET);
+	ASSERT_EQ(lex_one("mut").type, KEYWORD_MUT);
 }
 
 TEST(keywords_are_case_sensitive)
@@ -374,6 +375,7 @@ TEST(token_type_names)
 	ASSERT_EQ(to_string(KEYWORD_FN), "keyword \"fn\"");
 	ASSERT_EQ(to_string(KEYWORD_RETURN), "keyword \"return\"");
 	ASSERT_EQ(to_string(KEYWORD_LET), "keyword \"let\"");
+	ASSERT_EQ(to_string(KEYWORD_MUT), "keyword \"mut\"");
 	ASSERT_EQ(to_string(KEYWORD_TRUE), "keyword \"true\"");
 	ASSERT_EQ(to_string(KEYWORD_FALSE), "keyword \"false\"");
 	ASSERT_EQ(to_string(THIN_ARROW), "\"->\"");

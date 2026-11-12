@@ -4,6 +4,9 @@ _For Jaxson's eyes only_
 
 ## To implement
 - WIP:
+	- Local vars
+    	- mutability
+		- wild card
 - Soon:
 	- Add reg-imm instructions to IR representation
 	- Decide what division by zero (and MIN / -1, which overflows) does. Right now it's target dependent: x86 traps

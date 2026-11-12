@@ -49,4 +49,10 @@ namespace parse
 
 	std::optional<std::unique_ptr<ast::IntegerLiteralExpression>> try_parse_integer_literal(Lexer &lexer);
 	std::optional<std::unique_ptr<ast::BooleanLiteralExpression>> try_parse_boolean_literal(Lexer &lexer);
+
+	// === PATTERNS ============================================================
+
+	std::optional<std::unique_ptr<ast::PatternNode>> try_parse_pattern(Lexer &lexer);
+
+	std::optional<std::unique_ptr<ast::BindingPattern>> try_parse_binding_pattern(Lexer &lexer);
 }

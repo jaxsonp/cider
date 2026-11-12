@@ -35,7 +35,13 @@ AST::AST(std::istream &input)
 	for (const std::unique_ptr<ast::TopLevelDeclaration> &tld : this->tlds)
 	{
 		auto [name, type] = tld->declares();
-		this->symbols->add(ast::Symbol(name, type, ast::SymbolKind::Function), tld->src_loc);
+		ast::Symbol symbol{
+			.kind = ast::SymbolKind::Function,
+			.name = name,
+			.type = type,
+			.mut = false,
+		};
+		this->symbols->add(symbol, tld->src_loc);
 	}
 
 	log_vvv("Resolving symbols");
@@ -84,7 +90,7 @@ namespace ast
 		return nullptr;
 	}
 
-	void SymbolScope::add(Symbol symbol, CompilerError::LocVariant loc)
+	Symbol *SymbolScope::add(Symbol symbol, CompilerError::LocVariant loc)
 	{
 		if (const Symbol *existing = this->find(symbol.name))
 		{
@@ -98,9 +104,19 @@ namespace ast
 		// shadowing replaces the name's entry, the shadowed symbol stays alive in storage
 		Symbol &stored = this->storage.emplace_back(std::move(symbol));
 		this->symbols.insert_or_assign(stored.name, &stored);
+		return &stored;
 	}
 
 	SymbolScope::SymbolScope(SymbolScope *parent)
 		: parent(parent) {}
+
+	std::pair<std::string, FrontendType> FunctionDefinition::declares() const
+	{
+		std::vector<FrontendType> param_types;
+		param_types.reserve(this->args.size());
+		for (const ArgDefinition &arg : this->args)
+			param_types.push_back(arg.type);
+		return {this->name, FrontendType::function(this->return_type, std::move(param_types))};
+	};
 
 }

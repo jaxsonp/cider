@@ -29,15 +29,12 @@ namespace ast
 		Local,
 	};
 
-	class Symbol
+	struct Symbol
 	{
-	public:
+		SymbolKind kind;
 		std::string name;
 		FrontendType type;
-		SymbolKind kind;
-
-		Symbol(std::string name, FrontendType type, SymbolKind kind)
-			: name(name), type(type), kind(kind) {}
+		bool mut;
 	};
 
 	class SymbolScope
@@ -66,7 +63,8 @@ namespace ast
 		/// enclosing one). Code resolved before this keeps pointing at the shadowed symbol
 		/// @param symbol Pre-instantiated symbol
 		/// @param loc Location of the declaration, for errors
-		void add(Symbol symbol, CompilerError::LocVariant loc = std::monostate{});
+		/// @return The stored symbol, valid for the lifetime of this scope
+		Symbol *add(Symbol symbol, CompilerError::LocVariant loc = std::monostate{});
 
 		SymbolScope(SymbolScope *parent);
 	};
@@ -83,14 +81,15 @@ namespace ast
 		std::optional<FrontendType> cur_fn_return_type = std::nullopt;
 	};
 
-	// Node interface
-	class Node
+	// TLD interface
+	class TopLevelDeclaration
 	{
-	public:
-		/// @brief Location in the source code that this AST node spans
-		SourceLocRange src_loc;
+	protected:
+		TopLevelDeclaration(SourceLocRange src_loc) : src_loc(src_loc) {};
 
-		Node(SourceLocRange src_loc) : src_loc(src_loc) {};
+	public:
+		/// @brief Location in the source code that this node spans
+		SourceLocRange src_loc;
 
 		/// @brief Recursively resolve symbols
 		/// @param scope Current symbol scope
@@ -104,28 +103,35 @@ namespace ast
 		/// @param depth Indentation level
 		virtual void print(std::ostream &out, unsigned int depth = 0) const = 0;
 
-		virtual ~Node() = default;
-	};
-
-	// TLD interface
-	class TopLevelDeclaration : public Node
-	{
-	protected:
-		TopLevelDeclaration(SourceLocRange src_loc) : Node(src_loc) {};
-
-	public:
 		virtual std::pair<std::string, FrontendType> declares() const = 0;
 		virtual void emit_ir(IrWriter &writer) const = 0;
+
+		virtual ~TopLevelDeclaration() = default;
 	};
 
 	// expression interface
-	class ExpressionNode : public Node
+	class ExpressionNode
 	{
 	protected:
-		ExpressionNode(SourceLocRange src_loc) : Node(src_loc) {};
-		ExpressionNode(SourceLocRange src_loc, FrontendType type) : Node(src_loc), type(type) {};
+		ExpressionNode(SourceLocRange src_loc) : src_loc(src_loc) {};
+		ExpressionNode(SourceLocRange src_loc, FrontendType type) : src_loc(src_loc), type(type) {};
 
 	public:
+		/// @brief Location in the source code that this node spans
+		SourceLocRange src_loc;
+
+		/// @brief Recursively resolve symbols
+		/// @param scope Current symbol scope
+		virtual void resolve_symbols(SymbolScope *scope) = 0;
+
+		/// @brief Recursively resolve types and check semantics
+		virtual void check_semantics(SemanticAnalysisState &state) const = 0;
+
+		/// @brief Recursively write this node and its children to `out`
+		/// @param out Stream to write output to
+		/// @param depth Indentation level
+		virtual void print(std::ostream &out, unsigned int depth = 0) const = 0;
+
 		FrontendType type = FrontendType::unresolved();
 
 		/// @brief Resolve and check the type of this expression. Should only be called after symbols have been
@@ -135,17 +141,67 @@ namespace ast
 		/// @brief Write IR for this node to the provided writer
 		/// @return ID of output register
 		virtual ir::VRegId emit_ir(IrFunctionWriter &writer) const = 0;
+
+		virtual ~ExpressionNode() = default;
 	};
 
 	// statement interface
-	class StatementNode : public Node
+	class StatementNode
 	{
 	protected:
-		StatementNode(SourceLocRange src_loc) : Node(src_loc) {};
+		StatementNode(SourceLocRange src_loc) : src_loc(src_loc) {};
 
 	public:
+		/// @brief Location in the source code that this node spans
+		SourceLocRange src_loc;
+
+		/// @brief Recursively resolve symbols
+		/// @param scope Current symbol scope
+		virtual void resolve_symbols(SymbolScope *scope) = 0;
+
+		/// @brief Recursively resolve types and check semantics
+		virtual void check_semantics(SemanticAnalysisState &state) const = 0;
+
+		/// @brief Recursively write this node and its children to `out`
+		/// @param out Stream to write output to
+		/// @param depth Indentation level
+		virtual void print(std::ostream &out, unsigned int depth = 0) const = 0;
+
 		/// @brief Write IR for this node to the provided writer
 		virtual void emit_ir(IrFunctionWriter &writer) const = 0;
+
+		virtual ~StatementNode() = default;
+	};
+
+	/// @brief Pattern interface. A pattern can't resolve or check itself without the type of the value it
+	/// destructures, which comes from whatever contains it (a declaration's or parameter's type annotation)
+	class PatternNode
+	{
+	protected:
+		PatternNode(SourceLocRange src_loc) : src_loc(src_loc) {};
+
+	public:
+		/// @brief Location in the source code that this pattern spans
+		SourceLocRange src_loc;
+
+		/// @brief Check this pattern against the type of the value it destructures, and add the symbols it binds to
+		/// `scope`
+		/// @param scope Scope to declare bindings in
+		/// @param type Type of the value this pattern matches
+		/// @param kind What is declaring the bindings
+		virtual void declare(SymbolScope *scope, const FrontendType &type, SymbolKind kind) = 0;
+
+		/// @brief Bind a value to the names in this pattern
+		/// @param value VReg holding the value being matched, of the type given to `declare`
+		virtual void emit_ir(IrFunctionWriter &writer, ir::VRegId value) const = 0;
+
+		/// @brief Whether this pattern is refutable (ie, can it fail to match)
+		virtual bool is_refutable() const = 0;
+
+		/// @brief Recursively write this pattern and its children to `out`
+		virtual void print(std::ostream &out, unsigned int depth = 0) const = 0;
+
+		virtual ~PatternNode() = default;
 	};
 
 	// EXPRESSIONS =============================================================
@@ -332,12 +388,15 @@ namespace ast
 
 	struct DeclarationStatement : StatementNode
 	{
-		std::unique_ptr<ExpressionNode> init_expr;
-		std::string declared_name;
+		std::unique_ptr<PatternNode> pattern;
+		/// @brief Type annotation, the type of the whole value `pattern` matches
 		FrontendType declared_type;
+		std::unique_ptr<ExpressionNode> init_expr;
 
-		DeclarationStatement(SourceLocRange src_loc, std::string_view name, FrontendType type, std::unique_ptr<ExpressionNode> init_expr)
-			: StatementNode(src_loc), init_expr(std::move(init_expr)), declared_name(name), declared_type(type) {};
+		DeclarationStatement(SourceLocRange src_loc, std::unique_ptr<PatternNode> pattern, FrontendType declared_type,
+							 std::unique_ptr<ExpressionNode> init_expr)
+			: StatementNode(src_loc), pattern(std::move(pattern)), declared_type(declared_type),
+			  init_expr(std::move(init_expr)) {};
 
 		void resolve_symbols(SymbolScope *scope) override;
 
@@ -350,17 +409,20 @@ namespace ast
 
 	// FUNCTION STUFF ==========================================================
 
-	struct ArgDefinition : Node
+	/// @brief A function parameter. Not polymorphic, its methods are called by the `FunctionDefinition` owning it
+	struct ArgDefinition
 	{
+		SourceLocRange src_loc;
+		std::unique_ptr<PatternNode> pattern;
+		/// @brief Type annotation, the type of the whole value `pattern` matches
 		FrontendType type;
-		std::string name;
 
-		ArgDefinition(SourceLocRange src_loc, std::string name, FrontendType type)
-			: Node(src_loc), name(name), type(type) {};
+		ArgDefinition(SourceLocRange src_loc, std::unique_ptr<PatternNode> pattern, FrontendType type)
+			: src_loc(src_loc), pattern(std::move(pattern)), type(type) {};
 
-		void resolve_symbols(SymbolScope *scope) override;
+		void resolve_symbols(SymbolScope *scope);
 
-		void check_semantics(SemanticAnalysisState &state) const override;
+		void check_semantics(SemanticAnalysisState &state) const;
 
 		void print(std::ostream &out, unsigned int depth = 0) const;
 	};
@@ -392,14 +454,29 @@ namespace ast
 
 		void print(std::ostream &out, unsigned int depth = 0) const;
 
-		inline std::pair<std::string, FrontendType> declares() const override
-		{
-			std::vector<FrontendType> param_types;
-			param_types.reserve(this->args.size());
-			for (const ArgDefinition &arg : this->args)
-				param_types.push_back(arg.type);
-			return {this->name, FrontendType::function(this->return_type, std::move(param_types))};
-		};
+		std::pair<std::string, FrontendType> declares() const override;
+	};
+
+	// PATTERNS N STUFF ==========================================================
+
+	/// Binds the whole value to a name, `x` or `mut x`
+	struct BindingPattern : PatternNode
+	{
+		std::string name;
+		bool mut;
+		/// @brief Symbol this binding declared. nullptr until `.declare(...)` is called
+		Symbol *symbol = nullptr;
+
+		BindingPattern(SourceLocRange src_loc, std::string name, bool mut)
+			: PatternNode(src_loc), name(std::move(name)), mut(mut) {};
+
+		void declare(SymbolScope *scope, const FrontendType &type, SymbolKind kind) override;
+
+		void emit_ir(IrFunctionWriter &writer, ir::VRegId value) const override;
+
+		bool is_refutable() const override { return false; };
+
+		void print(std::ostream &out, unsigned int depth = 0) const override;
 	};
 }
 

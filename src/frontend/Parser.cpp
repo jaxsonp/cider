@@ -52,7 +52,7 @@ namespace parse
 		{
 			if (auto arg = try_parse_arg_definition(lexer))
 			{
-				args.push_back(arg.value());
+				args.push_back(std::move(arg.value()));
 				if (lexer.peek().type == TokenType::COMMA)
 				{
 					lexer.take();
@@ -111,15 +111,16 @@ namespace parse
 
 	std::optional<ast::ArgDefinition> try_parse_arg_definition(Lexer &lexer)
 	{
-		if (lexer.peek().type != TokenType::IDENT)
+		auto pattern = try_parse_pattern(lexer);
+		if (!pattern.has_value())
 			return std::nullopt;
 
-		Token name_tok = lexer.take();
+		SourceLoc start = pattern.value()->src_loc.start;
 		lexer.expect(TokenType::COLON);
 		Token type_tok = lexer.expect(TokenType::IDENT);
 		return ast::ArgDefinition(
-			SourceLocRange{name_tok.loc.start, type_tok.loc.end},
-			std::move(name_tok.str),
+			SourceLocRange{start, type_tok.loc.end},
+			std::move(pattern.value()),
 			type_from_token(type_tok));
 	}
 
@@ -169,7 +170,13 @@ namespace parse
 			return std::nullopt;
 
 		SourceLoc start = lexer.take().loc.start;
-		std::string name = std::move(lexer.expect(TokenType::IDENT).str);
+
+		SourceLoc pattern_start = lexer.peek().loc.start;
+		std::unique_ptr<ast::PatternNode> pattern;
+		if (auto parsed_pattern = try_parse_pattern(lexer))
+			pattern = std::move(parsed_pattern.value());
+		else
+			throw CompilerError::syntax_error("Expected pattern", pattern_start);
 
 		// require type annotation FOR NOW
 		// TODO type inference
@@ -187,7 +194,7 @@ namespace parse
 
 		SourceLoc end = lexer.expect(TokenType::SEMICOLON).loc.end;
 
-		return std::make_unique<ast::DeclarationStatement>(SourceLocRange{start, end}, name, type, std::move(expr));
+		return std::make_unique<ast::DeclarationStatement>(SourceLocRange{start, end}, std::move(pattern), type, std::move(expr));
 	}
 
 	// EXPRESSIONS =============================================================
@@ -670,5 +677,34 @@ namespace parse
 
 		Token tok = lexer.take();
 		return std::make_unique<ast::BooleanLiteralExpression>(tok.loc, tok.type == TokenType::KEYWORD_TRUE);
+	}
+
+	std::optional<std::unique_ptr<ast::PatternNode>> try_parse_pattern(Lexer &lexer)
+	{
+		if (auto pattern = try_parse_binding_pattern(lexer))
+		{
+			return std::move(pattern.value());
+		}
+		return std::nullopt;
+	}
+
+	std::optional<std::unique_ptr<ast::BindingPattern>> try_parse_binding_pattern(Lexer &lexer)
+	{
+		if (lexer.peek().type != TokenType::IDENT && lexer.peek().type != TokenType::KEYWORD_MUT)
+			return std::nullopt;
+
+		SourceLoc start = lexer.peek().loc.start;
+
+		bool mut = false;
+		if (lexer.peek().type == TokenType::KEYWORD_MUT)
+		{
+			mut = true;
+			lexer.take(); // consume mut
+		}
+
+		// after a 'mut' the name is required
+		Token name_tok = lexer.expect(TokenType::IDENT);
+
+		return std::make_unique<ast::BindingPattern>(SourceLocRange(start, name_tok.loc.end), std::move(name_tok.str), mut);
 	}
 }

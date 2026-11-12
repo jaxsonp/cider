@@ -323,7 +323,7 @@ namespace ast
 		this->init_expr->resolve_symbols(scope);
 
 		// add to scope AFTER resolving expr, cus name doesn't exist while evaluating expr (or is the shadowed symbol)
-		scope->add(Symbol(this->declared_name, this->declared_type, SymbolKind::Local), this->src_loc);
+		this->pattern->declare(scope, this->declared_type, SymbolKind::Local);
 	}
 
 	void DeclarationStatement::check_semantics(SemanticAnalysisState &state) const
@@ -332,7 +332,7 @@ namespace ast
 		if (this->declared_type.is_void())
 			throw CompilerError::type_error(
 				std::format("Cannot declare variables with type: '{}'", this->declared_type.to_string()),
-				this->init_expr->src_loc.start);
+				this->pattern->src_loc);
 
 		this->init_expr->resolve_type();
 		this->init_expr->check_semantics(state);
@@ -342,8 +342,7 @@ namespace ast
 		{
 			throw CompilerError::type_error(
 				std::format(
-					"Invalid initialization type, \"{}\" has type '{}', found '{}'",
-					this->declared_name,
+					"Invalid initialization type, expected '{}', found '{}'",
 					this->declared_type.to_string(),
 					this->init_expr->type.to_string()),
 				this->init_expr->src_loc.start);
@@ -355,13 +354,27 @@ namespace ast
 	void ArgDefinition::resolve_symbols(SymbolScope *scope)
 	{
 		// add this argument to the local scope
-		scope->add(Symbol(this->name, this->type, SymbolKind::Parameter), this->src_loc);
+		this->pattern->declare(scope, this->type, SymbolKind::Parameter);
 	}
 
 	void ArgDefinition::check_semantics(SemanticAnalysisState &state) const
 	{
 		if (this->type.variant == FrontendType::Variant::VOID)
-			throw CompilerError::type_error(std::format("Parameter '{}' cannot have type 'void'", this->name), this->src_loc);
+			throw CompilerError::type_error("Parameters cannot have type 'void'", this->src_loc);
+	}
+
+	// ==== BindingPattern =========================================
+
+	void BindingPattern::declare(SymbolScope *scope, const FrontendType &type, SymbolKind kind)
+	{
+		this->symbol = scope->add(
+			Symbol{
+				.kind = kind,
+				.name = this->name,
+				.type = type,
+				.mut = this->mut,
+			},
+			this->src_loc);
 	}
 
 	// ==== FunctionDefinition =========================================

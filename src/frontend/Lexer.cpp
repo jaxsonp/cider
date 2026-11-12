@@ -239,6 +239,10 @@ Token Lexer::take()
 			{
 				tok.type = TokenType::KEYWORD_LET;
 			}
+			else if (token_str == "mut")
+			{
+				tok.type = TokenType::KEYWORD_MUT;
+			}
 			else if (token_str == "fn")
 			{
 				tok.type = TokenType::KEYWORD_FN;
@@ -298,6 +302,8 @@ std::string to_string(TokenType type)
 		return "keyword \"false\"";
 	case TokenType::KEYWORD_LET:
 		return "keyword \"let\"";
+	case TokenType::KEYWORD_MUT:
+		return "keyword \"mut\"";
 	case TokenType::KEYWORD_FN:
 		return "keyword \"fn\"";
 	case TokenType::KEYWORD_RETURN:

@@ -7,7 +7,7 @@ function_definition = "fn", ident, "(", arg_definition_list, ")", [ "->", type ]
 
 arg_definition_list = [ arg_definition, { ",", arg_definition }, [ "," ] ] ;
 
-arg_definition = ident, ":", type ;
+arg_definition = pattern, ":", type ;
 
 block = "{", { stmt }, [ expr ], "}" ;
 
@@ -19,14 +19,17 @@ stmt = var_decl_stmt
      | block (* block as statement, no semicolon *)
      | expr, ";" ; (* other expressions need semicolon *)
 
-(* "let" is immutable, "let mut" is mutable (never assigning a "let mut" is an error) *)
-var_decl_stmt = "let", [ "mut" ], ident, ":", type, "=", expr, ";" ;
+var_decl_stmt = "let", pattern, ":", type, "=", expr, ";" ;
 
 return_stmt = "return", [ expr ], ";" ;
 
 assignment_stmt = expr, "=", expr, ";" ;
 
 if_expr = "if", expr, block, { "elif", expr, block }, [ "else", block ] ;
+
+(* Patterns *)
+pattern = "_" (* wildcard, binds nothing *)
+        | [ "mut" ], ident ; (* binding *)
 
 (* Expression precedence *)
 expr = logical_or ;

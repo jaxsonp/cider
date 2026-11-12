@@ -147,8 +147,9 @@ namespace ast
 	{
 		for (size_t i = 0; i < depth; ++i)
 			out << INDENTATION_STR;
-		out << "Declaration statement (binding name: \"" << this->declared_name << "\", type: " << this->declared_type.to_string() << ")";
+		out << "Declaration statement (type: " << this->declared_type.to_string() << ")";
 		out << " [" << this->src_loc.to_string() << "]" << std::endl;
+		this->pattern->print(out, depth + 1);
 		this->init_expr->print(out, depth + 1);
 	}
 
@@ -158,8 +159,9 @@ namespace ast
 	{
 		for (size_t i = 0; i < depth; ++i)
 			out << INDENTATION_STR;
-		out << "Arg definition (name: \"" << this->name << "\", type: " << this->type.to_string() << ")";
+		out << "Arg definition (type: " << this->type.to_string() << ")";
 		out << " [" << this->src_loc.to_string() << "]" << std::endl;
+		this->pattern->print(out, depth + 1);
 	}
 
 	void FunctionDefinition::print(std::ostream &out, unsigned int depth) const
@@ -174,5 +176,15 @@ namespace ast
 			stmt->print(out, depth + 1);
 		if (this->body_return_expr.has_value())
 			this->body_return_expr.value()->print(out, depth + 1);
+	}
+
+	// PATTERNS ================================================================
+
+	void BindingPattern::print(std::ostream &out, unsigned int depth) const
+	{
+		for (size_t i = 0; i < depth; ++i)
+			out << INDENTATION_STR;
+		out << "Binding pattern (name: \"" << this->name << "\"" << (this->mut ? ", mut" : "") << ")";
+		out << " [" << this->src_loc.to_string() << "]" << std::endl;
 	}
 }

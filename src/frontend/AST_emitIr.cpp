@@ -172,10 +172,8 @@ namespace ast
 
 	void DeclarationStatement::emit_ir(IrFunctionWriter &writer) const
 	{
-		// locals are immutable, so the name can just refer to the initializer's vreg instead of a copy of it
-		// TODO change this when vars become mutable
 		ir::VRegId init_reg = this->init_expr->emit_ir(writer);
-		writer.bind_local(this->declared_name, init_reg);
+		this->pattern->emit_ir(writer, init_reg);
 	}
 
 	void FunctionDefinition::emit_ir(IrWriter &writer) const
@@ -195,8 +193,9 @@ namespace ast
 		uint64_t arg_index = 0;
 		for (const ArgDefinition &arg : this->args)
 		{
-			ir::VRegId arg_reg = fn_writer.new_local(arg.name, arg.type.resolve_type());
+			ir::VRegId arg_reg = fn_writer.new_vreg(arg.type.resolve_type());
 			fn_writer.add_load_arg(arg_reg, arg_index);
+			arg.pattern->emit_ir(fn_writer, arg_reg);
 			++arg_index;
 		}
 
@@ -224,5 +223,12 @@ namespace ast
 			// the fresh unreachable block that return left behind, which is harmless
 			fn_writer.add_return();
 		}
+	}
+
+	void BindingPattern::emit_ir(IrFunctionWriter &writer, ir::VRegId value) const
+	{
+		// nothing can be assigned yet, so the name can just refer to the value's vreg instead of a copy of it
+		// TODO a mut binding needs its own storage once there's assignment
+		writer.bind_local(this->name, value);
 	}
 }
